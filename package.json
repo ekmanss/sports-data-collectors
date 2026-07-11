@@ -1,0 +1,30 @@
+{
+  "name": "hltv-cloakbrowser-typescript-live",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.11.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "match": "tsx src/cli/match.ts",
+    "check": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json",
+    "fetch": "tsx src/cli/fetch.ts",
+    "scorebot": "tsx src/cli/scorebot.ts",
+    "export": "tsx src/cli/export.ts",
+    "report": "tsx src/cli/report.ts",
+    "test": "tsx tests/live.ts",
+    "verify": "pnpm check"
+  },
+  "dependencies": {
+    "cloakbrowser": "0.4.10",
+    "playwright-core": "1.61.0"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.3",
+    "tsx": "4.23.0",
+    "typescript": "5.9.3"
+  }
+}

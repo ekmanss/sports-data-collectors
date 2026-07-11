@@ -1,0 +1,7 @@
+node_modules/
+dist/
+outputs/
+artifacts/
+*.tmp
+.DS_Store
+.idea/

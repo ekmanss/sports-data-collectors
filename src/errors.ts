@@ -5,7 +5,6 @@ export interface HltvMatchErrorOptions {
   stage: CaptureStage;
   retryable: boolean;
   matchId?: string;
-  slug?: string;
   details?: Record<string, unknown>;
   cause?: unknown;
 }
@@ -15,7 +14,6 @@ export class HltvMatchError extends Error {
   readonly stage: CaptureStage;
   readonly retryable: boolean;
   readonly matchId?: string;
-  readonly slug?: string;
   readonly details?: Record<string, unknown>;
 
   constructor(message: string, options: HltvMatchErrorOptions) {
@@ -25,7 +23,6 @@ export class HltvMatchError extends Error {
     this.stage = options.stage;
     this.retryable = options.retryable;
     this.matchId = options.matchId;
-    this.slug = options.slug;
     this.details = options.details;
   }
 }

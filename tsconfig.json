@@ -8,6 +8,8 @@
     "resolveJsonModule": true,
     "skipLibCheck": false,
     "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "outDir": "dist"
   },
   "include": ["src/**/*.ts", "tests/**/*.ts"]

@@ -1,22 +1,26 @@
 {
-  "name": "hltv-cloakbrowser-typescript-live",
+  "name": "hltv-match-data",
   "version": "1.0.0",
   "private": true,
   "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
   "packageManager": "pnpm@11.11.0",
   "engines": {
     "node": ">=22"
   },
   "scripts": {
-    "match": "tsx src/cli/match.ts",
     "check": "tsc --noEmit",
     "build": "tsc -p tsconfig.build.json",
-    "fetch": "tsx src/cli/fetch.ts",
-    "scorebot": "tsx src/cli/scorebot.ts",
-    "export": "tsx src/cli/export.ts",
-    "report": "tsx src/cli/report.ts",
-    "test": "tsx tests/live.ts",
-    "verify": "pnpm check"
+    "test": "tsx --test tests/match.test.ts",
+    "test:live": "tsx tests/live.ts",
+    "verify": "pnpm check && pnpm test"
   },
   "dependencies": {
     "cloakbrowser": "0.4.10",

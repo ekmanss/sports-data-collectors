@@ -1,14 +1,10 @@
-export type MatchIdInput = number | string;
-
 export type HltvMatchErrorCode =
   | 'INVALID_INPUT'
   | 'BROWSER_NOT_INSTALLED'
   | 'NAVIGATION_FAILED'
   | 'ACCESS_BLOCKED'
   | 'MATCH_NOT_FOUND'
-  | 'SLUG_MISMATCH'
   | 'INCOMPLETE_CAPTURE'
-  | 'OUTPUT_ERROR'
   | 'ABORTED'
   | 'INTERNAL_ERROR';
 
@@ -21,7 +17,6 @@ export type CaptureStage =
   | 'extracting-scorebot'
   | 'building-output'
   | 'validating-output'
-  | 'publishing-files'
   | 'completed';
 
 export interface HltvMatchProgressEvent {
@@ -32,10 +27,6 @@ export interface HltvMatchProgressEvent {
 }
 
 export interface GetHltvMatchOptions {
-  id: MatchIdInput;
-  slug: string;
-  outputRoot?: string;
-  writeFiles?: boolean;
   headless?: boolean;
   pageWaitMs?: number;
   scorebotWaitMs?: number;
@@ -47,8 +38,6 @@ export interface NormalizedGetHltvMatchOptions {
   id: number;
   slug: string;
   url: string;
-  outputRoot: string | null;
-  writeFiles: boolean;
   headless: boolean;
   pageWaitMs: number;
   scorebotWaitMs: number;
@@ -280,7 +269,7 @@ export interface MapCheck {
 }
 
 export interface MatchDiagnostics {
-  schemaVersion: '1.1.0';
+  schemaVersion: '2.0.0';
   generatedAt: string;
   input: { id: number; slug: string; url: string };
   attempts: Array<{
@@ -290,35 +279,16 @@ export interface MatchDiagnostics {
     httpStatus: number | null;
     error?: { code: string; message: string };
   }>;
-  rawArtifacts: Record<string, string | string[]>;
   capture: Record<string, unknown>;
   reconciliation: Record<string, unknown>;
   mapChecks: Record<string, MapCheck>;
   mergedRecentModes: string[][];
   warnings: DiagnosticWarning[];
-  consumerAudit: {
-    compactBytes: number;
-    forbiddenKeyHits: string[];
-    sensitiveValueHits: string[];
-    allCompletedMapScoresConsistent: boolean;
-  };
-}
-
-export interface MatchFiles {
-  directory: string;
-  json: string;
-  markdown: string;
-  chineseReport: string;
-  diagnostics: string;
-  artifacts: string;
 }
 
 export interface GetHltvMatchResult {
   data: HltvMatch;
-  markdown: string;
-  chineseReport: string;
   diagnostics: MatchDiagnostics;
-  files: MatchFiles | null;
 }
 
 export interface RawImageInfo {
@@ -403,24 +373,6 @@ export interface RawExtractedPage {
   [key: string]: unknown;
 }
 
-export interface RawPageCapture {
-  language: 'TypeScript';
-  runtime: string;
-  cloakbrowser_version: string;
-  playwright_version: string;
-  browser_version: string;
-  browser_tier: string;
-  headless: boolean;
-  wait_ms: number;
-  http_status: number | null;
-  navigation_seconds: number;
-  total_seconds: number;
-  html_bytes: number;
-  html_sha256: string;
-  extracted: RawExtractedPage;
-  error: null;
-}
-
 export interface RawSnapshot {
   capturedAt: string;
   httpStatus: number | null;
@@ -432,9 +384,12 @@ export interface RawSnapshot {
 }
 
 export interface CaptureAttempt {
-  page: RawPageCapture;
+  initialPage: RawExtractedPage;
   snapshot: RawSnapshot;
-  html: string;
+  collector: { cloakbrowser: string; playwright: string };
+  httpStatus: number | null;
+  navigationSeconds: number;
+  totalSeconds: number;
   attempt: number;
   startedAt: string;
   completedAt: string;

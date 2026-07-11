@@ -1,9 +1,8 @@
-import { readFile, readdir } from 'node:fs/promises';
-import { isAbsolute, relative, resolve } from 'node:path';
+import { matchIdentityFromUrl } from '../config.js';
 import type {
-  CombinedScoreboard, DiagnosticWarning, GameLogEvent, GameRound, HeadToHead, HltvMatch, HltvPlayer,
+  CaptureAttempt, CombinedScoreboard, DiagnosticWarning, GameLogEvent, GameRound, HeadToHead, HltvMatch, HltvPlayer,
   HltvTeam, MapStats, MatchDiagnostics, MatchMap, RawExtractedPage, RawLogEvent, RawMapCard,
-  RawPageCapture, RawScoreboard, RawSnapshot, RecentMatches, ScoreboardPlayer, VetoEntry,
+  RawScoreboard, RawSnapshot, RecentMatches, ScoreboardPlayer, VetoEntry,
 } from '../types.js';
 
 type RawRound = {
@@ -13,15 +12,6 @@ type RawRound = {
 
 type RawSegment = { rounds: RawRound[]; completedRounds: number };
 
-const readJson = async <T>(path: string): Promise<T> => JSON.parse(await readFile(path, 'utf8')) as T;
-const readOptionalJson = async <T>(path: string): Promise<T | null> => {
-  try {
-    return await readJson<T>(path);
-  } catch (error: unknown) {
-    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return null;
-    throw error;
-  }
-};
 const jsonEqual = (left: unknown, right: unknown): boolean => JSON.stringify(left) === JSON.stringify(right);
 
 function mergeLatestWithRich(latest: RawExtractedPage, rich: RawExtractedPage | null): { data: RawExtractedPage; fallbackSections: string[] } {
@@ -511,52 +501,21 @@ function normalizeVeto(veto: string[], teams: { id: number; name: string }[]): V
   });
 }
 
-function forbiddenKeyHits(value: unknown): string[] {
-  const forbidden = new Set([
-    'currentSnapshot', 'liveMaps', 'chronological', 'mapRows', 'className', 'images', 'rowClasses', 'stats', 'sections',
-    'visibleGameLog', 'scrollHeight', 'httpStatus', 'rawCumulativeEvents', 'nonFormalEventsRemoved',
-    'cumulativePrefixEventsRemoved', 'adjacentFormalRoundDuplicatesRemoved', 'validation',
-  ]);
-  const hits: string[] = [];
-  const walk = (item: unknown, path: string): void => {
-    if (!item || typeof item !== 'object') return;
-    if (Array.isArray(item)) return item.forEach((child, index) => walk(child, `${path}[${index}]`));
-    for (const [key, child] of Object.entries(item as Record<string, unknown>)) {
-      if (forbidden.has(key)) hits.push(`${path}.${key}`);
-      walk(child, `${path}.${key}`);
-    }
-  };
-  walk(value, '$');
-  return hits;
-}
-
-function sensitiveValueHits(value: unknown): string[] {
-  const serialized = JSON.stringify(value);
-  const patterns: Array<[string, RegExp]> = [
-    ['credential-keyword', /cookie|authorization|bearer|password|api[_-]?key|access[_-]?token|refresh[_-]?token/i],
-    ['local-user-path', /\/Users\//i],
-  ];
-  return patterns.filter(([, pattern]) => pattern.test(serialized)).map(([name]) => name);
-}
-
 function requireId(value: number | null, label: string): number {
   if (value === null || !Number.isSafeInteger(value) || value <= 0) throw new Error(`${label} is missing a valid ID`);
   return value;
 }
 
-export async function buildConsumerFromCaptureData(
-  staticPage: RawPageCapture,
-  richPage: RawPageCapture | null,
-  lastLiveSnapshot: RawSnapshot,
-  latestSnapshot: RawSnapshot | null,
-  liveSnapshots: RawSnapshot[],
-  liveFiles: string[],
-  input: { id: number; slug: string; url: string; attempts?: MatchDiagnostics['attempts'] },
-  artifactLabel = 'artifacts',
-): Promise<{ consumer: HltvMatch; diagnostics: MatchDiagnostics }> {
-  const mergedStatic = mergeLatestWithRich(staticPage.extracted, richPage?.extracted ?? null);
+export function buildConsumerFromCapture(
+  capture: CaptureAttempt,
+  attempts: MatchDiagnostics['attempts'],
+): { data: HltvMatch; diagnostics: MatchDiagnostics } {
+  const snapshot = capture.snapshot;
+  const identity = matchIdentityFromUrl(snapshot.page.url);
+  if (!identity) throw new Error('final snapshot has an invalid HLTV match URL');
+  const mergedStatic = mergeLatestWithRich(snapshot.page, capture.initialPage);
   const staticData = mergedStatic.data;
-  const snapshotsByMap = new Map(liveSnapshots.map((snapshot) => [mapName(snapshot), snapshot]));
+  const snapshotsByMap = new Map([[mapName(snapshot), snapshot]]);
 
   const teams: HltvTeam[] = staticData.teams.map((team) => ({ id: requireId(team.id, `team ${team.name}`), name: team.name, country: team.country, url: team.url, logo: team.logo }));
   const players: HltvPlayer[] = staticData.lineups.flatMap((lineup) => lineup.players.map((player) => ({
@@ -584,12 +543,12 @@ export async function buildConsumerFromCaptureData(
     playerIds: lineup.players.map((player) => requireId(player.id, `player ${player.nickname}`)),
   }));
 
-  const filtered = formalEvents(lastLiveSnapshot.gameLog.chronological);
+  const filtered = formalEvents(snapshot.gameLog.chronological);
   const deduplicated = deduplicateAdjacent(filtered.events);
   const rawRounds = groupRounds(deduplicated.events);
   const segments = segmentRounds(rawRounds);
   const matchOver = String(staticData.match.status).toLowerCase().includes('over');
-  const stateSnapshot = latestSnapshot?.scoreboardNormal ? latestSnapshot : lastLiveSnapshot;
+  const stateSnapshot = snapshot;
   let currentMap = mapName(stateSnapshot);
   if (matchOver) {
     for (const map of staticData.maps.maps) {
@@ -658,11 +617,11 @@ export async function buildConsumerFromCaptureData(
   const consumer: HltvMatch = {
     schemaVersion: '2.1.0',
     generatedAt: new Date().toISOString(),
-    source: input.url || staticData.url,
-    collector: { language: 'TypeScript', cloakbrowser: staticPage.cloakbrowser_version, playwright: staticPage.playwright_version },
+    source: identity.url,
+    collector: { language: 'TypeScript', ...capture.collector },
     match: {
       id: requireId(staticData.match.id, 'match'),
-      slug: input.slug,
+      slug: identity.slug,
       status: staticData.match.status,
       scheduledUnixMs: staticData.match.scheduledUnixMs,
       event: staticData.match.event,
@@ -704,35 +663,25 @@ export async function buildConsumerFromCaptureData(
     }];
   }));
   const diagnostics: MatchDiagnostics = {
-    schemaVersion: '1.1.0',
+    schemaVersion: '2.0.0',
     generatedAt: consumer.generatedAt,
     input: { id: consumer.match.id, slug: consumer.match.slug, url: consumer.source },
-    attempts: input.attempts ?? [],
-    rawArtifacts: {
-      staticPage: `${artifactLabel}/page.json`,
-      richStaticPage: `${artifactLabel}/page-rich.json`,
-      renderedHtml: `${artifactLabel}/page.html`,
-      lastLiveScorebot: `${artifactLabel}/scorebot-current.json`,
-      latestScorebotAttempt: `${artifactLabel}/scorebot-latest.json`,
-      perMapSnapshots: liveFiles.map((file) => `${artifactLabel}/live/${file}`),
-    },
+    attempts,
     capture: {
-      static: Object.fromEntries(Object.entries(staticPage).filter(([key]) => key !== 'extracted')),
+      collector: capture.collector,
+      httpStatus: capture.httpStatus,
+      navigationSeconds: capture.navigationSeconds,
+      totalSeconds: capture.totalSeconds,
       fallbackSections: mergedStatic.fallbackSections,
-      latestScorebotAttempt: latestSnapshot ? {
-        capturedAt: latestSnapshot.capturedAt,
-        httpStatus: latestSnapshot.httpStatus,
-        status: latestSnapshot.page.match?.status ?? null,
-        scoreboardPresent: Boolean(latestSnapshot.scoreboardNormal),
-      } : null,
-      lastLive: {
-        capturedAt: lastLiveSnapshot.capturedAt,
-        httpStatus: lastLiveSnapshot.httpStatus,
-        map: mapName(lastLiveSnapshot),
-        normalPlayers: lastLiveSnapshot.scoreboardNormal?.teams.flatMap((team) => team.players).length ?? 0,
-        advancedPlayers: lastLiveSnapshot.scoreboardAdvanced?.teams.flatMap((team) => team.players).length ?? 0,
-        sourceEvents: lastLiveSnapshot.gameLog.chronological.length,
-        excludedNonFormalEvents: filtered.excluded + (lastLiveSnapshot.gameLog.excludedNoiseEvents ?? 0),
+      scorebot: {
+        capturedAt: snapshot.capturedAt,
+        httpStatus: snapshot.httpStatus,
+        map: mapName(snapshot),
+        scoreboardPresent: Boolean(snapshot.scoreboardNormal),
+        normalPlayers: snapshot.scoreboardNormal?.teams.flatMap((team) => team.players).length ?? 0,
+        advancedPlayers: snapshot.scoreboardAdvanced?.teams.flatMap((team) => team.players).length ?? 0,
+        sourceEvents: snapshot.gameLog.chronological.length,
+        excludedNonFormalEvents: filtered.excluded + snapshot.gameLog.excludedNoiseEvents,
         adjacentDuplicatesRemoved: deduplicated.removed,
       },
     },
@@ -740,31 +689,6 @@ export async function buildConsumerFromCaptureData(
     mapChecks,
     mergedRecentModes: consumer.recentMatches.views.filter((view) => view.modes.length > 1).map((view) => view.modes),
     warnings,
-    consumerAudit: {
-      compactBytes: Buffer.byteLength(JSON.stringify(consumer)),
-      forbiddenKeyHits: forbiddenKeyHits(consumer),
-      sensitiveValueHits: sensitiveValueHits(consumer),
-      allCompletedMapScoresConsistent: Object.values(mapChecks).every((check) => check.consistent),
-    },
   };
-  return { consumer, diagnostics };
-}
-
-export async function buildConsumer(
-  root: string,
-  artifactsDirectory = 'artifacts/cloakbrowser',
-  input: { id: number; slug: string; url: string; attempts?: MatchDiagnostics['attempts'] } = { id: 0, slug: '', url: '' },
-): Promise<{ consumer: HltvMatch; diagnostics: MatchDiagnostics }> {
-  const artifacts = isAbsolute(artifactsDirectory) ? artifactsDirectory : resolve(root, artifactsDirectory);
-  const artifactLabel = relative(root, artifacts) || '.';
-  const staticPage = await readJson<RawPageCapture>(resolve(artifacts, 'page.json'));
-  const richPage = await readOptionalJson<RawPageCapture>(resolve(artifacts, 'page-rich.json'));
-  const lastLiveSnapshot = await readJson<RawSnapshot>(resolve(artifacts, 'scorebot-current.json'));
-  const latestSnapshot = await readOptionalJson<RawSnapshot>(resolve(artifacts, 'scorebot-latest.json'));
-  const liveDir = resolve(artifacts, 'live');
-  const liveFiles = (await readdir(liveDir)).filter((file) => file.endsWith('.json') && file !== 'unknown.json');
-  const liveSnapshots = await Promise.all(liveFiles.map((file) => readJson<RawSnapshot>(resolve(liveDir, file))));
-  return buildConsumerFromCaptureData(
-    staticPage, richPage, lastLiveSnapshot, latestSnapshot, liveSnapshots, liveFiles, input, artifactLabel,
-  );
+  return { data: consumer, diagnostics };
 }

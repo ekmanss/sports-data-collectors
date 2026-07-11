@@ -6,10 +6,6 @@
     const match = href?.match(new RegExp(`/${kind}/(\\d+)`));
     return match ? Number(match[1]) : null;
   };
-  const rows = (table) => [...(table?.querySelectorAll('tr') || [])].map((row) =>
-    [...row.querySelectorAll('th,td')].map((cell) => clean(cell.textContent))
-  );
-
   const matchPage = document.querySelector('.match-page');
   const eventLink = matchPage?.querySelector('.timeAndEvent .event a');
   const timeNode = matchPage?.querySelector('.timeAndEvent .time');
@@ -247,17 +243,6 @@
     }));
   })() : null;
 
-  const scoreboard = document.querySelector('#scoreboardElement .scoreboard');
-  const scoreboardData = scoreboard ? {
-    mode: text(scoreboard, '.pro-toggle.active'),
-    round: text(scoreboard, '.currentRoundText'),
-    score: text(scoreboard, '.scoreText'),
-    fact: text(scoreboard, '.facts'),
-    tables: [...scoreboard.querySelectorAll('table.team')].map((table) => rows(table)),
-  } : null;
-  const visibleGameLog = [...document.querySelectorAll('#scoreboardElement .gamelog .gamelogBox')]
-    .map((node) => clean(node.textContent));
-
   return {
     title: document.title,
     url: location.href,
@@ -278,8 +263,6 @@
     mapStats,
     recentMatches,
     headToHead,
-    scoreboard: scoreboardData,
-    visibleGameLog,
     sections: {
       matchPage: Boolean(matchPage),
       maps: Boolean(mapSection),
@@ -288,7 +271,7 @@
       mapStats: Boolean(mapStatsRoot),
       recentMatches: Boolean(document.querySelector('#past-matches')),
       headToHead: Boolean(h2hRoot),
-      scoreboard: Boolean(scoreboard),
+      scoreboard: Boolean(document.querySelector('#scoreboardElement .scoreboard')),
       gameLog: Boolean(document.querySelector('#scoreboardElement .gamelog')),
       cloudflareChallenge: document.title.includes('Just a moment') || Boolean(document.querySelector('[id^="cf-chl"]')),
     },

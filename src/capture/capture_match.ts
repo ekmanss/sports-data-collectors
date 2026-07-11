@@ -1,16 +1,14 @@
-import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { binaryInfo, launch } from 'cloakbrowser';
+import { launch } from 'cloakbrowser';
 import type { Page } from 'playwright-core';
-import { emitProgress, throwIfAborted } from '../config.js';
+import { emitProgress, matchIdentityFromUrl, throwIfAborted } from '../config.js';
 import { HltvMatchError, asHltvMatchError } from '../errors.js';
 import type {
   CaptureAttempt,
   NormalizedGetHltvMatchOptions,
   RawExtractedPage,
   RawLogEvent,
-  RawPageCapture,
   RawScoreboard,
   RawSnapshot,
 } from '../types.js';
@@ -34,25 +32,12 @@ function assertExtractedPage(value: unknown): asserts value is RawExtractedPage 
   }
 }
 
-function expectedPath(options: NormalizedGetHltvMatchOptions): string {
-  return `/matches/${options.id}/${options.slug}`;
-}
-
 function validateFinalUrl(finalUrl: string, options: NormalizedGetHltvMatchOptions): void {
-  let url: URL;
-  try {
-    url = new URL(finalUrl);
-  } catch (cause) {
-    throw new HltvMatchError('HLTV returned an invalid final URL', {
-      code: 'SLUG_MISMATCH', stage: 'validating-source', retryable: false, cause,
-    });
-  }
-  const path = url.pathname.replace(/\/$/, '');
-  if (url.protocol !== 'https:' || url.hostname !== 'www.hltv.org' || path !== expectedPath(options)) {
-    throw new HltvMatchError(`final HLTV path ${path} does not match the requested match`, {
-      code: 'SLUG_MISMATCH', stage: 'validating-source', retryable: false,
-      matchId: String(options.id), slug: options.slug,
-      details: { expectedPath: expectedPath(options), finalPath: path },
+  const identity = matchIdentityFromUrl(finalUrl);
+  if (!identity || identity.id !== options.id) {
+    throw new HltvMatchError('HLTV returned a different or invalid match URL', {
+      code: 'INCOMPLETE_CAPTURE', stage: 'validating-source', retryable: false,
+      matchId: String(options.id), details: { finalUrl },
     });
   }
 }
@@ -71,7 +56,7 @@ async function abortableDelay(milliseconds: number, options: NormalizedGetHltvMa
       clearTimeout(timer);
       signal?.removeEventListener('abort', aborted);
       reject(new HltvMatchError('capture was aborted', {
-        code: 'ABORTED', stage, retryable: false, matchId: String(options.id), slug: options.slug,
+        code: 'ABORTED', stage, retryable: false, matchId: String(options.id),
       }));
     }
     signal?.addEventListener('abort', aborted, { once: true });
@@ -259,7 +244,6 @@ export async function captureMatch(options: NormalizedGetHltvMatchOptions, attem
   const extractor = await readFile(resolve(ROOT, 'shared/hltv_dom_extract.js'), 'utf8');
   const cloakPackage = JSON.parse(await readFile(resolve(ROOT, 'node_modules/cloakbrowser/package.json'), 'utf8')) as { version: string };
   const playwrightPackage = JSON.parse(await readFile(resolve(ROOT, 'node_modules/playwright-core/package.json'), 'utf8')) as { version: string };
-  const browserDetails = binaryInfo();
   emitProgress(options, { stage: 'launching-browser', attempt, message: 'Launching CloakBrowser' });
   let browser: Awaited<ReturnType<typeof launch>> | null = null;
   try {
@@ -292,7 +276,7 @@ export async function captureMatch(options: NormalizedGetHltvMatchOptions, attem
     validateFinalUrl(initialPage.url, options);
     if (initialPage.match.id !== options.id) {
       throw new HltvMatchError('the loaded page contains a different match ID', {
-        code: 'SLUG_MISMATCH', stage: 'validating-source', retryable: false,
+        code: 'INCOMPLETE_CAPTURE', stage: 'validating-source', retryable: false,
         details: { expectedId: options.id, pageId: initialPage.match.id },
       });
     }
@@ -317,6 +301,13 @@ export async function captureMatch(options: NormalizedGetHltvMatchOptions, attem
       scorebotPresent = await page.locator('#scoreboardElement .scoreboard').count() > 0;
     }
     const snapshot = await collectSnapshot(page, response?.status() ?? null, extractor);
+    validateFinalUrl(snapshot.page.url, options);
+    if (snapshot.page.match.id !== options.id) {
+      throw new HltvMatchError('the final page snapshot contains a different match ID', {
+        code: 'INCOMPLETE_CAPTURE', stage: 'validating-source', retryable: false,
+        matchId: String(options.id), details: { pageId: snapshot.page.match.id },
+      });
+    }
     const status = initialPage.match.status.toLowerCase();
     const requiresScorebot = status.includes('live') || status.includes('over');
     if (requiresScorebot && !scorebotPresent) {
@@ -324,22 +315,22 @@ export async function captureMatch(options: NormalizedGetHltvMatchOptions, attem
         code: 'INCOMPLETE_CAPTURE', stage: 'extracting-scorebot', retryable: false,
       });
     }
-    const html = await page.content();
     const completedAt = new Date().toISOString();
-    const pageCapture: RawPageCapture = {
-      language: 'TypeScript', runtime: process.version,
-      cloakbrowser_version: cloakPackage.version, playwright_version: playwrightPackage.version,
-      browser_version: String(browserDetails.version), browser_tier: String(browserDetails.tier),
-      headless: options.headless, wait_ms: options.pageWaitMs,
-      http_status: response?.status() ?? null,
-      navigation_seconds: Number(((performance.now() - navigationStarted) / 1000).toFixed(3)),
-      total_seconds: Number(((performance.now() - started) / 1000).toFixed(3)),
-      html_bytes: Buffer.byteLength(html), html_sha256: createHash('sha256').update(html).digest('hex'),
-      extracted: initialPage, error: null,
+    return {
+      initialPage,
+      snapshot,
+      collector: { cloakbrowser: cloakPackage.version, playwright: playwrightPackage.version },
+      httpStatus: response?.status() ?? null,
+      navigationSeconds: Number(((performance.now() - navigationStarted) / 1000).toFixed(3)),
+      totalSeconds: Number(((performance.now() - started) / 1000).toFixed(3)),
+      attempt,
+      startedAt,
+      completedAt,
     };
-    return { page: pageCapture, snapshot, html, attempt, startedAt, completedAt };
   } catch (error) {
-    throw asHltvMatchError(error, { code: 'INTERNAL_ERROR', stage: 'extracting-page', retryable: false, matchId: String(options.id), slug: options.slug });
+    throw asHltvMatchError(error, {
+      code: 'INTERNAL_ERROR', stage: 'extracting-page', retryable: false, matchId: String(options.id),
+    });
   } finally {
     await browser?.close();
   }

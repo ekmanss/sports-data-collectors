@@ -1,40 +1,33 @@
 # Consumer schema 2.1.0
 
-`match.json` contains stable business facts only. Raw browser payloads stay under `artifacts/`; capture, reconciliation, warning, and validation evidence belongs in `diagnostics.json`.
-
-Version 2.1.0 adds `match.slug` to the compatible 2.x contract. The input ID, input slug, source URL, output directory, and consumer identity must agree exactly.
+`getHltvMatch()` returns `{ data, diagnostics }`. `data` uses schema `2.1.0` and contains stable business facts. `diagnostics` uses schema `2.0.0` and contains capture attempts, reconciliation evidence, warnings, and timing.
 
 ## Canonical rules
 
 - `teams` and `players` are entity lists. Other sections reference them by ID.
-- `maps[].score` is the only canonical per-map score.
+- `maps[].score` is the canonical per-map score.
 - A completed map uses the final match-card score; a current map uses the current Scorebot score.
 - A map scoreboard is included only when its score matches the canonical score.
 - The current scoreboard is stored once under `current`.
 - Game log events exist only in `maps[].gameLog.rounds[].events`.
 - Round start is implicit; round completion is represented by `round.result`.
 - An in-progress live round may have `result: null`.
-- The cumulative Scorebot log is split into maps before export and never embedded directly.
+- The cumulative Scorebot log is split into maps before returning.
 - Identical Team/Core recent-match views are stored once with both mode names.
 - H2H is grouped as matches with nested maps.
 - Missing scalar values are `null`; missing collections are empty arrays.
-- The JSON is written compactly. Markdown is the human-readable artifact.
 - `current` is `null` after the match ends.
 
 ## Required identity
 
 ```text
 schemaVersion = 2.1.0
-match.id       = requested ID
-match.slug     = requested slug
+match.id       = final HLTV page match ID
+match.slug     = final canonical URL slug
 source         = https://www.hltv.org/matches/<id>/<slug>
 ```
 
-HLTV query parameters, fragments, and a trailing slash do not affect source-path validation. A different path ID or slug is fatal.
-
-## Forbidden consumer keys
-
-`currentSnapshot`, `liveMaps`, `chronological`, `mapRows`, `className`, `images`, `rowClasses`, `stats`, `sections`, `visibleGameLog`, `scrollHeight`, `httpStatus`, `rawCumulativeEvents`, `nonFormalEventsRemoved`, `cumulativePrefixEventsRemoved`, `adjacentFormalRoundDuplicatesRemoved`, and `validation`.
+Query parameters, fragments, and a trailing slash are removed during input normalization. A redirect may correct the slug, but a different host or match ID is fatal.
 
 ## Required consistency
 
@@ -43,7 +36,12 @@ HLTV query parameters, fragments, and a trailing slash do not affect source-path
 - For every completed or current map, the canonical score sum equals completed rounds.
 - Every stored map round starts at round 1 and increments without gaps.
 - Every completed-map round has exactly one result.
-- A current or final scoreboard score must agree with its canonical score.
-- No credential, session, local user path, or browser-private field appears in a public artifact.
+- A current or final scoreboard score agrees with its canonical score before it is included.
 
-Violations fail the capture with `INCOMPLETE_CAPTURE`; they are never downgraded into a superficially successful partial result.
+Violations fail with `INCOMPLETE_CAPTURE`; they are never downgraded into a superficially successful partial result.
+
+## Data coverage
+
+The schema preserves match-page and Scorebot business data for match identity, event, teams, players, lineups, streams, vetoes, maps, scores, halves, map statistics, recent matches, head-to-head history, Normal/Advanced scoreboards, and formal round events.
+
+Browser-private state, DOM class names, duplicate visible log fragments, and raw HTML are implementation details rather than match data and are not returned.

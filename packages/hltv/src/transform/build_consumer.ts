@@ -126,7 +126,7 @@ function parseRoundResult(text: string): RawRound['result'] {
     ctScore: Number(match[2]),
     tScore: Number(match[3]),
     reason: match[4] || null,
-  } : { winnerSide: null, ctScore: null, tScore: null, reason: text.replace(/^Round over\s*-?\s*/, '') || null };
+  } : null;
 }
 
 function groupRounds(events: RawLogEvent[]): RawRound[] {
@@ -140,8 +140,11 @@ function groupRounds(events: RawLogEvent[]): RawRound[] {
     }
     if (!current) continue;
     if (event.text.startsWith('Round over')) {
-      current.result = parseRoundResult(event.text);
-      rounds.push(current);
+      const result = parseRoundResult(event.text);
+      if (result) {
+        current.result = result;
+        rounds.push(current);
+      }
       current = null;
       continue;
     }
@@ -163,15 +166,101 @@ function segmentRounds(rounds: RawRound[]): RawSegment[] {
   for (const round of rounds) {
     const total = resultTotal(round);
     if (total !== null && current.length && total !== previousTotal + 1) {
-      segments.push({ rounds: current, completedRounds: current.filter((item) => item.result).length });
+      segments.push({ rounds: current, completedRounds: current.filter((item) => resultTotal(item) !== null).length });
       current = [];
       previousTotal = 0;
     }
     current.push(round);
     if (total !== null) previousTotal = total;
   }
-  if (current.length) segments.push({ rounds: current, completedRounds: current.filter((item) => item.result).length });
+  if (current.length) segments.push({ rounds: current, completedRounds: current.filter((item) => resultTotal(item) !== null).length });
   return segments;
+}
+
+type ReconstructedRounds = {
+  rounds: RawRound[];
+  firstSegmentIndex: number;
+  sourceSegments: number[];
+  overlappingRounds: number;
+};
+
+function resultIdentity(round: RawRound): string | null {
+  if (!round.result || round.result.ctScore === null || round.result.tScore === null) return null;
+  const scores = [round.result.ctScore, round.result.tScore].sort((left, right) => left - right);
+  return `${scores[0]}:${scores[1]}`;
+}
+
+function scoredRoundsByTotal(segment: RawSegment, target: number): Map<number, RawRound> {
+  const output = new Map<number, RawRound>();
+  for (const round of segment.rounds) {
+    const total = resultTotal(round);
+    if (total !== null && total >= 1 && total <= target) output.set(total, round);
+  }
+  return output;
+}
+
+function reconstructOverlappingSegments(
+  segments: RawSegment[],
+  lastSegmentIndex: number,
+  target: number,
+  includeUnfinishedTail: boolean,
+): ReconstructedRounds | null {
+  let tailIndex = -1;
+  for (let index = lastSegmentIndex; index >= 0; index -= 1) {
+    if (scoredRoundsByTotal(segments[index]!, target).has(target)) {
+      tailIndex = index;
+      break;
+    }
+  }
+  if (tailIndex < 0) return null;
+
+  const selected = scoredRoundsByTotal(segments[tailIndex]!, target);
+  const sourceSegments = [tailIndex];
+  let firstSegmentIndex = tailIndex;
+  let overlappingRounds = 0;
+  let frontier = target;
+  while (selected.has(frontier)) frontier -= 1;
+
+  while (frontier > 0) {
+    let best: { index: number; rounds: Map<number, RawRound>; overlap: number } | null = null;
+    for (let index = firstSegmentIndex - 1; index >= 0; index -= 1) {
+      const candidate = scoredRoundsByTotal(segments[index]!, target);
+      if (!candidate.has(frontier)) continue;
+      const selectedBoundary = selected.get(frontier + 1);
+      const candidateBoundary = candidate.get(frontier + 1);
+      if (!selectedBoundary || !candidateBoundary
+        || resultIdentity(selectedBoundary) !== resultIdentity(candidateBoundary)) continue;
+      const overlapping = [...candidate].filter(([total, round]) => {
+        const selectedRound = selected.get(total);
+        return selectedRound && resultIdentity(selectedRound) === resultIdentity(round);
+      }).length;
+      if (!best || overlapping > best.overlap || (overlapping === best.overlap && index > best.index)) {
+        best = { index, rounds: candidate, overlap: overlapping };
+      }
+    }
+    if (!best) return null;
+    for (const [total, round] of best.rounds) {
+      if (!selected.has(total)) selected.set(total, round);
+    }
+    overlappingRounds += best.overlap;
+    sourceSegments.push(best.index);
+    firstSegmentIndex = best.index;
+    while (selected.has(frontier)) frontier -= 1;
+  }
+
+  const rounds = Array.from({ length: target }, (_, index) => selected.get(index + 1)!);
+  if (includeUnfinishedTail) {
+    const tail = segments[tailIndex]!.rounds;
+    let completedIndex = -1;
+    for (let index = tail.length - 1; index >= 0; index -= 1) {
+      if (resultTotal(tail[index]!) === target) {
+        completedIndex = index;
+        break;
+      }
+    }
+    rounds.push(...tail.slice(completedIndex + 1).filter((round) => resultTotal(round) === null));
+  }
+  return { rounds, firstSegmentIndex, sourceSegments: sourceSegments.sort((a, b) => a - b), overlappingRounds };
 }
 
 function selectRoundSegments(
@@ -181,6 +270,7 @@ function selectRoundSegments(
   currentScoreSum: number,
 ): { assignments: Map<string, RawRound[]>; diagnostics: Record<string, unknown> } {
   const assignments = new Map<string, RawRound[]>();
+  const reconciliation = new Map<string, { sourceSegments: number[]; overlappingRounds: number }>();
   const currentIndex = Math.max(0, maps.findIndex((map) => map.name === currentMap));
   const expected = maps.slice(0, currentIndex + 1).map((map, index) => {
     const cardScores = map.teams.map((team) => Number(team.score));
@@ -217,17 +307,22 @@ function selectRoundSegments(
       }
       continue;
     }
-    let found = -1;
-    for (let candidate = segmentIndex; candidate >= 0; candidate -= 1) {
-      if (segments[candidate]!.completedRounds === target.completedRounds) {
-        found = candidate;
-        break;
-      }
+    const reconstructed = reconstructOverlappingSegments(
+      segments,
+      segmentIndex,
+      target.completedRounds,
+      expectedIndex === currentIndex,
+    );
+    if (!reconstructed) {
+      assignments.set(target.name, []);
+      continue;
     }
-    if (found >= 0) {
-      assignments.set(target.name, segments[found]!.rounds);
-      segmentIndex = found - 1;
-    } else assignments.set(target.name, []);
+    assignments.set(target.name, reconstructed.rounds);
+    reconciliation.set(target.name, {
+      sourceSegments: reconstructed.sourceSegments,
+      overlappingRounds: reconstructed.overlappingRounds,
+    });
+    segmentIndex = reconstructed.firstSegmentIndex - 1;
   }
   for (const map of maps) if (!assignments.has(map.name)) assignments.set(map.name, []);
   return {
@@ -236,8 +331,10 @@ function selectRoundSegments(
       detectedSegments: segments.map((segment, index) => ({ index, completedRounds: segment.completedRounds, totalRounds: segment.rounds.length })),
       expected,
       assigned: Object.fromEntries([...assignments].map(([name, rounds]) => [name, {
-        completedRounds: rounds.filter((round) => round.result).length,
+        completedRounds: rounds.filter((round) => resultTotal(round) !== null).length,
         totalRounds: rounds.length,
+        sourceSegments: reconciliation.get(name)?.sourceSegments ?? [],
+        overlappingRounds: reconciliation.get(name)?.overlappingRounds ?? 0,
       }])),
     },
   };
@@ -608,7 +705,7 @@ export function buildConsumerFromCapture(
         map: map.name,
         expectedCompletedRounds: scoreSum,
         capturedCompletedRounds: completedRounds,
-        reason: 'The page no longer exposed Scorebot after the match and no final live snapshot was captured for this map.',
+        reason: 'No complete Scorebot round sequence could be safely reconciled for the canonical map score.',
       });
     }
   }

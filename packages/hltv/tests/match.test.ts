@@ -4,8 +4,11 @@ import { resolve } from 'node:path';
 import test from 'node:test';
 import { matchIdentityFromUrl } from '../src/config.js';
 import { HltvError } from '../src/errors.js';
+import { buildConsumerFromCapture } from '../src/transform/build_consumer.js';
 import { validateMatch } from '../src/transform/validate_match.js';
-import type { HltvMatch, MatchDiagnostics, MatchMap } from '../src/types.js';
+import type {
+  CaptureAttempt, HltvMatch, MatchDiagnostics, MatchMap, RawExtractedPage, RawLogEvent, RawScoreboard,
+} from '../src/types.js';
 
 const fixturePath = resolve(
   import.meta.dirname,
@@ -112,4 +115,129 @@ test('rejects score and Game log disagreement', () => {
     () => validateMatch(match, diagnosticsFor(match), rawSections, match.match.id),
     (error: unknown) => error instanceof HltvError && error.code === 'INCOMPLETE_CAPTURE',
   );
+});
+
+test('reconciles overlapping Scorebot replay fragments across maps', () => {
+  let top = 0;
+  const event = (text: string): RawLogEvent => ({
+    top: top++,
+    type: [],
+    text,
+    players: [],
+    weapon: null,
+    headshot: false,
+  });
+  const scoredRounds = (start: number, end: number, correctedReplay = false): RawLogEvent[] => Array.from(
+    { length: end - start + 1 },
+    (_, index) => start + index,
+  ).flatMap((total) => {
+    const corrected = correctedReplay && total > start;
+    return [
+      event('Round started'),
+      event(`Round over - Winner: ${corrected ? 'T' : 'CT'} (${corrected ? total - 1 : total} - ${corrected ? 1 : 0}) - Enemy eliminated`),
+    ];
+  });
+  const knifeRound = (): RawLogEvent[] => [
+    event('Round started'),
+    event('Round over - Winner: CT (1 - 0) - Enemy eliminated'),
+  ];
+  const drawRound = (): RawLogEvent[] => [
+    event('Round started'),
+    event('Round over - Draw'),
+  ];
+
+  const page: RawExtractedPage = {
+    title: 'Alpha vs Bravo',
+    url: 'https://www.hltv.org/matches/2395805/alpha-vs-bravo-event',
+    match: {
+      id: 2395805,
+      status: 'LIVE',
+      scheduledUnixMs: 1_784_000_000_000,
+      event: { id: 1, name: 'Event', url: 'https://www.hltv.org/events/1/event' },
+    },
+    teams: [
+      { id: 1, name: 'Alpha', url: null, country: null, logo: null },
+      { id: 2, name: 'Bravo', url: null, country: null, logo: null },
+    ],
+    maps: {
+      format: 'Best of 3',
+      stage: 'Group stage',
+      veto: [],
+      maps: [
+        { name: 'Dust2', optional: false, halfScores: '', teams: [
+          { name: 'Alpha', score: '25', picked: true },
+          { name: 'Bravo', score: '22', picked: false },
+        ] },
+        { name: 'Mirage', optional: false, halfScores: '', teams: [
+          { name: 'Alpha', score: '13', picked: false },
+          { name: 'Bravo', score: '5', picked: true },
+        ] },
+        { name: 'Nuke', optional: false, halfScores: '', teams: [
+          { name: 'Alpha', score: '-', picked: false },
+          { name: 'Bravo', score: '-', picked: false },
+        ] },
+      ],
+    },
+    streams: [],
+    lineups: [],
+    mapStats: null,
+    recentMatches: [],
+    headToHead: null,
+    sections: { matchPage: true, maps: true },
+  };
+  const scoreboard: RawScoreboard = {
+    mode: 'Normal',
+    round: '8 - Nuke',
+    fact: '',
+    score: '4:3',
+    teams: [
+      { team: 'Alpha', players: [] },
+      { team: 'Bravo', players: [] },
+    ],
+  };
+  const chronological = [
+    ...knifeRound(),
+    ...scoredRounds(1, 28),
+    ...knifeRound(),
+    ...drawRound(),
+    ...scoredRounds(24, 47, true),
+    ...knifeRound(),
+    ...scoredRounds(1, 18),
+    ...knifeRound(),
+    ...scoredRounds(1, 7),
+  ];
+  const capturedAt = '2026-07-13T00:00:00.000Z';
+  const capture: CaptureAttempt = {
+    initialPage: page,
+    snapshot: {
+      capturedAt,
+      httpStatus: 200,
+      page,
+      scoreboardNormal: scoreboard,
+      scoreboardAdvanced: null,
+      gameLog: { scrollHeight: chronological.length * 26, chronological, excludedNoiseEvents: 0 },
+      note: null,
+    },
+    collector: { packageVersion: '0.0.0', cloakbrowserVersion: '0.4.10', playwrightVersion: '1.61.0' },
+    httpStatus: 200,
+    navigationSeconds: 0,
+    totalSeconds: 0,
+    attempt: 1,
+    startedAt: capturedAt,
+    completedAt: capturedAt,
+  };
+
+  const result = buildConsumerFromCapture(capture, [{
+    attempt: 1,
+    startedAt: capturedAt,
+    completedAt: capturedAt,
+    httpStatus: 200,
+  }]);
+
+  assert.deepEqual(
+    result.data.maps.map((map) => [map.name, map.gameLog.rounds.filter((round) => round.result).length]),
+    [['Dust2', 47], ['Mirage', 18], ['Nuke', 7]],
+  );
+  assert.deepEqual(result.data.maps[0]!.gameLog.rounds[24]!.result?.sideScore, { ct: 24, t: 1 });
+  validateMatch(result.data, result.diagnostics, page, 2395805);
 });

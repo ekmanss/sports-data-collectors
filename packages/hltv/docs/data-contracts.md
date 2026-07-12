@@ -62,6 +62,8 @@ interface HltvMatch {
 - Exactly two unique primary teams are required.
 - Every lineup player ID references a canonical player.
 - Completed and current map scores equal the number of completed Game log rounds.
+- Overlapping Scorebot replay fragments are joined only when the older fragment supplies the missing prefix and agrees with the newer fragment at the splice boundary; the newer replay remains authoritative after that boundary.
+- Knife rounds, scoreless draws, and replay fragments that cannot be safely reconciled are excluded rather than counted as official map rounds.
 - Stored rounds start at one and increment without gaps.
 - Completed maps contain no unfinished round.
 - Scoreboards are included only when their score agrees with the canonical map score.

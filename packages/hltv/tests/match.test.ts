@@ -75,10 +75,12 @@ test('defaults browser timezone to the runtime timezone and accepts an explicit 
 });
 
 test('uses a longer bounded cooldown for an access challenge', () => {
-  assert.equal(retryDelayMilliseconds('ACCESS_BLOCKED', 0), 10_000);
-  assert.equal(retryDelayMilliseconds('ACCESS_BLOCKED', 0.999_999), 12_500);
-  assert.equal(retryDelayMilliseconds('NAVIGATION_FAILED', 0), 2_000);
-  assert.equal(retryDelayMilliseconds('NAVIGATION_FAILED', 0.999_999), 2_500);
+  assert.equal(retryDelayMilliseconds('ACCESS_BLOCKED', 1, 0), 10_000);
+  assert.equal(retryDelayMilliseconds('ACCESS_BLOCKED', 1, 0.999_999), 12_500);
+  assert.equal(retryDelayMilliseconds('ACCESS_BLOCKED', 2, 0), 20_000);
+  assert.equal(retryDelayMilliseconds('ACCESS_BLOCKED', 2, 0.999_999), 25_000);
+  assert.equal(retryDelayMilliseconds('NAVIGATION_FAILED', 1, 0), 2_000);
+  assert.equal(retryDelayMilliseconds('NAVIGATION_FAILED', 1, 0.999_999), 2_500);
 });
 
 test('accepts complete completed-match data', () => {

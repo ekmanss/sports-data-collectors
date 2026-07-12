@@ -126,7 +126,7 @@ CLIENT_CLOSED
 INTERNAL_ERROR
 ```
 
-HTTP 403 access challenges cool down for about 10–12.5 seconds before one retry. HTTP 429, HTTP 5xx, and transient navigation failures retry once after a shorter delay. All retries stay within the operation's total timeout budget. The library is silent by default.
+HTTP 403 access challenges use at most two retries with bounded exponential cooldowns of about 10–12.5 seconds and 20–25 seconds. HTTP 429, HTTP 5xx, and transient navigation failures retry once after a shorter delay. All retries stay within the operation's total timeout budget. The library is silent by default.
 
 ## Manual recipes
 

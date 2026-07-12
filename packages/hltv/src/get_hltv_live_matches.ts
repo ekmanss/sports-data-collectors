@@ -155,7 +155,7 @@ export async function getLiveMatchesWithBrowser(
 ): Promise<GetHltvLiveMatchesResult> {
   const attempts: HltvLiveMatchesDiagnostics['attempts'] = [];
   emitProgress(context, { stage: 'validating-input', attempt: 1, message: 'Validated live-list request' });
-  for (let attempt = 1; attempt <= 2; attempt += 1) {
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
     const startedAt = new Date().toISOString();
     try {
       const capture = await captureLiveMatches(browser, context, attempt);
@@ -222,15 +222,20 @@ export async function getLiveMatchesWithBrowser(
         httpStatus: typeof normalized.details?.httpStatus === 'number' ? normalized.details.httpStatus : null,
         error: { code: normalized.code, message: normalized.message },
       });
-      if (!normalized.retryable || attempt === 2) throw normalized;
+      const maxAttempts = normalized.code === 'ACCESS_BLOCKED' ? 3 : 2;
+      if (!normalized.retryable || attempt >= maxAttempts) throw normalized;
       emitProgress(context, {
         stage: 'navigating',
         attempt,
         message: normalized.code === 'ACCESS_BLOCKED'
-          ? 'Access challenge; cooling down before one retry'
+          ? `Access challenge; cooling down before retry ${attempt} of 2`
           : 'Transient failure; retrying once',
       });
-      await abortableDelay(retryDelayMilliseconds(normalized.code), context, 'navigating');
+      await abortableDelay(
+        retryDelayMilliseconds(normalized.code, attempt),
+        context,
+        'navigating',
+      );
     }
   }
   throw new HltvError('live-list capture produced no result', {

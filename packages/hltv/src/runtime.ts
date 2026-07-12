@@ -9,10 +9,11 @@ import type {
 
 export function retryDelayMilliseconds(
   code: HltvErrorCode,
+  retryNumber = 1,
   random = Math.random(),
 ): number {
-  const base = code === 'ACCESS_BLOCKED' ? 10_000 : 2_000;
-  const jitterRange = code === 'ACCESS_BLOCKED' ? 2_501 : 501;
+  const base = code === 'ACCESS_BLOCKED' ? 10_000 * (2 ** (retryNumber - 1)) : 2_000;
+  const jitterRange = Math.floor(base / 4) + 1;
   return base + Math.floor(random * jitterRange);
 }
 

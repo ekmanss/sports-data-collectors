@@ -8,6 +8,8 @@ import {
   abortableDelay,
   createOperationContext,
   emitProgress,
+  remainingMs,
+  retryDelayMilliseconds,
   throwIfStopped,
   type OperationContext,
 } from './runtime.js';
@@ -20,6 +22,99 @@ import type {
   HltvClientOptions,
   HltvRequestOptions,
 } from './types.js';
+
+type OneShotResult = {
+  diagnostics: {
+    startedAt: string;
+    completedAt: string;
+    durationMs: number;
+    attempts: Array<{
+      attempt: number;
+      startedAt: string;
+      completedAt: string;
+      httpStatus: number | null;
+      error?: { code: string; message: string };
+    }>;
+  };
+};
+
+async function runOneShot<T extends OneShotResult>(input: {
+  clientOptions: HltvClientOptions;
+  requestOptions: HltvRequestOptions;
+  operation: 'live-list' | 'match-detail';
+  defaultTimeoutMs: number;
+  execute(client: HltvClient, request: HltvRequestOptions): Promise<T>;
+}): Promise<T> {
+  const context = createOperationContext(
+    input.operation,
+    input.requestOptions,
+    input.defaultTimeoutMs,
+  );
+  const startedAt = new Date().toISOString();
+  const failedAttempts: OneShotResult['diagnostics']['attempts'] = [];
+  try {
+    for (let browserAttempt = 1; browserAttempt <= 3; browserAttempt += 1) {
+      throwIfStopped(context, 'launching-browser');
+      const attemptStartedAt = new Date().toISOString();
+      const client = await createHltvClient(input.clientOptions);
+      try {
+        const result = await input.execute(client, {
+          ...input.requestOptions,
+          timeoutMs: remainingMs(context),
+          signal: context.signal,
+        });
+        const attempts = [
+          ...failedAttempts,
+          ...result.diagnostics.attempts,
+        ].map((attempt, index) => ({ ...attempt, attempt: index + 1 }));
+        return {
+          ...result,
+          diagnostics: {
+            ...result.diagnostics,
+            startedAt,
+            durationMs: Math.max(
+              0,
+              Date.parse(result.diagnostics.completedAt) - Date.parse(startedAt),
+            ),
+            attempts,
+          },
+        };
+      } catch (error) {
+        const normalized = error instanceof HltvError ? error : null;
+        if (normalized?.code !== 'ACCESS_BLOCKED' || browserAttempt === 3) throw error;
+        failedAttempts.push({
+          attempt: browserAttempt,
+          startedAt: attemptStartedAt,
+          completedAt: new Date().toISOString(),
+          httpStatus: typeof normalized.details?.httpStatus === 'number'
+            ? normalized.details.httpStatus
+            : null,
+          error: { code: normalized.code, message: normalized.message },
+        });
+        emitProgress(context, {
+          stage: 'navigating',
+          attempt: browserAttempt,
+          message: `Access challenge; rotating browser before retry ${browserAttempt} of 2`,
+        });
+      } finally {
+        await client.close();
+      }
+      await abortableDelay(
+        retryDelayMilliseconds('ACCESS_BLOCKED', browserAttempt),
+        context,
+        'navigating',
+      );
+    }
+    throw new HltvError('one-shot capture produced no result', {
+      code: 'INTERNAL_ERROR',
+      operation: input.operation,
+      stage: 'extracting-page',
+      retryable: false,
+    });
+  } finally {
+    context.dispose();
+  }
+}
 
 interface QueueTask<T = unknown> {
   context: OperationContext;
@@ -172,12 +267,13 @@ export async function getHltvLiveMatches(
   options: GetHltvLiveMatchesOptions = {},
 ): Promise<GetHltvLiveMatchesResult> {
   const split = splitCombinedOptions(options);
-  const client = await createHltvClient(split.client);
-  try {
-    return await client.getLiveMatches(split.request as HltvRequestOptions);
-  } finally {
-    await client.close();
-  }
+  return await runOneShot({
+    clientOptions: split.client,
+    requestOptions: split.request as HltvRequestOptions,
+    operation: 'live-list',
+    defaultTimeoutMs: 60_000,
+    execute: (client, request) => client.getLiveMatches(request),
+  });
 }
 
 export async function getHltvMatch(
@@ -190,10 +286,11 @@ export async function getHltvMatch(
     });
   }
   const split = splitCombinedOptions(options);
-  const client = await createHltvClient(split.client);
-  try {
-    return await client.getMatch(matchUrl, split.request as HltvRequestOptions);
-  } finally {
-    await client.close();
-  }
+  return await runOneShot({
+    clientOptions: split.client,
+    requestOptions: split.request as HltvRequestOptions,
+    operation: 'match-detail',
+    defaultTimeoutMs: 180_000,
+    execute: (client, request) => client.getMatch(matchUrl, request),
+  });
 }

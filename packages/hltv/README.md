@@ -126,7 +126,7 @@ CLIENT_CLOSED
 INTERNAL_ERROR
 ```
 
-HTTP 403 access challenges use at most two retries with bounded exponential cooldowns of about 10–12.5 seconds and 20–25 seconds. HTTP 429, HTTP 5xx, and transient navigation failures retry once after a shorter delay. All retries stay within the operation's total timeout budget. The library is silent by default.
+The one-shot functions handle HTTP 403 access challenges by closing the challenged browser and launching a fresh browser for at most two retries, with bounded exponential cooldowns of about 10–12.5 seconds and 20–25 seconds. A reusable `HltvClient` does not replace its browser and returns `ACCESS_BLOCKED` immediately so its owner can decide when to rebuild the client. HTTP 429, HTTP 5xx, and transient navigation failures retry once in the current browser after a shorter delay. All retries stay within the operation's total timeout budget. The library is silent by default.
 
 ## Manual recipes
 

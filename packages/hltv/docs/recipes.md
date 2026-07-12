@@ -1,19 +1,19 @@
-# Recipes
+# 手动操作指南
 
-Copy-paste commands for manual, one-off HLTV collection. Commands in this document run from the repository root and write disposable results to `outputs/`, which is already ignored by Git.
+本文提供可直接复制执行的命令，用于单次手动采集 HLTV 数据。所有命令都从仓库根目录运行，并将临时结果写入 `outputs/`；该目录已被 Git 忽略。
 
-Build the local package once before running a recipe:
+运行示例前，先构建本地包并创建输出目录：
 
 ```bash
 pnpm --filter @ekmanss/hltv build
 mkdir -p outputs
 ```
 
-In another project, install `@ekmanss/hltv` and replace `./packages/hltv/dist/index.js` in the examples with `@ekmanss/hltv`.
+如果是在其他项目中使用，请先安装 `@ekmanss/hltv`，并将示例中的 `./packages/hltv/dist/index.js` 替换为 `@ekmanss/hltv`。
 
-## Capture the live-match list
+## 获取进行中的比赛列表
 
-Save the complete result, including diagnostics:
+保存完整返回结果，包括业务数据 `data` 和诊断信息 `diagnostics`：
 
 ```bash
 node --input-type=module -e "
@@ -24,7 +24,7 @@ process.stdout.write(JSON.stringify(result, null, 2) + '\n');
 " > outputs/live-matches.json
 ```
 
-Inspect a compact view with `jq`:
+使用 `jq` 查看精简结果：
 
 ```bash
 jq '.data.matches[] | {
@@ -36,9 +36,9 @@ jq '.data.matches[] | {
 }' outputs/live-matches.json
 ```
 
-`matches: []` is a successful result when HLTV has no live matches.
+当 HLTV 当前没有正在进行的比赛时，返回 `matches: []` 属于正常结果，不代表采集失败。
 
-## Capture one match by URL
+## 根据 URL 获取单场比赛详情
 
 ```bash
 MATCH_URL='https://www.hltv.org/matches/<id>/<slug>' \
@@ -50,11 +50,11 @@ process.stdout.write(JSON.stringify(result, null, 2) + '\n');
 " > outputs/match-detail.json
 ```
 
-The URL must be the canonical `https://www.hltv.org/matches/<id>/<slug>` URL.
+`MATCH_URL` 必须是规范的 `https://www.hltv.org/matches/<id>/<slug>` 地址。
 
-## Discover and capture the first live match
+## 自动获取第一场进行中比赛的详情
 
-This writes the list first and exits successfully without a detail file when no match is live.
+以下命令会先保存进行中比赛列表。如果当前没有比赛，命令会正常退出，并且不会创建详情文件。
 
 ```bash
 node --input-type=module <<'EOF'
@@ -71,19 +71,19 @@ await writeFile('outputs/live-matches.json', JSON.stringify(live, null, 2) + '\n
 
 const first = live.data.matches[0];
 if (!first) {
-  console.log('No live matches.');
+  console.log('当前没有正在进行的比赛。');
   process.exit(0);
 }
 
 const detail = await getHltvMatch(first.url);
 await writeFile('outputs/match-detail.json', JSON.stringify(detail, null, 2) + '\n');
-console.log(`Saved match ${first.id}.`);
+console.log(`已保存比赛 ${first.id}。`);
 EOF
 ```
 
-## Capture every live match detail
+## 获取全部进行中比赛的详情
 
-Reuse one browser and keep requests serial. The client enforces the configured interval between operations.
+需要连续采集多场比赛时，应复用同一个浏览器实例并保持串行请求。客户端会按照配置的间隔启动各项操作。
 
 ```bash
 node --input-type=module <<'EOF'
@@ -107,7 +107,7 @@ try {
       `outputs/match-${match.id}.json`,
       JSON.stringify(detail, null, 2) + '\n',
     );
-    console.log(`Saved match ${match.id}.`);
+    console.log(`已保存比赛 ${match.id}。`);
   }
 } finally {
   await client.close();
@@ -115,9 +115,9 @@ try {
 EOF
 ```
 
-## Keep JSON output clean while showing progress
+## 显示进度并保持 JSON 文件纯净
 
-Progress belongs on standard error, so redirecting standard output still produces valid JSON:
+进度信息应写入标准错误（stderr）。这样即使把标准输出（stdout）重定向到文件，生成的内容仍然是有效 JSON：
 
 ```js
 const onProgress = (event) => {
@@ -127,19 +127,19 @@ const onProgress = (event) => {
 const result = await getHltvLiveMatches({ onProgress });
 ```
 
-## Save only business data
+## 只保存业务数据
 
-Every operation returns `{ data, diagnostics }`. Use `result.data` instead of `result` when diagnostics are not needed:
+每项操作都返回 `{ data, diagnostics }`。如果不需要诊断信息，请保存 `result.data`，而不是完整的 `result`：
 
 ```js
 JSON.stringify(result.data, null, 2)
 ```
 
-Keep diagnostics while developing or investigating missing fields. A live score may be `null` when HLTV displays `-`; warnings explain other partial fields.
+开发或排查字段缺失时，建议保留 `diagnostics`。当 HLTV 页面显示 `-` 时，进行中比分可能合理地返回 `null`；其他不完整字段会通过 `warnings` 说明。
 
-## Timeouts and proxy
+## 设置超时和代理
 
-One-shot functions accept browser and request options together:
+一次性函数可以同时接收浏览器选项和请求选项：
 
 ```js
 const result = await getHltvLiveMatches({
@@ -153,9 +153,9 @@ const result = await getHltvLiveMatches({
 });
 ```
 
-Match-detail requests normally need a larger timeout such as `180_000`. Proxy credentials are never included in returned data, diagnostics, errors, or progress events.
+比赛详情通常需要更大的超时时间，例如 `180_000` 毫秒。代理凭据不会出现在返回数据、诊断信息、错误或进度事件中。
 
-## Fail visibly in shell scripts
+## 让 Shell 脚本正确感知失败
 
 ```js
 try {
@@ -167,4 +167,4 @@ try {
 }
 ```
 
-Operational failures are `HltvError` instances with stable `code`, `operation`, `stage`, and `retryable` fields.
+运行失败时会抛出 `HltvError`，其中包含稳定的 `code`、`operation`、`stage` 和 `retryable` 字段，可用于日志记录、重试判断和自动化处理。

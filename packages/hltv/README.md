@@ -126,6 +126,10 @@ INTERNAL_ERROR
 
 HTTP 429, HTTP 5xx, and transient navigation failures retry once within the operation's total timeout budget. The library is silent by default.
 
+## Manual recipes
+
+See [docs/recipes.md](docs/recipes.md) for copy-paste commands that save live lists and match details to files, discover and capture live matches, reuse one browser, show progress, and configure timeouts or a proxy.
+
 ## Data contracts
 
 See [docs/data-contracts.md](docs/data-contracts.md) for the Match Detail `3.0.0` and Live Matches `1.0.0` schemas and consistency rules.

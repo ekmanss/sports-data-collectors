@@ -1,49 +1,63 @@
-export type HltvMatchErrorCode =
+/// <reference lib="esnext.disposable" />
+
+export type HltvErrorCode =
   | 'INVALID_INPUT'
-  | 'BROWSER_NOT_INSTALLED'
+  | 'BROWSER_LAUNCH_FAILED'
   | 'NAVIGATION_FAILED'
+  | 'TIMEOUT'
   | 'ACCESS_BLOCKED'
   | 'MATCH_NOT_FOUND'
   | 'INCOMPLETE_CAPTURE'
   | 'ABORTED'
+  | 'CLIENT_CLOSED'
   | 'INTERNAL_ERROR';
+
+export type HltvOperation = 'client' | 'live-list' | 'match-detail';
 
 export type CaptureStage =
   | 'validating-input'
   | 'launching-browser'
+  | 'queued'
+  | 'throttling'
   | 'navigating'
   | 'validating-source'
   | 'extracting-page'
   | 'extracting-scorebot'
+  | 'stabilizing'
   | 'building-output'
   | 'validating-output'
   | 'completed';
 
-export interface HltvMatchProgressEvent {
+export interface HltvProgressEvent {
+  operation: HltvOperation;
   stage: CaptureStage;
   attempt: number;
   message: string;
   timestamp: string;
 }
 
-export interface GetHltvMatchOptions {
-  headless?: boolean;
-  pageWaitMs?: number;
-  scorebotWaitMs?: number;
-  signal?: AbortSignal;
-  onProgress?: (event: HltvMatchProgressEvent) => void;
+export interface HltvProxyOptions {
+  server: string;
+  username?: string;
+  password?: string;
 }
 
-export interface NormalizedGetHltvMatchOptions {
-  id: number;
-  slug: string;
-  url: string;
-  headless: boolean;
-  pageWaitMs: number;
-  scorebotWaitMs: number;
-  signal?: AbortSignal;
-  onProgress?: (event: HltvMatchProgressEvent) => void;
+export interface HltvClientOptions {
+  headless?: boolean;
+  proxy?: HltvProxyOptions;
+  timezone?: string;
+  maxConcurrency?: number;
+  minRequestIntervalMs?: number;
 }
+
+export interface HltvRequestOptions {
+  timeoutMs?: number;
+  signal?: AbortSignal;
+  onProgress?: (event: HltvProgressEvent) => void;
+}
+
+export type GetHltvMatchOptions = HltvClientOptions & HltvRequestOptions;
+export type GetHltvLiveMatchesOptions = HltvClientOptions & HltvRequestOptions;
 
 export interface HltvEvent {
   id: number | null;
@@ -221,10 +235,10 @@ export interface HeadToHead {
 }
 
 export interface HltvMatch {
-  schemaVersion: '2.1.0';
-  generatedAt: string;
-  source: string;
-  collector: { language: 'TypeScript'; cloakbrowser: string; playwright: string };
+  schemaVersion: '3.0.0';
+  capturedAt: string;
+  sport: 'cs2';
+  source: { provider: 'hltv'; url: string };
   match: {
     id: number;
     slug: string;
@@ -269,8 +283,12 @@ export interface MapCheck {
 }
 
 export interface MatchDiagnostics {
-  schemaVersion: '2.0.0';
-  generatedAt: string;
+  schemaVersion: '3.0.0';
+  operation: 'match-detail';
+  startedAt: string;
+  completedAt: string;
+  durationMs: number;
+  collector: CollectorVersions;
   input: { id: number; slug: string; url: string };
   attempts: Array<{
     attempt: number;
@@ -289,6 +307,87 @@ export interface MatchDiagnostics {
 export interface GetHltvMatchResult {
   data: HltvMatch;
   diagnostics: MatchDiagnostics;
+}
+
+export interface CollectorVersions {
+  packageVersion: string;
+  cloakbrowserVersion: string;
+  playwrightVersion: string;
+}
+
+export interface HltvLiveTeam {
+  id: number | null;
+  name: string;
+  logoUrl: string | null;
+  score: {
+    currentMap: number | null;
+    mapsWon: number | null;
+  };
+}
+
+export interface HltvLiveMatch {
+  id: number;
+  url: string;
+  status: 'live';
+  bestOf: number | null;
+  region: string | null;
+  isLan: boolean | null;
+  event: {
+    id: number | null;
+    name: string | null;
+    type: string | null;
+    logoUrl: string | null;
+  };
+  teams: [HltvLiveTeam, HltvLiveTeam];
+}
+
+export interface HltvLiveMatchesData {
+  schemaVersion: '1.0.0';
+  capturedAt: string;
+  sport: 'cs2';
+  source: { provider: 'hltv'; url: 'https://www.hltv.org/matches' };
+  matches: HltvLiveMatch[];
+}
+
+export interface HltvLiveWarning {
+  code: string;
+  matchId?: number;
+  field?: string;
+  reason: string;
+}
+
+export interface HltvLiveMatchesDiagnostics {
+  schemaVersion: '1.0.0';
+  operation: 'live-list';
+  startedAt: string;
+  completedAt: string;
+  durationMs: number;
+  collector: CollectorVersions;
+  attempts: Array<{
+    attempt: number;
+    startedAt: string;
+    completedAt: string;
+    httpStatus: number | null;
+    error?: { code: HltvErrorCode; message: string };
+  }>;
+  summary: {
+    cardsSeen: number;
+    matchesReturned: number;
+    cardsSkipped: number;
+    duplicatesMerged: number;
+  };
+  warnings: HltvLiveWarning[];
+}
+
+export interface GetHltvLiveMatchesResult {
+  data: HltvLiveMatchesData;
+  diagnostics: HltvLiveMatchesDiagnostics;
+}
+
+export interface HltvClient extends AsyncDisposable {
+  getLiveMatches(options?: HltvRequestOptions): Promise<GetHltvLiveMatchesResult>;
+  getMatch(matchUrl: string, options?: HltvRequestOptions): Promise<GetHltvMatchResult>;
+  close(): Promise<void>;
 }
 
 export interface RawImageInfo {
@@ -386,11 +485,43 @@ export interface RawSnapshot {
 export interface CaptureAttempt {
   initialPage: RawExtractedPage;
   snapshot: RawSnapshot;
-  collector: { cloakbrowser: string; playwright: string };
+  collector: CollectorVersions;
   httpStatus: number | null;
   navigationSeconds: number;
   totalSeconds: number;
   attempt: number;
   startedAt: string;
   completedAt: string;
+}
+
+export interface RawLiveTeam {
+  id: number | null;
+  name: string;
+  logoUrl: string | null;
+  currentMap: number | null;
+  mapsWon: number | null;
+}
+
+export interface RawLiveCard {
+  id: number | null;
+  url: string | null;
+  bestOf: number | null;
+  region: string | null;
+  isLan: boolean | null;
+  event: {
+    id: number | null;
+    name: string | null;
+    type: string | null;
+    logoUrl: string | null;
+  };
+  teams: RawLiveTeam[];
+}
+
+export interface RawLivePage {
+  title: string;
+  url: string;
+  recognized: boolean;
+  challenge: boolean;
+  cardsSeen: number;
+  cards: RawLiveCard[];
 }

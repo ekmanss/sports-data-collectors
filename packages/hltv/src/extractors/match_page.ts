@@ -1,4 +1,6 @@
-() => {
+// Page-context code is intentionally self-contained and serialized with toString().
+// @ts-nocheck
+export function extractHltvMatchPage() {
   const clean = (value) => (value || '').replace(/\s+/g, ' ').trim();
   const text = (root, selector) => clean(root?.querySelector(selector)?.textContent);
   const absolute = (href) => href ? new URL(href, location.origin).href : null;

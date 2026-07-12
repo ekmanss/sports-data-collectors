@@ -1,10 +1,10 @@
 import { matchIdentityFromUrl } from '../config.js';
-import { HltvMatchError } from '../errors.js';
+import { HltvError } from '../errors.js';
 import type { HltvMatch, MatchDiagnostics, RawExtractedPage } from '../types.js';
 
 function fail(message: string, details?: Record<string, unknown>): never {
-  throw new HltvMatchError(message, {
-    code: 'INCOMPLETE_CAPTURE', stage: 'validating-output', retryable: false, details,
+  throw new HltvError(message, {
+    code: 'INCOMPLETE_CAPTURE', operation: 'match-detail', stage: 'validating-output', retryable: false, details,
   });
 }
 
@@ -14,14 +14,14 @@ export function validateMatch(
   raw: Pick<RawExtractedPage, 'sections'>,
   requestedId: number,
 ): void {
-  const identity = matchIdentityFromUrl(match.source);
-  if (match.schemaVersion !== '2.1.0') fail('unexpected consumer schema version');
+  const identity = matchIdentityFromUrl(match.source.url);
+  if (match.schemaVersion !== '3.0.0') fail('unexpected consumer schema version');
   if (!identity || match.match.id !== requestedId || identity.id !== requestedId || match.match.slug !== identity.slug) {
     fail('match identity is inconsistent with the request', {
       requestedId,
       outputId: match.match.id,
       outputSlug: match.match.slug,
-      source: match.source,
+      source: match.source.url,
     });
   }
   if (!raw.sections.matchPage || !raw.sections.maps) fail('required HLTV match sections were not present');

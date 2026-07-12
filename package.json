@@ -1,30 +1,16 @@
 {
-  "name": "hltv-match-data",
-  "version": "1.0.0",
+  "name": "sports-data-collectors",
+  "version": "0.0.0",
   "private": true,
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    }
-  },
   "packageManager": "pnpm@11.11.0",
-  "engines": {
-    "node": ">=22"
-  },
   "scripts": {
-    "check": "tsc --noEmit",
-    "build": "tsc -p tsconfig.build.json",
-    "test": "tsx --test tests/match.test.ts",
-    "test:live": "tsx tests/live.ts",
-    "verify": "pnpm check && pnpm test"
-  },
-  "dependencies": {
-    "cloakbrowser": "0.4.10",
-    "playwright-core": "1.61.0"
+    "check": "tsc --noEmit -p tsconfig.json && pnpm --filter @ekmanss/hltv check",
+    "test": "pnpm --filter @ekmanss/hltv test",
+    "test:live": "pnpm --filter @ekmanss/hltv test:live",
+    "build": "pnpm --filter @ekmanss/hltv build",
+    "verify": "pnpm check && pnpm test && pnpm build",
+    "release": "tsx scripts/release.ts"
   },
   "devDependencies": {
     "@types/node": "24.13.3",

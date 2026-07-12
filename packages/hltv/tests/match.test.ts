@@ -3,22 +3,26 @@ import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import test from 'node:test';
 import { matchIdentityFromUrl } from '../src/config.js';
-import { HltvMatchError } from '../src/errors.js';
+import { HltvError } from '../src/errors.js';
 import { validateMatch } from '../src/transform/validate_match.js';
 import type { HltvMatch, MatchDiagnostics, MatchMap } from '../src/types.js';
 
 const fixturePath = resolve(
   import.meta.dirname,
-  '../examples/2395674_voca-vs-regain-circuit-x-blast-open-porto-2026-north-america-rising-event/match.json',
+  'fixtures/completed-match.json',
 );
 const completedFixture = JSON.parse(await readFile(fixturePath, 'utf8')) as HltvMatch;
 const rawSections = { sections: { matchPage: true, maps: true } };
 
 function diagnosticsFor(match: HltvMatch): MatchDiagnostics {
   return {
-    schemaVersion: '2.0.0',
-    generatedAt: match.generatedAt,
-    input: { id: match.match.id, slug: match.match.slug, url: match.source },
+    schemaVersion: '3.0.0',
+    operation: 'match-detail',
+    startedAt: match.capturedAt,
+    completedAt: match.capturedAt,
+    durationMs: 0,
+    collector: { packageVersion: '0.0.0', cloakbrowserVersion: '0.4.10', playwrightVersion: '1.61.0' },
+    input: { id: match.match.id, slug: match.match.slug, url: match.source.url },
     attempts: [],
     capture: {},
     reconciliation: {},
@@ -44,11 +48,11 @@ function cloneFixture(): HltvMatch {
 
 test('parses and canonicalizes a complete HLTV match URL', () => {
   assert.deepEqual(
-    matchIdentityFromUrl(`${completedFixture.source}/?ref=test#scorebot`),
+    matchIdentityFromUrl(`${completedFixture.source.url}/?ref=test#scorebot`),
     {
       id: completedFixture.match.id,
       slug: completedFixture.match.slug,
-      url: completedFixture.source,
+      url: completedFixture.source.url,
     },
   );
   assert.equal(matchIdentityFromUrl('https://example.com/matches/2395674/not-hltv'), null);
@@ -92,7 +96,7 @@ test('accepts a live map with completed rounds and a current snapshot', () => {
   }))];
   match.match.status = 'LIVE';
   match.current = {
-    capturedAt: match.generatedAt,
+    capturedAt: match.capturedAt,
     map: liveMap.name,
     round: liveMap.gameLog.rounds.length + 1,
     score: liveMap.score,
@@ -106,6 +110,6 @@ test('rejects score and Game log disagreement', () => {
   match.maps[0]!.score[0]!.score += 1;
   assert.throws(
     () => validateMatch(match, diagnosticsFor(match), rawSections, match.match.id),
-    (error: unknown) => error instanceof HltvMatchError && error.code === 'INCOMPLETE_CAPTURE',
+    (error: unknown) => error instanceof HltvError && error.code === 'INCOMPLETE_CAPTURE',
   );
 });

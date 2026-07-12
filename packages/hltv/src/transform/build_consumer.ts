@@ -615,10 +615,10 @@ export function buildConsumerFromCapture(
 
   const currentRoundMatch = stateSnapshot.scoreboardNormal?.round.match(/^(\d+)/);
   const consumer: HltvMatch = {
-    schemaVersion: '2.1.0',
-    generatedAt: new Date().toISOString(),
-    source: identity.url,
-    collector: { language: 'TypeScript', ...capture.collector },
+    schemaVersion: '3.0.0',
+    capturedAt: snapshot.capturedAt,
+    sport: 'cs2',
+    source: { provider: 'hltv', url: identity.url },
     match: {
       id: requireId(staticData.match.id, 'match'),
       slug: identity.slug,
@@ -663,12 +663,16 @@ export function buildConsumerFromCapture(
     }];
   }));
   const diagnostics: MatchDiagnostics = {
-    schemaVersion: '2.0.0',
-    generatedAt: consumer.generatedAt,
-    input: { id: consumer.match.id, slug: consumer.match.slug, url: consumer.source },
+    schemaVersion: '3.0.0',
+    operation: 'match-detail',
+    startedAt: attempts[0]?.startedAt ?? capture.startedAt,
+    completedAt: attempts.at(-1)?.completedAt ?? capture.completedAt,
+    durationMs: Math.max(0, Date.parse(attempts.at(-1)?.completedAt ?? capture.completedAt)
+      - Date.parse(attempts[0]?.startedAt ?? capture.startedAt)),
+    collector: capture.collector,
+    input: { id: consumer.match.id, slug: consumer.match.slug, url: consumer.source.url },
     attempts,
     capture: {
-      collector: capture.collector,
       httpStatus: capture.httpStatus,
       navigationSeconds: capture.navigationSeconds,
       totalSeconds: capture.totalSeconds,

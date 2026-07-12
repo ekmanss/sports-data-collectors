@@ -1,0 +1,43 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - '@ekmanss/hltv@*'
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+      - run: corepack enable
+      - run: npm install --global npm@11.18.0
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm verify
+      - name: Verify tag
+        shell: bash
+        run: |
+          version="$(node -p "require('./packages/hltv/package.json').version")"
+          test "${GITHUB_REF_NAME}" = "@ekmanss/hltv@${version}"
+      - name: Check registry
+        id: registry
+        shell: bash
+        run: |
+          version="$(node -p "require('./packages/hltv/package.json').version")"
+          if npm view "@ekmanss/hltv@${version}" version >/dev/null 2>&1; then
+            echo "published=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "published=false" >> "${GITHUB_OUTPUT}"
+          fi
+      - name: Publish package
+        if: steps.registry.outputs.published != 'true'
+        working-directory: packages/hltv
+        run: npm publish --access public

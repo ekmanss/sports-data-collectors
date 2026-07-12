@@ -1,19 +1,29 @@
-import { readFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
-import { launch } from 'cloakbrowser';
-import type { Page } from 'playwright-core';
-import { emitProgress, matchIdentityFromUrl, throwIfAborted } from '../config.js';
-import { HltvMatchError, asHltvMatchError } from '../errors.js';
+import type { Browser, Page } from 'playwright-core';
+import { matchIdentityFromUrl, type MatchIdentity } from '../config.js';
+import { HltvError, asHltvError } from '../errors.js';
+import { extractHltvMatchPage } from '../extractors/match_page.js';
+import { collectorVersions } from '../metadata.js';
+import {
+  abortableDelay,
+  emitProgress,
+  navigationTimeout,
+  remainingMs,
+  throwIfStopped,
+  type OperationContext,
+} from '../runtime.js';
 import type {
   CaptureAttempt,
-  NormalizedGetHltvMatchOptions,
   RawExtractedPage,
   RawLogEvent,
   RawScoreboard,
   RawSnapshot,
 } from '../types.js';
 
-const ROOT = resolve(import.meta.dirname, '../..');
+export interface MatchCaptureOptions extends MatchIdentity {
+  context: OperationContext;
+  pageSettleMs: number;
+  scorebotSettleMs: number;
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -21,51 +31,30 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function assertExtractedPage(value: unknown): asserts value is RawExtractedPage {
   if (!isRecord(value) || !isRecord(value.match) || !Array.isArray(value.teams) || !isRecord(value.maps) || !Array.isArray(value.lineups)) {
-    throw new HltvMatchError('HLTV page returned an unrecognized match payload', {
-      code: 'INCOMPLETE_CAPTURE', stage: 'extracting-page', retryable: false,
+    throw new HltvError('HLTV page returned an unrecognized match payload', {
+      code: 'INCOMPLETE_CAPTURE', operation: 'match-detail', stage: 'extracting-page', retryable: false,
     });
   }
   if (typeof value.url !== 'string' || typeof value.title !== 'string' || !isRecord(value.sections)) {
-    throw new HltvMatchError('HLTV page metadata is incomplete', {
-      code: 'INCOMPLETE_CAPTURE', stage: 'extracting-page', retryable: false,
+    throw new HltvError('HLTV page metadata is incomplete', {
+      code: 'INCOMPLETE_CAPTURE', operation: 'match-detail', stage: 'extracting-page', retryable: false,
     });
   }
 }
 
-function validateFinalUrl(finalUrl: string, options: NormalizedGetHltvMatchOptions): void {
+function validateFinalUrl(finalUrl: string, options: MatchCaptureOptions): void {
   const identity = matchIdentityFromUrl(finalUrl);
   if (!identity || identity.id !== options.id) {
-    throw new HltvMatchError('HLTV returned a different or invalid match URL', {
+    throw new HltvError('HLTV returned a different or invalid match URL', {
       code: 'INCOMPLETE_CAPTURE', stage: 'validating-source', retryable: false,
-      matchId: String(options.id), details: { finalUrl },
+      operation: 'match-detail', matchId: options.id, details: { finalUrl },
     });
   }
 }
 
-async function abortableDelay(milliseconds: number, options: NormalizedGetHltvMatchOptions, stage: 'extracting-page' | 'extracting-scorebot'): Promise<void> {
-  throwIfAborted(options, stage);
-  if (milliseconds === 0) return;
-  await new Promise<void>((resolveDelay, reject) => {
-    const timer = setTimeout(done, milliseconds);
-    const signal = options.signal;
-    function done(): void {
-      signal?.removeEventListener('abort', aborted);
-      resolveDelay();
-    }
-    function aborted(): void {
-      clearTimeout(timer);
-      signal?.removeEventListener('abort', aborted);
-      reject(new HltvMatchError('capture was aborted', {
-        code: 'ABORTED', stage, retryable: false, matchId: String(options.id),
-      }));
-    }
-    signal?.addEventListener('abort', aborted, { once: true });
-  });
-}
-
-async function evaluatePage(page: Page, extractor: string): Promise<RawExtractedPage> {
+async function evaluatePage(page: Page): Promise<RawExtractedPage> {
   await page.evaluate('globalThis.__name = (target) => target');
-  const extracted: unknown = await page.evaluate(`(${extractor})()`);
+  const extracted: unknown = await page.evaluate(`(${extractHltvMatchPage.toString()})()`);
   assertExtractedPage(extracted);
   return extracted;
 }
@@ -177,11 +166,11 @@ function formalGameLog(events: RawLogEvent[]): RawLogEvent[] {
   return formal;
 }
 
-function fallbackConfig(options: NormalizedGetHltvMatchOptions, page: RawExtractedPage): Record<string, string> {
+function fallbackConfig(options: MatchCaptureOptions, page: RawExtractedPage): Record<string, string> {
   const [first, second] = page.teams;
   if (!first?.id || !second?.id) {
-    throw new HltvMatchError('cannot restore Scorebot without two identified teams', {
-      code: 'INCOMPLETE_CAPTURE', stage: 'extracting-scorebot', retryable: false,
+    throw new HltvError('cannot restore Scorebot without two identified teams', {
+      code: 'INCOMPLETE_CAPTURE', operation: 'match-detail', stage: 'extracting-scorebot', retryable: false,
     });
   }
   return {
@@ -204,8 +193,8 @@ async function installScorebotFallback(page: Page, config: Record<string, string
   `);
 }
 
-async function collectSnapshot(page: Page, httpStatus: number | null, extractor: string): Promise<RawSnapshot> {
-  const pageData = await evaluatePage(page, extractor);
+async function collectSnapshot(page: Page, httpStatus: number | null): Promise<RawSnapshot> {
+  const pageData = await evaluatePage(page);
   const normal = await extractScoreboard(page);
   let advanced: RawScoreboard | null = null;
   if (await switchScoreboard(page, 'Advanced')) {
@@ -228,98 +217,106 @@ async function collectSnapshot(page: Page, httpStatus: number | null, extractor:
 
 function classifyHttp(status: number | null): void {
   if (status === 404) {
-    throw new HltvMatchError('HLTV match page was not found', { code: 'MATCH_NOT_FOUND', stage: 'navigating', retryable: false });
+    throw new HltvError('HLTV match page was not found', { code: 'MATCH_NOT_FOUND', operation: 'match-detail', stage: 'navigating', retryable: false });
   }
   if (status === 403) {
-    throw new HltvMatchError('HLTV denied access to the match page', { code: 'ACCESS_BLOCKED', stage: 'navigating', retryable: false });
+    throw new HltvError('HLTV denied access to the match page', { code: 'ACCESS_BLOCKED', operation: 'match-detail', stage: 'navigating', retryable: false });
   }
   if (status === 429 || (status !== null && status >= 500)) {
-    throw new HltvMatchError(`HLTV returned HTTP ${status}`, { code: 'NAVIGATION_FAILED', stage: 'navigating', retryable: true, details: { httpStatus: status } });
+    throw new HltvError(`HLTV returned HTTP ${status}`, { code: 'NAVIGATION_FAILED', operation: 'match-detail', stage: 'navigating', retryable: true, details: { httpStatus: status } });
   }
 }
 
-export async function captureMatch(options: NormalizedGetHltvMatchOptions, attempt: number): Promise<CaptureAttempt> {
+export async function captureMatch(
+  browser: Browser,
+  options: MatchCaptureOptions,
+  attempt: number,
+): Promise<CaptureAttempt> {
   const startedAt = new Date().toISOString();
   const started = performance.now();
-  const extractor = await readFile(resolve(ROOT, 'shared/hltv_dom_extract.js'), 'utf8');
-  const cloakPackage = JSON.parse(await readFile(resolve(ROOT, 'node_modules/cloakbrowser/package.json'), 'utf8')) as { version: string };
-  const playwrightPackage = JSON.parse(await readFile(resolve(ROOT, 'node_modules/playwright-core/package.json'), 'utf8')) as { version: string };
-  emitProgress(options, { stage: 'launching-browser', attempt, message: 'Launching CloakBrowser' });
-  let browser: Awaited<ReturnType<typeof launch>> | null = null;
+  const versions = await collectorVersions();
+  let page: Page | null = null;
+  const stopPage = (): void => { void page?.close().catch(() => undefined); };
   try {
-    throwIfAborted(options, 'launching-browser');
-    try {
-      browser = await launch({ headless: options.headless, locale: 'en-US', timezone: 'Asia/Singapore' });
-    } catch (cause) {
-      const message = cause instanceof Error ? cause.message : String(cause);
-      const missing = /install|binary|executable|browser/i.test(message);
-      throw new HltvMatchError(missing ? 'CloakBrowser is not installed; run: pnpm exec cloakbrowser install' : message, {
-        code: missing ? 'BROWSER_NOT_INSTALLED' : 'NAVIGATION_FAILED', stage: 'launching-browser', retryable: !missing, cause,
-      });
-    }
-    const page = await browser.newPage();
-    emitProgress(options, { stage: 'navigating', attempt, message: `Opening ${options.url}` });
+    throwIfStopped(options.context, 'navigating', options.id);
+    page = await browser.newPage();
+    options.context.signal.addEventListener('abort', stopPage, { once: true });
+    emitProgress(options.context, { stage: 'navigating', attempt, message: `Opening ${options.url}` });
     const navigationStarted = performance.now();
     let response;
     try {
-      response = await page.goto(options.url, { waitUntil: 'domcontentloaded', timeout: 90_000 });
+      response = await page.goto(options.url, {
+        waitUntil: 'domcontentloaded',
+        timeout: navigationTimeout(options.context),
+      });
     } catch (cause) {
-      throw new HltvMatchError('failed to navigate to the HLTV match page', {
-        code: 'NAVIGATION_FAILED', stage: 'navigating', retryable: true, cause,
+      throwIfStopped(options.context, 'navigating', options.id);
+      throw new HltvError('failed to navigate to the HLTV match page', {
+        code: 'NAVIGATION_FAILED', operation: 'match-detail', stage: 'navigating', retryable: true,
+        matchId: options.id, cause,
       });
     }
     classifyHttp(response?.status() ?? null);
     validateFinalUrl(page.url(), options);
-    emitProgress(options, { stage: 'extracting-page', attempt, message: 'Waiting for and extracting match sections' });
-    await abortableDelay(options.pageWaitMs, options, 'extracting-page');
-    const initialPage = await evaluatePage(page, extractor);
+    emitProgress(options.context, { stage: 'extracting-page', attempt, message: 'Waiting for and extracting match sections' });
+    await abortableDelay(options.pageSettleMs, options.context, 'extracting-page', options.id);
+    const initialPage = await evaluatePage(page);
     validateFinalUrl(initialPage.url, options);
     if (initialPage.match.id !== options.id) {
-      throw new HltvMatchError('the loaded page contains a different match ID', {
-        code: 'INCOMPLETE_CAPTURE', stage: 'validating-source', retryable: false,
+      throw new HltvError('the loaded page contains a different match ID', {
+        code: 'INCOMPLETE_CAPTURE', operation: 'match-detail', stage: 'validating-source', retryable: false,
+        matchId: options.id,
         details: { expectedId: options.id, pageId: initialPage.match.id },
       });
     }
     if (initialPage.sections.cloudflareChallenge) {
-      throw new HltvMatchError('HLTV returned an access challenge', { code: 'ACCESS_BLOCKED', stage: 'navigating', retryable: false });
+      throw new HltvError('HLTV returned an access challenge', {
+        code: 'ACCESS_BLOCKED', operation: 'match-detail', stage: 'navigating', retryable: false, matchId: options.id,
+      });
     }
     if (!initialPage.sections.matchPage) {
-      throw new HltvMatchError('the HLTV match page root did not load', { code: 'NAVIGATION_FAILED', stage: 'extracting-page', retryable: true });
+      throw new HltvError('the HLTV match page root did not load', {
+        code: 'NAVIGATION_FAILED', operation: 'match-detail', stage: 'extracting-page', retryable: true, matchId: options.id,
+      });
     }
 
-    emitProgress(options, { stage: 'extracting-scorebot', attempt, message: 'Extracting Normal/Advanced scoreboard and Game log' });
+    emitProgress(options.context, { stage: 'extracting-scorebot', attempt, message: 'Extracting Normal/Advanced scoreboard and Game log' });
     let scorebotPresent = await page.locator('#scoreboardElement .scoreboard').count() > 0;
     if (!scorebotPresent) {
       await installScorebotFallback(page, fallbackConfig(options, initialPage));
-      response = await page.reload({ waitUntil: 'domcontentloaded', timeout: 90_000 });
+      response = await page.reload({ waitUntil: 'domcontentloaded', timeout: navigationTimeout(options.context) });
       classifyHttp(response?.status() ?? null);
       validateFinalUrl(page.url(), options);
     }
-    await abortableDelay(options.scorebotWaitMs, options, 'extracting-scorebot');
+    await abortableDelay(options.scorebotSettleMs, options.context, 'extracting-scorebot', options.id);
     if (!scorebotPresent) {
-      await page.waitForSelector('#scoreboardElement .scoreboard', { timeout: 10_000 }).catch(() => null);
+      await page.waitForSelector('#scoreboardElement .scoreboard', {
+        timeout: Math.max(1, Math.min(10_000, remainingMs(options.context))),
+      }).catch(() => null);
+      throwIfStopped(options.context, 'extracting-scorebot', options.id);
       scorebotPresent = await page.locator('#scoreboardElement .scoreboard').count() > 0;
     }
-    const snapshot = await collectSnapshot(page, response?.status() ?? null, extractor);
+    const snapshot = await collectSnapshot(page, response?.status() ?? null);
     validateFinalUrl(snapshot.page.url, options);
     if (snapshot.page.match.id !== options.id) {
-      throw new HltvMatchError('the final page snapshot contains a different match ID', {
-        code: 'INCOMPLETE_CAPTURE', stage: 'validating-source', retryable: false,
-        matchId: String(options.id), details: { pageId: snapshot.page.match.id },
+      throw new HltvError('the final page snapshot contains a different match ID', {
+        code: 'INCOMPLETE_CAPTURE', operation: 'match-detail', stage: 'validating-source', retryable: false,
+        matchId: options.id, details: { pageId: snapshot.page.match.id },
       });
     }
     const status = initialPage.match.status.toLowerCase();
     const requiresScorebot = status.includes('live') || status.includes('over');
     if (requiresScorebot && !scorebotPresent) {
-      throw new HltvMatchError('Scorebot data is required for this match state but was unavailable', {
-        code: 'INCOMPLETE_CAPTURE', stage: 'extracting-scorebot', retryable: false,
+      throw new HltvError('Scorebot data is required for this match state but was unavailable', {
+        code: 'INCOMPLETE_CAPTURE', operation: 'match-detail', stage: 'extracting-scorebot', retryable: false,
+        matchId: options.id,
       });
     }
     const completedAt = new Date().toISOString();
     return {
       initialPage,
       snapshot,
-      collector: { cloakbrowser: cloakPackage.version, playwright: playwrightPackage.version },
+      collector: versions,
       httpStatus: response?.status() ?? null,
       navigationSeconds: Number(((performance.now() - navigationStarted) / 1000).toFixed(3)),
       totalSeconds: Number(((performance.now() - started) / 1000).toFixed(3)),
@@ -328,10 +325,12 @@ export async function captureMatch(options: NormalizedGetHltvMatchOptions, attem
       completedAt,
     };
   } catch (error) {
-    throw asHltvMatchError(error, {
-      code: 'INTERNAL_ERROR', stage: 'extracting-page', retryable: false, matchId: String(options.id),
+    throwIfStopped(options.context, 'extracting-page', options.id);
+    throw asHltvError(error, {
+      code: 'INTERNAL_ERROR', operation: 'match-detail', stage: 'extracting-page', retryable: false, matchId: options.id,
     });
   } finally {
-    await browser?.close();
+    options.context.signal.removeEventListener('abort', stopPage);
+    await page?.close().catch(() => undefined);
   }
 }

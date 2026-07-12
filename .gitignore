@@ -5,3 +5,4 @@ artifacts/
 *.tmp
 .DS_Store
 .idea/
+/result.json

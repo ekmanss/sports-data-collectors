@@ -21,6 +21,7 @@ export interface LiveCaptureAttempt {
 }
 
 const LIVE_URL = 'https://www.hltv.org/matches';
+const LIVE_HYDRATION_TIMEOUT_MS = 25_000;
 
 function classifyHttp(status: number | null): void {
   if (status === 403) {
@@ -65,6 +66,11 @@ function signature(value: RawLivePage): string {
   })));
 }
 
+function hasHydratedLiveState(value: RawLivePage): boolean {
+  return value.cards.length > 0 && value.cards.every((card) =>
+    card.teams.length === 2 && card.teams.every((team) => team.mapsWon !== null));
+}
+
 async function stableSnapshot(
   page: Page,
   context: OperationContext,
@@ -73,7 +79,7 @@ async function stableSnapshot(
   emitProgress(context, { stage: 'stabilizing', attempt, message: 'Waiting for a stable live snapshot' });
   const started = Date.now();
   let previous: RawLivePage | null = null;
-  while (Date.now() - started < 5_000) {
+  while (Date.now() - started < LIVE_HYDRATION_TIMEOUT_MS) {
     throwIfStopped(context, 'stabilizing');
     const current = await extract(page);
     if (current.challenge) {
@@ -82,7 +88,9 @@ async function stableSnapshot(
       });
     }
     if (current.recognized && current.cards.length === 0) return { page: current, stable: true };
-    if (current.recognized && previous && signature(current) === signature(previous)) {
+    if (current.recognized && hasHydratedLiveState(current)
+      && previous && hasHydratedLiveState(previous)
+      && signature(current) === signature(previous)) {
       return { page: current, stable: true };
     }
     if (current.recognized) previous = current;

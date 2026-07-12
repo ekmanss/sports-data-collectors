@@ -6,6 +6,7 @@ const matchUrl = process.env.HLTV_MATCH_URL;
 if (!matchUrl) throw new Error('set HLTV_MATCH_URL to run the real-network smoke test');
 
 const client = await createHltvClient({
+  ...(process.env.HLTV_TIMEZONE ? { timezone: process.env.HLTV_TIMEZONE } : {}),
   ...(process.env.HLTV_PROXY_SERVER ? {
     proxy: {
       server: process.env.HLTV_PROXY_SERVER,

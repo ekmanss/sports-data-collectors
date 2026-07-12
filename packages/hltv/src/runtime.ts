@@ -1,10 +1,20 @@
 import { HltvError } from './errors.js';
 import type {
   CaptureStage,
+  HltvErrorCode,
   HltvOperation,
   HltvProgressEvent,
   HltvRequestOptions,
 } from './types.js';
+
+export function retryDelayMilliseconds(
+  code: HltvErrorCode,
+  random = Math.random(),
+): number {
+  const base = code === 'ACCESS_BLOCKED' ? 10_000 : 2_000;
+  const jitterRange = code === 'ACCESS_BLOCKED' ? 2_501 : 501;
+  return base + Math.floor(random * jitterRange);
+}
 
 export interface OperationContext {
   operation: Exclude<HltvOperation, 'client'>;

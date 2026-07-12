@@ -26,7 +26,8 @@ const LIVE_HYDRATION_TIMEOUT_MS = 25_000;
 function classifyHttp(status: number | null): void {
   if (status === 403) {
     throw new HltvError('HLTV denied access to the matches page', {
-      code: 'ACCESS_BLOCKED', operation: 'live-list', stage: 'navigating', retryable: false,
+      code: 'ACCESS_BLOCKED', operation: 'live-list', stage: 'navigating', retryable: true,
+      details: { httpStatus: status },
     });
   }
   if (status === 429 || (status !== null && status >= 500)) {
@@ -84,7 +85,7 @@ async function stableSnapshot(
     const current = await extract(page);
     if (current.challenge) {
       throw new HltvError('HLTV returned an access challenge', {
-        code: 'ACCESS_BLOCKED', operation: 'live-list', stage: 'navigating', retryable: false,
+        code: 'ACCESS_BLOCKED', operation: 'live-list', stage: 'navigating', retryable: true,
       });
     }
     if (current.recognized && current.cards.length === 0) return { page: current, stable: true };

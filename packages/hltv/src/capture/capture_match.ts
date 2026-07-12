@@ -220,7 +220,10 @@ function classifyHttp(status: number | null): void {
     throw new HltvError('HLTV match page was not found', { code: 'MATCH_NOT_FOUND', operation: 'match-detail', stage: 'navigating', retryable: false });
   }
   if (status === 403) {
-    throw new HltvError('HLTV denied access to the match page', { code: 'ACCESS_BLOCKED', operation: 'match-detail', stage: 'navigating', retryable: false });
+    throw new HltvError('HLTV denied access to the match page', {
+      code: 'ACCESS_BLOCKED', operation: 'match-detail', stage: 'navigating', retryable: true,
+      details: { httpStatus: status },
+    });
   }
   if (status === 429 || (status !== null && status >= 500)) {
     throw new HltvError(`HLTV returned HTTP ${status}`, { code: 'NAVIGATION_FAILED', operation: 'match-detail', stage: 'navigating', retryable: true, details: { httpStatus: status } });
@@ -271,7 +274,7 @@ export async function captureMatch(
     }
     if (initialPage.sections.cloudflareChallenge) {
       throw new HltvError('HLTV returned an access challenge', {
-        code: 'ACCESS_BLOCKED', operation: 'match-detail', stage: 'navigating', retryable: false, matchId: options.id,
+        code: 'ACCESS_BLOCKED', operation: 'match-detail', stage: 'navigating', retryable: true, matchId: options.id,
       });
     }
     if (!initialPage.sections.matchPage) {

@@ -2,8 +2,9 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import test from 'node:test';
-import { matchIdentityFromUrl } from '../src/config.js';
+import { matchIdentityFromUrl, normalizeClientOptions } from '../src/config.js';
 import { HltvError } from '../src/errors.js';
+import { retryDelayMilliseconds } from '../src/runtime.js';
 import { buildConsumerFromCapture } from '../src/transform/build_consumer.js';
 import { validateMatch } from '../src/transform/validate_match.js';
 import type {
@@ -60,6 +61,24 @@ test('parses and canonicalizes a complete HLTV match URL', () => {
   );
   assert.equal(matchIdentityFromUrl('https://example.com/matches/2395674/not-hltv'), null);
   assert.equal(matchIdentityFromUrl('https://www.hltv.org/matches/2395674'), null);
+});
+
+test('defaults browser timezone to the runtime timezone and accepts an explicit egress timezone', () => {
+  assert.equal(
+    normalizeClientOptions().timezone,
+    Intl.DateTimeFormat().resolvedOptions().timeZone,
+  );
+  assert.equal(
+    normalizeClientOptions({ timezone: 'America/Los_Angeles' }).timezone,
+    'America/Los_Angeles',
+  );
+});
+
+test('uses a longer bounded cooldown for an access challenge', () => {
+  assert.equal(retryDelayMilliseconds('ACCESS_BLOCKED', 0), 10_000);
+  assert.equal(retryDelayMilliseconds('ACCESS_BLOCKED', 0.999_999), 12_500);
+  assert.equal(retryDelayMilliseconds('NAVIGATION_FAILED', 0), 2_000);
+  assert.equal(retryDelayMilliseconds('NAVIGATION_FAILED', 0.999_999), 2_500);
 });
 
 test('accepts complete completed-match data', () => {

@@ -2,13 +2,23 @@ import type { Browser } from 'playwright-core';
 import { captureMatch, type MatchCaptureOptions } from './capture/capture_match.js';
 import { matchIdentityFromUrl } from './config.js';
 import { HltvError, asHltvError } from './errors.js';
-import { abortableDelay, emitProgress, throwIfStopped, type OperationContext } from './runtime.js';
+import {
+  abortableDelay,
+  emitProgress,
+  retryDelayMilliseconds,
+  throwIfStopped,
+  type OperationContext,
+} from './runtime.js';
 import { buildConsumerFromCapture } from './transform/build_consumer.js';
 import { validateMatch } from './transform/validate_match.js';
 import type { GetHltvMatchResult, MatchDiagnostics } from './types.js';
 
-async function retryDelay(context: OperationContext, matchId: number): Promise<void> {
-  await abortableDelay(2_000 + Math.floor(Math.random() * 501), context, 'navigating', matchId);
+async function retryDelay(
+  context: OperationContext,
+  matchId: number,
+  code: HltvError['code'],
+): Promise<void> {
+  await abortableDelay(retryDelayMilliseconds(code), context, 'navigating', matchId);
 }
 
 export async function getMatchWithBrowser(
@@ -64,8 +74,14 @@ export async function getMatchWithBrowser(
         error: { code: normalized.code, message: normalized.message },
       });
       if (!normalized.retryable || attempt === 2) throw normalized;
-      emitProgress(context, { stage: 'navigating', attempt, message: 'Transient failure; retrying once' });
-      await retryDelay(context, options.id);
+      emitProgress(context, {
+        stage: 'navigating',
+        attempt,
+        message: normalized.code === 'ACCESS_BLOCKED'
+          ? 'Access challenge; cooling down before one retry'
+          : 'Transient failure; retrying once',
+      });
+      await retryDelay(context, options.id, normalized.code);
     }
   }
   throw new HltvError('match capture produced no result', {

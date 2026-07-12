@@ -58,7 +58,7 @@ import { createHltvClient } from '@ekmanss/hltv';
 
 const client = await createHltvClient({
   headless: true,
-  timezone: 'UTC',
+  timezone: 'America/Los_Angeles',
   maxConcurrency: 1,
   minRequestIntervalMs: 5_000,
 });
@@ -89,7 +89,7 @@ interface HltvClientOptions {
     username?: string;
     password?: string;
   };
-  timezone?: string;                  // default: UTC
+  timezone?: string;                  // default: runtime system timezone
   maxConcurrency?: number;            // default: 1, maximum: 3
   minRequestIntervalMs?: number;      // default: 5000
 }
@@ -106,6 +106,8 @@ interface HltvRequestOptions {
 ```
 
 The one-shot functions accept both groups in one options object. Locale is fixed to `en-US`; returned timestamps use Unix milliseconds or UTC ISO strings. Proxy credentials never appear in data, diagnostics, errors, or logs.
+
+The browser timezone is part of its network fingerprint. The default follows the runtime system timezone. When a VPN, transparent proxy, or remote network changes the public egress location, pass the matching IANA timezone explicitly. For example, a US West Coast egress should use `America/Los_Angeles`. A timezone that disagrees with the public egress can increase the chance of an access challenge.
 
 ## Errors
 
@@ -124,7 +126,7 @@ CLIENT_CLOSED
 INTERNAL_ERROR
 ```
 
-HTTP 429, HTTP 5xx, and transient navigation failures retry once within the operation's total timeout budget. The library is silent by default.
+HTTP 403 access challenges cool down for about 10–12.5 seconds before one retry. HTTP 429, HTTP 5xx, and transient navigation failures retry once after a shorter delay. All retries stay within the operation's total timeout budget. The library is silent by default.
 
 ## Manual recipes
 

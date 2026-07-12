@@ -75,7 +75,7 @@ function normalizeProxy(proxy: HltvProxyOptions | undefined): HltvProxyOptions |
 export function normalizeClientOptions(options: HltvClientOptions = {}): NormalizedClientOptions {
   if (!options || typeof options !== 'object') invalid('client options must be an object');
   if (options.headless !== undefined && typeof options.headless !== 'boolean') invalid('headless must be a boolean');
-  const timezone = options.timezone ?? 'UTC';
+  const timezone = options.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
   if (typeof timezone !== 'string' || !timezone.trim()) invalid('timezone must be a non-empty IANA timezone');
   try {
     new Intl.DateTimeFormat('en-US', { timeZone: timezone });

@@ -3,7 +3,13 @@ import { captureLiveMatches } from './capture/capture_live.js';
 import { matchIdentityFromUrl } from './config.js';
 import { HltvError, asHltvError } from './errors.js';
 import { collectorVersions } from './metadata.js';
-import { abortableDelay, emitProgress, throwIfStopped, type OperationContext } from './runtime.js';
+import {
+  abortableDelay,
+  emitProgress,
+  retryDelayMilliseconds,
+  throwIfStopped,
+  type OperationContext,
+} from './runtime.js';
 import type {
   GetHltvLiveMatchesResult,
   HltvLiveMatch,
@@ -217,8 +223,14 @@ export async function getLiveMatchesWithBrowser(
         error: { code: normalized.code, message: normalized.message },
       });
       if (!normalized.retryable || attempt === 2) throw normalized;
-      emitProgress(context, { stage: 'navigating', attempt, message: 'Transient failure; retrying once' });
-      await abortableDelay(2_000 + Math.floor(Math.random() * 501), context, 'navigating');
+      emitProgress(context, {
+        stage: 'navigating',
+        attempt,
+        message: normalized.code === 'ACCESS_BLOCKED'
+          ? 'Access challenge; cooling down before one retry'
+          : 'Transient failure; retrying once',
+      });
+      await abortableDelay(retryDelayMilliseconds(normalized.code), context, 'navigating');
     }
   }
   throw new HltvError('live-list capture produced no result', {

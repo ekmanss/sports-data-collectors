@@ -1,6 +1,6 @@
 {
   "name": "@ekmanss/hltv",
-  "version": "20260712.7.0",
+  "version": "20260713.0.0",
   "description": "Typed HLTV match-detail and live-match data collection with CloakBrowser.",
   "type": "module",
   "main": "./dist/index.js",

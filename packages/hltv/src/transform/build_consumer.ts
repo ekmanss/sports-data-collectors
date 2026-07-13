@@ -1,8 +1,8 @@
 import { matchIdentityFromUrl } from '../config.js';
 import type {
   CaptureAttempt, CombinedScoreboard, DiagnosticWarning, GameLogEvent, GameRound, HeadToHead, HltvMatch, HltvPlayer,
-  HltvTeam, MapStats, MatchDiagnostics, MatchMap, RawExtractedPage, RawLogEvent, RawMapCard,
-  RawScoreboard, RawSnapshot, RecentMatches, ScoreboardPlayer, VetoEntry,
+  HltvTeam, MapStats, MatchDiagnostics, MatchMap, MatchStats, RawExtractedPage, RawLogEvent, RawMapCard,
+  RawMatchStats, RawScoreboard, RawSnapshot, RecentMatches, ScoreboardPlayer, VetoEntry,
 } from '../types.js';
 
 type RawRound = {
@@ -25,6 +25,7 @@ function mergeLatestWithRich(latest: RawExtractedPage, rich: RawExtractedPage | 
     }
   };
   useRich('streams', !data.streams?.length && Boolean(rich.streams?.length));
+  useRich('matchStats', !data.matchStats && Boolean(rich.matchStats));
   useRich('mapStats', !data.mapStats && Boolean(rich.mapStats));
   useRich('recentMatches', !data.recentMatches?.length && Boolean(rich.recentMatches?.length));
   useRich('headToHead', !data.headToHead && Boolean(rich.headToHead));
@@ -73,6 +74,11 @@ function rateFrom(numericValue: unknown, displayPercent: unknown): number | null
   if (numeric !== null) return numeric;
   const percent = numberFrom(displayPercent);
   return percent === null ? null : percent / 100;
+}
+
+function integerFrom(value: unknown): number | null {
+  const parsed = numberFrom(value);
+  return parsed !== null && Number.isInteger(parsed) && parsed >= 0 ? parsed : null;
 }
 
 function idFromName<T extends { id: number; name: string }>(items: T[], name: string | null | undefined): number | null {
@@ -532,6 +538,43 @@ function normalizeMapStats(input: unknown): MapStats {
   };
 }
 
+function normalizeMatchStats(
+  input: RawMatchStats | null | undefined,
+  teams: HltvTeam[],
+  players: HltvPlayer[],
+): MatchStats {
+  if (!input) return { views: [] };
+  return {
+    views: input.views.map((view) => ({
+      mapStatsId: view.mapStatsId,
+      map: view.map,
+      side: view.side,
+      teams: view.teams.map((team) => ({
+        teamId: team.id ?? idFromName(teams, team.name),
+        name: team.name,
+        players: team.players.map((player) => ({
+          playerId: player.id ?? players.find((item) => item.nickname === player.nickname)?.id ?? null,
+          nickname: player.nickname,
+          traditional: {
+            kills: integerFrom(player.kills),
+            deaths: integerFrom(player.deaths),
+            adr: numberFrom(player.adr),
+            kastRate: rateFrom(null, player.kast),
+          },
+          ecoAdjusted: {
+            kills: integerFrom(player.ecoAdjustedKills),
+            deaths: integerFrom(player.ecoAdjustedDeaths),
+            adr: numberFrom(player.ecoAdjustedAdr),
+            kastRate: rateFrom(null, player.ecoAdjustedKast),
+          },
+          roundSwingRate: rateFrom(null, player.roundSwing),
+          rating: numberFrom(player.rating),
+        })),
+      })),
+    })),
+  };
+}
+
 function normalizeRecent(input: unknown[]): RecentMatches {
   const raw = input as RawRecentView[];
   if (!raw?.length) return { period: 'past 3 months', views: [] };
@@ -634,6 +677,29 @@ export function buildConsumerFromCapture(
       roundSwingRate: rateFrom(player.stats?.numericRoundSwing, player.stats?.roundSwing),
     },
   })));
+  for (const player of staticData.matchStats?.views.flatMap((view) =>
+    view.teams.flatMap((team) => team.players)) ?? []) {
+    if (player.id === null || players.some((item) => item.id === player.id)) continue;
+    players.push({
+      id: player.id,
+      nickname: player.nickname,
+      fullName: player.fullName ?? null,
+      country: player.country ?? null,
+      image: null,
+      bodyshotUrl: null,
+      profileUrl: player.profileUrl ?? null,
+      statsUrl: null,
+      metrics: {
+        rating: null,
+        killsPerRound: null,
+        deathsPerRound: null,
+        kastRate: null,
+        adr: null,
+        multiKillRating: null,
+        roundSwingRate: null,
+      },
+    });
+  }
   const lineups = staticData.lineups.map((lineup) => ({
     teamId: requireId(lineup.id, `lineup ${lineup.name}`),
     worldRank: lineup.worldRank,
@@ -712,7 +778,7 @@ export function buildConsumerFromCapture(
 
   const currentRoundMatch = stateSnapshot.scoreboardNormal?.round.match(/^(\d+)/);
   const consumer: HltvMatch = {
-    schemaVersion: '3.0.0',
+    schemaVersion: '3.1.0',
     capturedAt: snapshot.capturedAt,
     sport: 'cs2',
     source: { provider: 'hltv', url: identity.url },
@@ -743,6 +809,7 @@ export function buildConsumerFromCapture(
       score: currentScores,
       scoreboard: combineScoreboards(stateSnapshot.scoreboardNormal, stateSnapshot.scoreboardAdvanced, teams, players),
     } : null,
+    matchStats: normalizeMatchStats(staticData.matchStats, teams, players),
     mapStats: normalizeMapStats(staticData.mapStats),
     recentMatches: normalizeRecent(staticData.recentMatches),
     headToHead: normalizeHeadToHead(staticData.headToHead),

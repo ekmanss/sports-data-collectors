@@ -15,7 +15,7 @@ export function validateMatch(
   requestedId: number,
 ): void {
   const identity = matchIdentityFromUrl(match.source.url);
-  if (match.schemaVersion !== '3.0.0') fail('unexpected consumer schema version');
+  if (match.schemaVersion !== '3.1.0') fail('unexpected consumer schema version');
   if (!identity || match.match.id !== requestedId || identity.id !== requestedId || match.match.slug !== identity.slug) {
     fail('match identity is inconsistent with the request', {
       requestedId,
@@ -33,9 +33,26 @@ export function validateMatch(
   }
 
   const playerIds = new Set(match.players.map((player) => player.id));
+  const teamIds = new Set(match.teams.map((team) => team.id));
   for (const lineup of match.lineups) {
     if (lineup.playerIds.some((id) => !playerIds.has(id))) {
       fail('a lineup references an unknown player', { teamId: lineup.teamId });
+    }
+  }
+  for (const view of match.matchStats.views) {
+    for (const team of view.teams) {
+      if (team.teamId === null || !teamIds.has(team.teamId)) {
+        fail('Match stats reference an unknown team', { teamId: team.teamId, team: team.name });
+      }
+      const unknownPlayer = team.players.find(
+        (player) => player.playerId === null || !playerIds.has(player.playerId),
+      );
+      if (unknownPlayer) {
+        fail('Match stats reference an unknown player', {
+          playerId: unknownPlayer.playerId,
+          player: unknownPlayer.nickname,
+        });
+      }
     }
   }
 

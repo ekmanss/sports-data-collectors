@@ -89,6 +89,67 @@ export function extractHltvMatchPage() {
     };
   });
 
+  const matchStatsRoot = document.querySelector('#match-stats');
+  const matchStatMaps = Object.fromEntries(
+    [...(matchStatsRoot?.querySelectorAll('.stats-menu-link') || [])].flatMap((node) => {
+      const label = node.querySelector('.dynamic-map-name-full');
+      const key = label?.getAttribute('id');
+      return key ? [[key, clean(label.textContent)]] : [];
+    }),
+  );
+  const matchStats = matchStatsRoot ? {
+    views: [...matchStatsRoot.querySelectorAll('.stats-content')].flatMap((content) => {
+      const key = content.id.replace(/-content$/, '');
+      const mapStatsId = key === 'all' ? null : Number(key) || null;
+      const map = key === 'all' ? null : matchStatMaps[key] || null;
+      return [
+        ['both', 'totalstats'],
+        ['ct', 'ctstats'],
+        ['t', 'tstats'],
+      ].map(([side, tableClass]) => ({
+        mapStatsId,
+        map,
+        side,
+        teams: [...content.querySelectorAll(`table.${tableClass}`)].map((table) => {
+          const teamLink = table.querySelector('tr.header-row a[href*="/team/"]');
+          const teamHref = teamLink?.getAttribute('href');
+          return {
+            id: idFromHref(teamHref, 'team'),
+            name: clean(teamLink?.textContent),
+            players: [...table.querySelectorAll('tr:not(.header-row)')].flatMap((row) => {
+              const playerLink = row.querySelector('a[href*="/player/"]');
+              const playerHref = playerLink?.getAttribute('href');
+              if (!playerLink) return [];
+              const splitKd = (selector) => {
+                const [kills = '', deaths = ''] = text(row, selector).split('-').map(clean);
+                return { kills, deaths };
+              };
+              const traditional = splitKd('.kd.traditional-data');
+              const ecoAdjusted = splitKd('.kd.eco-adjusted-data');
+              return [{
+                id: idFromHref(playerHref, 'player'),
+                nickname: text(row, '.player-nick') || clean(playerLink.textContent),
+                fullName: text(row, '.gtSmartphone-only.statsPlayerName') || null,
+                country: row.querySelector('img.flag')?.getAttribute('title') || null,
+                profileUrl: absolute(playerHref),
+                kills: traditional.kills,
+                deaths: traditional.deaths,
+                ecoAdjustedKills: ecoAdjusted.kills,
+                ecoAdjustedDeaths: ecoAdjusted.deaths,
+                roundSwing: text(row, '.roundSwing'),
+                adr: text(row, '.adr.traditional-data'),
+                ecoAdjustedAdr: text(row, '.adr.eco-adjusted-data'),
+                kast: text(row, '.kast.traditional-data'),
+                ecoAdjustedKast: text(row, '.kast.eco-adjusted-data'),
+                rating: text(row, '.rating'),
+              }];
+            }),
+          };
+        }),
+      }));
+    }),
+  } : null;
+
   const mapStatsRoot = document.querySelector('#map-stats + .map-stats-infobox');
   const mapStats = mapStatsRoot ? (() => {
     const mapTeamNames = [...mapStatsRoot.querySelectorAll('.map-stats-infobox-header .team')].map((node) => clean(node.textContent));
@@ -262,6 +323,7 @@ export function extractHltvMatchPage() {
     maps: { format, stage, veto, maps },
     streams,
     lineups,
+    matchStats,
     mapStats,
     recentMatches,
     headToHead,
@@ -270,6 +332,7 @@ export function extractHltvMatchPage() {
       maps: Boolean(mapSection),
       streams: streams.length > 0,
       lineups: Boolean(document.querySelector('#lineups')),
+      matchStats: Boolean(matchStatsRoot),
       mapStats: Boolean(mapStatsRoot),
       recentMatches: Boolean(document.querySelector('#past-matches')),
       headToHead: Boolean(h2hRoot),

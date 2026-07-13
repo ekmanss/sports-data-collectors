@@ -15,7 +15,12 @@ const fixturePath = resolve(
   import.meta.dirname,
   'fixtures/completed-match.json',
 );
-const completedFixture = JSON.parse(await readFile(fixturePath, 'utf8')) as HltvMatch;
+// Keep the legacy 3.0.0 fixture useful while testing the 3.1.0 additive contract.
+const completedFixture = {
+  ...JSON.parse(await readFile(fixturePath, 'utf8')) as HltvMatch,
+  schemaVersion: '3.1.0',
+  matchStats: { views: [] },
+} satisfies HltvMatch;
 const rawSections = { sections: { matchPage: true, maps: true } };
 
 function diagnosticsFor(match: HltvMatch): MatchDiagnostics {
@@ -129,9 +134,201 @@ test('accepts a live map with completed rounds and a current snapshot', () => {
   validateMatch(match, diagnosticsFor(match), rawSections, match.match.id);
 });
 
+test('normalizes Match stats across map, side, and eco-adjusted dimensions', () => {
+  const capturedAt = '2026-07-14T00:00:00.000Z';
+  const player = (id: number, nickname: string) => ({
+    id,
+    nickname,
+    fullName: nickname,
+    country: null,
+    image: null,
+    profileUrl: null,
+    statsUrl: null,
+    rating: null,
+    kpr: null,
+    dpr: null,
+    kast: null,
+    adr: null,
+    stats: {},
+  });
+  const metricPlayer = (
+    id: number,
+    nickname: string,
+    kills: string,
+    deaths: string,
+  ) => ({
+    id,
+    nickname,
+    kills,
+    deaths,
+    ecoAdjustedKills: String(Number(kills) + 1),
+    ecoAdjustedDeaths: String(Number(deaths) - 1),
+    roundSwing: '+2.50%',
+    adr: '80.5',
+    ecoAdjustedAdr: '82.1',
+    kast: '75.0%',
+    ecoAdjustedKast: '77.5%',
+    rating: '1.20',
+  });
+  const page: RawExtractedPage = {
+    title: 'Alpha vs Bravo',
+    url: 'https://www.hltv.org/matches/2395900/alpha-vs-bravo-event',
+    match: {
+      id: 2395900,
+      status: 'Starts in 1 hour',
+      scheduledUnixMs: 1_784_000_000_000,
+      event: { id: 1, name: 'Event', url: 'https://www.hltv.org/events/1/event' },
+    },
+    teams: [
+      { id: 1, name: 'Alpha', url: null, country: null, logo: null },
+      { id: 2, name: 'Bravo', url: null, country: null, logo: null },
+    ],
+    maps: { format: 'Best of 3', stage: 'Group stage', veto: [], maps: [] },
+    streams: [],
+    lineups: [
+      { id: 1, name: 'Alpha', worldRank: 1, players: [player(11, 'alpha-one')] },
+      { id: 2, name: 'Bravo', worldRank: 2, players: [player(21, 'bravo-one')] },
+    ],
+    matchStats: {
+      views: [
+        {
+          mapStatsId: null,
+          map: null,
+          side: 'both',
+          teams: [
+            { id: 1, name: 'Alpha', players: [metricPlayer(11, 'alpha-one', '10', '8')] },
+            {
+              id: 2,
+              name: 'Bravo',
+              players: [
+                metricPlayer(21, 'bravo-one', '9', '10'),
+                metricPlayer(22, 'bravo-substitute', '3', '4'),
+              ],
+            },
+          ],
+        },
+        {
+          mapStatsId: 232821,
+          map: 'Cache',
+          side: 'ct',
+          teams: [
+            { id: 1, name: 'Alpha', players: [metricPlayer(11, 'alpha-one', '6', '3')] },
+            { id: 2, name: 'Bravo', players: [metricPlayer(21, 'bravo-one', '4', '5')] },
+          ],
+        },
+        {
+          mapStatsId: 232821,
+          map: 'Cache',
+          side: 't',
+          teams: [
+            { id: 1, name: 'Alpha', players: [metricPlayer(11, 'alpha-one', '4', '5')] },
+            { id: 2, name: 'Bravo', players: [metricPlayer(21, 'bravo-one', '5', '5')] },
+          ],
+        },
+      ],
+    },
+    mapStats: null,
+    recentMatches: [],
+    headToHead: null,
+    sections: { matchPage: true, maps: true, matchStats: true },
+  };
+  const capture: CaptureAttempt = {
+    initialPage: page,
+    snapshot: {
+      capturedAt,
+      httpStatus: 200,
+      page,
+      scoreboardNormal: null,
+      scoreboardAdvanced: null,
+      gameLog: { scrollHeight: 0, chronological: [], excludedNoiseEvents: 0 },
+      note: null,
+    },
+    collector: {
+      packageVersion: '0.0.0',
+      cloakbrowserVersion: '0.4.10',
+      playwrightVersion: '1.61.0',
+    },
+    httpStatus: 200,
+    navigationSeconds: 0,
+    totalSeconds: 0,
+    attempt: 1,
+    startedAt: capturedAt,
+    completedAt: capturedAt,
+  };
+
+  const result = buildConsumerFromCapture(capture, []);
+
+  assert.equal(result.data.schemaVersion, '3.1.0');
+  assert.equal(result.data.matchStats.views.length, 3);
+  assert.deepEqual(result.data.matchStats.views.map((view) => [view.map, view.side]), [
+    [null, 'both'],
+    ['Cache', 'ct'],
+    ['Cache', 't'],
+  ]);
+  assert.deepEqual(result.data.matchStats.views[0]!.teams[0]!.players[0], {
+    playerId: 11,
+    nickname: 'alpha-one',
+    traditional: { kills: 10, deaths: 8, adr: 80.5, kastRate: 0.75 },
+    ecoAdjusted: { kills: 11, deaths: 7, adr: 82.1, kastRate: 0.775 },
+    roundSwingRate: 0.025,
+    rating: 1.2,
+  });
+  assert.deepEqual(result.data.players.find((item) => item.id === 22), {
+    id: 22,
+    nickname: 'bravo-substitute',
+    fullName: null,
+    country: null,
+    image: null,
+    bodyshotUrl: null,
+    profileUrl: null,
+    statsUrl: null,
+    metrics: {
+      rating: null,
+      killsPerRound: null,
+      deathsPerRound: null,
+      kastRate: null,
+      adr: null,
+      multiKillRating: null,
+      roundSwingRate: null,
+    },
+  });
+
+  page.matchStats = null;
+  const withoutMatchStats = buildConsumerFromCapture(capture, []);
+  assert.deepEqual(withoutMatchStats.data.matchStats, { views: [] });
+});
+
 test('rejects score and Game log disagreement', () => {
   const match = cloneFixture();
   match.maps[0]!.score[0]!.score += 1;
+  assert.throws(
+    () => validateMatch(match, diagnosticsFor(match), rawSections, match.match.id),
+    (error: unknown) => error instanceof HltvError && error.code === 'INCOMPLETE_CAPTURE',
+  );
+});
+
+test('rejects Match stats that reference an unknown player', () => {
+  const match = cloneFixture();
+  match.matchStats = {
+    views: [{
+      mapStatsId: null,
+      map: null,
+      side: 'both',
+      teams: [{
+        teamId: match.teams[0]!.id,
+        name: match.teams[0]!.name,
+        players: [{
+          playerId: 999_999,
+          nickname: 'unknown',
+          traditional: { kills: 1, deaths: 1, adr: 50, kastRate: 0.5 },
+          ecoAdjusted: { kills: 1, deaths: 1, adr: 50, kastRate: 0.5 },
+          roundSwingRate: 0,
+          rating: 1,
+        }],
+      }],
+    }],
+  };
+
   assert.throws(
     () => validateMatch(match, diagnosticsFor(match), rawSections, match.match.id),
     (error: unknown) => error instanceof HltvError && error.code === 'INCOMPLETE_CAPTURE',

@@ -134,7 +134,7 @@ See [docs/recipes.md](docs/recipes.md) for copy-paste commands that save live li
 
 ## Data contracts
 
-See [docs/data-contracts.md](docs/data-contracts.md) for the Match Detail `3.0.0` and Live Matches `1.0.0` schemas and consistency rules.
+See [docs/data-contracts.md](docs/data-contracts.md) for the Match Detail `3.1.0` and Live Matches `1.0.0` schemas and consistency rules.
 
 ## Verification
 

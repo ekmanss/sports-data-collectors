@@ -34,7 +34,7 @@ for (const match of live.data.matches) {
 }
 
 const detail = await getHltvMatch(matchUrl, { ...clientOptions, onProgress });
-assert.equal(detail.data.schemaVersion, '3.0.0');
+assert.equal(detail.data.schemaVersion, '3.1.0');
 assert.equal(detail.data.match.id, matchIdentityFromUrl(matchUrl)?.id);
 assert.equal(detail.data.teams.length, 2);
 assert.ok(detail.data.maps.length > 0);

@@ -41,26 +41,34 @@ The collector deliberately excludes odds, stars, map pools, Scorebot, raw DOM, a
 - If values do not stabilize within five seconds, the latest complete snapshot is returned with `LIVE_STATE_UNSTABLE`.
 - A page that cannot be recognized as the HLTV matches page fails with `INCOMPLETE_CAPTURE`.
 
-## Match Detail 3.0.0
+## Match Detail 3.1.0
 
 `getHltvMatch()` and `client.getMatch()` return the full match-page and Scorebot model:
 
 ```ts
 interface HltvMatch {
-  schemaVersion: '3.0.0';
+  schemaVersion: '3.1.0';
   capturedAt: string;
   sport: 'cs2';
   source: { provider: 'hltv'; url: string };
   // match, teams, players, lineups, veto, streams,
-  // maps, current, mapStats, recentMatches, headToHead
+  // maps, current, matchStats, mapStats, recentMatches, headToHead
 }
 ```
+
+`matchStats.views` contains every published Match stats combination without depending on the
+currently selected page controls. A view identifies `All maps` with `map: null` or one completed
+map with its HLTV `mapStatsId`, then separates `both`, `ct`, and `t` sides. Each player keeps
+traditional and Eco-adjusted kills, deaths, ADR, and KAST together with the view's Round Swing
+and Rating 3.0. When HLTV has not published Match stats yet, `views` is empty.
 
 ### Match consistency
 
 - `match.id`, `match.slug`, and `source.url` must describe the same canonical HLTV match.
 - Exactly two unique primary teams are required.
 - Every lineup player ID references a canonical player.
+- Every Match stats team and player ID references a canonical team or player; substitutes found
+  only in Match stats are added to `players` without being invented as lineup members.
 - Completed and current map scores equal the number of completed Game log rounds.
 - Overlapping Scorebot replay fragments are joined only when the older fragment supplies the missing prefix and agrees with the newer fragment at the splice boundary; the newer replay remains authoritative after that boundary.
 - Knife rounds, scoreless draws, and replay fragments that cannot be safely reconciled are excluded rather than counted as official map rounds.

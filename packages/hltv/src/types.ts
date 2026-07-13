@@ -196,6 +196,39 @@ export interface MapStats {
   metrics: Record<string, MapStatRow[]>;
 }
 
+export interface MatchStatMetrics {
+  kills: number | null;
+  deaths: number | null;
+  adr: number | null;
+  kastRate: number | null;
+}
+
+export interface MatchStatPlayer {
+  playerId: number | null;
+  nickname: string;
+  traditional: MatchStatMetrics;
+  ecoAdjusted: MatchStatMetrics;
+  roundSwingRate: number | null;
+  rating: number | null;
+}
+
+export interface MatchStatTeam {
+  teamId: number | null;
+  name: string;
+  players: MatchStatPlayer[];
+}
+
+export interface MatchStatView {
+  mapStatsId: number | null;
+  map: string | null;
+  side: 'both' | 'ct' | 't';
+  teams: MatchStatTeam[];
+}
+
+export interface MatchStats {
+  views: MatchStatView[];
+}
+
 export interface RecentMatch {
   opponent: { id: number | null; name: string; country: string | null; url: string | null };
   timeAgo: string | null;
@@ -235,7 +268,7 @@ export interface HeadToHead {
 }
 
 export interface HltvMatch {
-  schemaVersion: '3.0.0';
+  schemaVersion: '3.1.0';
   capturedAt: string;
   sport: 'cs2';
   source: { provider: 'hltv'; url: string };
@@ -261,6 +294,7 @@ export interface HltvMatch {
     score: ScoreEntry[];
     scoreboard: CombinedScoreboard | null;
   } | null;
+  matchStats: MatchStats;
   mapStats: MapStats;
   recentMatches: RecentMatches;
   headToHead: HeadToHead;
@@ -450,6 +484,41 @@ export interface RawLineup {
   players: RawPlayer[];
 }
 
+export interface RawMatchStatPlayer {
+  id: number | null;
+  nickname: string;
+  fullName?: string | null;
+  country?: string | null;
+  profileUrl?: string | null;
+  kills: string;
+  deaths: string;
+  ecoAdjustedKills: string;
+  ecoAdjustedDeaths: string;
+  roundSwing: string;
+  adr: string;
+  ecoAdjustedAdr: string;
+  kast: string;
+  ecoAdjustedKast: string;
+  rating: string;
+}
+
+export interface RawMatchStatTeam {
+  id: number | null;
+  name: string;
+  players: RawMatchStatPlayer[];
+}
+
+export interface RawMatchStatView {
+  mapStatsId: number | null;
+  map: string | null;
+  side: 'both' | 'ct' | 't';
+  teams: RawMatchStatTeam[];
+}
+
+export interface RawMatchStats {
+  views: RawMatchStatView[];
+}
+
 export interface RawMapCard {
   name: string;
   optional: boolean;
@@ -465,6 +534,7 @@ export interface RawExtractedPage {
   maps: { format: string; stage: string; veto: string[]; maps: RawMapCard[] };
   streams: Array<{ name: string; viewers: string; url: string | null; embedUrl: string | null }>;
   lineups: RawLineup[];
+  matchStats?: RawMatchStats | null;
   mapStats: unknown;
   recentMatches: unknown[];
   headToHead: unknown;

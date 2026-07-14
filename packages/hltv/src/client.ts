@@ -3,7 +3,10 @@ import type { Browser } from 'playwright-core';
 import { matchIdentityFromUrl, normalizeClientOptions, splitCombinedOptions } from './config.js';
 import { HltvError } from './errors.js';
 import { getLiveMatchesWithBrowser } from './get_hltv_live_matches.js';
-import { getMatchWithBrowser } from './get_hltv_match.js';
+import {
+  createMatchCaptureSession,
+  getMatchWithSession,
+} from './get_hltv_match.js';
 import {
   abortableDelay,
   createOperationContext,
@@ -124,11 +127,19 @@ interface QueueTask<T = unknown> {
   onAbort: () => void;
 }
 
+const MATCH_SESSION_IDLE_TIMEOUT_MS = 10 * 60_000;
+
+type MatchSessionEntry = {
+  session: ReturnType<typeof createMatchCaptureSession>;
+  lastUsedAt: number;
+};
+
 class HltvClientImpl implements HltvClient {
   readonly #browser: Browser;
   readonly #maxConcurrency: number;
   readonly #minRequestIntervalMs: number;
   readonly #queue: QueueTask[] = [];
+  readonly #matchSessions = new Map<number, MatchSessionEntry>();
   #active = 0;
   #nextStartAt = 0;
   #closing = false;
@@ -144,7 +155,12 @@ class HltvClientImpl implements HltvClient {
 
   async getLiveMatches(options?: HltvRequestOptions): Promise<GetHltvLiveMatchesResult> {
     const context = createOperationContext('live-list', options, 60_000);
-    return await this.#schedule(context, () => getLiveMatchesWithBrowser(this.#browser, context));
+    try {
+      this.#pruneIdleMatchSessions();
+      return await this.#schedule(context, () => getLiveMatchesWithBrowser(this.#browser, context));
+    } finally {
+      context.dispose();
+    }
   }
 
   async getMatch(matchUrl: string, options?: HltvRequestOptions): Promise<GetHltvMatchResult> {
@@ -153,8 +169,60 @@ class HltvClientImpl implements HltvClient {
         code: 'INVALID_INPUT', operation: 'match-detail', stage: 'validating-input', retryable: false,
       });
     }
+    const identity = matchIdentityFromUrl(matchUrl)!;
     const context = createOperationContext('match-detail', options, 180_000);
-    return await this.#schedule(context, () => getMatchWithBrowser(this.#browser, matchUrl, context));
+    try {
+      this.#pruneIdleMatchSessions();
+      emitProgress(context, { stage: 'validating-input', attempt: 1, message: 'Validated HLTV match URL' });
+      for (let attempt = 1; attempt <= 2; attempt += 1) {
+        try {
+          const existing = this.#matchSessions.get(identity.id);
+          if (existing) {
+            existing.lastUsedAt = Date.now();
+            return await getMatchWithSession(existing.session, matchUrl, context, attempt);
+          }
+          return await this.#schedule(context, async () => {
+            let entry = this.#matchSessions.get(identity.id);
+            if (!entry) {
+              entry = {
+                session: createMatchCaptureSession(this.#browser, matchUrl),
+                lastUsedAt: Date.now(),
+              };
+              this.#matchSessions.set(identity.id, entry);
+            }
+            entry.lastUsedAt = Date.now();
+            return await getMatchWithSession(entry.session, matchUrl, context, attempt);
+          });
+        } catch (error) {
+          const entry = this.#matchSessions.get(identity.id);
+          if (entry) {
+            this.#matchSessions.delete(identity.id);
+            await entry.session.close();
+          }
+          const normalized = error instanceof HltvError ? error : null;
+          if (!normalized?.retryable || normalized.code === 'ACCESS_BLOCKED' || attempt === 2) {
+            throw error;
+          }
+          emitProgress(context, {
+            stage: 'navigating',
+            attempt,
+            message: 'Persistent match session failed; opening a fresh session once',
+          });
+          await abortableDelay(
+            retryDelayMilliseconds(normalized.code, attempt),
+            context,
+            'navigating',
+            identity.id,
+          );
+        }
+      }
+      throw new HltvError('match capture produced no result', {
+        code: 'INTERNAL_ERROR', operation: 'match-detail', stage: 'extracting-page', retryable: false,
+        matchId: identity.id,
+      });
+    } finally {
+      context.dispose();
+    }
   }
 
   async close(): Promise<void> {
@@ -164,7 +232,6 @@ class HltvClientImpl implements HltvClient {
       const queued = this.#queue.splice(0);
       for (const task of queued) {
         task.context.signal.removeEventListener('abort', task.onAbort);
-        task.context.dispose();
         task.reject(new HltvError('client was closed before the operation started', {
           code: 'CLIENT_CLOSED', operation: task.context.operation, stage: 'queued', retryable: false,
         }));
@@ -172,6 +239,9 @@ class HltvClientImpl implements HltvClient {
       if (this.#active > 0) {
         await new Promise<void>((resolve) => { this.#resolveIdle = resolve; });
       }
+      const sessions = [...this.#matchSessions.values()];
+      this.#matchSessions.clear();
+      await Promise.all(sessions.map(async ({ session }) => await session.close()));
       await this.#browser.close();
       this.#closed = true;
     })();
@@ -184,7 +254,6 @@ class HltvClientImpl implements HltvClient {
 
   #schedule<T>(context: OperationContext, run: () => Promise<T>): Promise<T> {
     if (this.#closing || this.#closed) {
-      context.dispose();
       throw new HltvError('client is closed', {
         code: 'CLIENT_CLOSED', operation: context.operation, stage: 'queued', retryable: false,
       });
@@ -200,7 +269,6 @@ class HltvClientImpl implements HltvClient {
           const index = this.#queue.indexOf(task as QueueTask);
           if (index < 0) return;
           this.#queue.splice(index, 1);
-          context.dispose();
           try {
             throwIfStopped(context, 'queued');
           } catch (error) {
@@ -237,10 +305,17 @@ class HltvClientImpl implements HltvClient {
     } catch (error) {
       task.reject(error);
     } finally {
-      task.context.dispose();
       this.#active -= 1;
       if (this.#closing && this.#active === 0) this.#resolveIdle?.();
       else this.#drain();
+    }
+  }
+
+  #pruneIdleMatchSessions(now = Date.now()): void {
+    for (const [matchId, entry] of this.#matchSessions) {
+      if (now - entry.lastUsedAt < MATCH_SESSION_IDLE_TIMEOUT_MS) continue;
+      this.#matchSessions.delete(matchId);
+      void entry.session.close().catch(() => undefined);
     }
   }
 }

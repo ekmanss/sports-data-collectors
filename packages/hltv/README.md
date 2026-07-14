@@ -75,11 +75,23 @@ try {
 }
 ```
 
-The client also implements `AsyncDisposable`. `close()` rejects queued work, allows active work to finish, and then closes the browser.
+The client also implements `AsyncDisposable`. `close()` rejects queued cold-navigation work, allows
+active per-match reads to finish, closes every persistent match page, and then closes the browser.
 
-Match Detail waits for stable page and Scorebot signals instead of sleeping for a fixed successful
-path. Its virtual Game log is traversed inside one browser evaluation, avoiding one protocol round
-trip per scroll position. Inspect `diagnostics.capture.timings` and
+The reusable client separates cold navigation from live state collection. The first `getMatch()` for
+a match opens one page and lets that page establish HLTV's native Scorebot connection. Later calls
+reuse the same page and never enter the global cold-navigation queue. A semantically complete
+Scorebot state is accepted immediately; the collector does not wait for a changing live scoreboard
+to produce two identical samples. If the lightweight Scorebot and static-map signature is unchanged,
+the latest verified snapshot is reused without re-extracting the virtual Game log. Idle match pages
+are closed after ten minutes, and `client.close()` closes the rest.
+
+The collector does not inject a synthetic Scorebot configuration or reload a page when native
+Scorebot is temporarily absent. The first cold page gets a bounded twelve-second readiness window;
+an established session uses a six-second inter-map window. Exhausting either window returns a
+fail-closed partial snapshot with `SCOREBOT_UNAVAILABLE`. Its virtual Game log is traversed inside one browser
+evaluation, avoiding one protocol round trip per scroll position. Inspect
+`diagnostics.capture.timings`, `diagnostics.capture.session`, and
 `diagnostics.capture.scorebot.positionsVisited` when profiling a capture; `navigationSeconds` is the
 pure `page.goto()` duration.
 
@@ -96,8 +108,8 @@ interface HltvClientOptions {
     password?: string;
   };
   timezone?: string;                  // default: runtime system timezone
-  maxConcurrency?: number;            // default: 1, maximum: 3
-  minRequestIntervalMs?: number;      // default: 5000
+  maxConcurrency?: number;            // default: 1, maximum: 3; cold navigations only
+  minRequestIntervalMs?: number;      // default: 5000; cold navigation start interval
 }
 ```
 

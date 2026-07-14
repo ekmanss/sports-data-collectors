@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { matchIdentityFromUrl } from '../src/config.js';
-import { getHltvLiveMatches, getHltvMatch } from '../src/index.js';
+import { HltvError } from '../src/errors.js';
+import { createHltvClient } from '../src/index.js';
+import type { GetHltvLiveMatchesResult, GetHltvMatchResult } from '../src/types.js';
 
 const matchUrl = process.env.HLTV_MATCH_URL;
 if (!matchUrl) throw new Error('set HLTV_MATCH_URL to run the real-network smoke test');
@@ -20,7 +22,30 @@ const onProgress = (event: { stage: string; message: string }): void => {
   process.stderr.write(`[${event.stage}] ${event.message}\n`);
 };
 
-const live = await getHltvLiveMatches({ ...clientOptions, onProgress });
+const delay = async (milliseconds: number): Promise<void> => await new Promise(
+  (resolve) => setTimeout(resolve, milliseconds),
+);
+let live: GetHltvLiveMatchesResult | undefined;
+let detail: GetHltvMatchResult | undefined;
+let warmDetail: GetHltvMatchResult | undefined;
+for (let browserAttempt = 1; browserAttempt <= 3; browserAttempt += 1) {
+  const client = await createHltvClient(clientOptions);
+  try {
+    live = await client.getLiveMatches({ onProgress });
+    detail = await client.getMatch(matchUrl, { onProgress });
+    warmDetail = await client.getMatch(matchUrl, { onProgress });
+    break;
+  } catch (error) {
+    if (!(error instanceof HltvError)
+      || error.code !== 'ACCESS_BLOCKED'
+      || browserAttempt === 3) throw error;
+    process.stderr.write(`[browser-rotation] Access blocked; retrying with a fresh client (${browserAttempt}/2)\n`);
+  } finally {
+    await client.close();
+  }
+  await delay(browserAttempt * 10_000);
+}
+if (!live || !detail || !warmDetail) throw new Error('real-network smoke did not produce results');
 assert.equal(live.data.schemaVersion, '1.0.0');
 assert.equal(live.data.sport, 'cs2');
 assert.equal(live.data.source.url, 'https://www.hltv.org/matches');
@@ -33,7 +58,6 @@ for (const match of live.data.matches) {
   assert.ok(match.teams.every((team) => team.name.length > 0));
 }
 
-const detail = await getHltvMatch(matchUrl, { ...clientOptions, onProgress });
 assert.equal(detail.data.schemaVersion, '3.1.0');
 assert.equal(detail.data.match.id, matchIdentityFromUrl(matchUrl)?.id);
 assert.equal(detail.data.teams.length, 2);
@@ -43,8 +67,14 @@ const capture = detail.diagnostics.capture as {
   navigationSeconds?: number;
   totalSeconds?: number;
   timings?: Record<string, number>;
+  session?: { reused?: boolean; snapshotCacheHit?: boolean; ageMs?: number };
   scorebot?: { positionsVisited?: number; scoreboardPresent?: boolean };
 };
+const warmCapture = warmDetail.diagnostics.capture as typeof capture;
+assert.equal(capture.session?.reused, false);
+assert.equal(warmCapture.session?.reused, true);
+assert.equal(warmCapture.timings?.navigationMs, 0);
+assert.equal(warmCapture.timings?.newPageMs, 0);
 const scorebotUnavailable = detail.diagnostics.warnings.some(
   (warning) => warning.code === 'SCOREBOT_UNAVAILABLE',
 );
@@ -71,7 +101,10 @@ process.stdout.write(`${JSON.stringify({
   message: 'Real HLTV validation OK',
   liveMatches: live.data.matches.length,
   matchId: detail.data.match.id,
-  captureSeconds: capture.totalSeconds,
-  timings: capture.timings,
+  coldCaptureSeconds: capture.totalSeconds,
+  warmCaptureSeconds: warmCapture.totalSeconds,
+  coldTimings: capture.timings,
+  warmTimings: warmCapture.timings,
+  warmSession: warmCapture.session,
   positionsVisited,
 })}\n`);

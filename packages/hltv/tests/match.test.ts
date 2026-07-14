@@ -2,9 +2,14 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import test from 'node:test';
+import type { Browser } from 'playwright-core';
+import {
+  isScorebotSemanticallyReady,
+  MatchCaptureSession,
+} from '../src/capture/capture_match.js';
 import { matchIdentityFromUrl, normalizeClientOptions } from '../src/config.js';
 import { HltvError, withHltvErrorDetails } from '../src/errors.js';
-import { retryDelayMilliseconds } from '../src/runtime.js';
+import { createOperationContext, retryDelayMilliseconds } from '../src/runtime.js';
 import { buildConsumerFromCapture } from '../src/transform/build_consumer.js';
 import { validateMatch } from '../src/transform/validate_match.js';
 import type {
@@ -86,6 +91,169 @@ test('uses a longer bounded cooldown for an access challenge', () => {
   assert.equal(retryDelayMilliseconds('ACCESS_BLOCKED', 2, 0.999_999), 25_000);
   assert.equal(retryDelayMilliseconds('NAVIGATION_FAILED', 1, 0), 2_000);
   assert.equal(retryDelayMilliseconds('NAVIGATION_FAILED', 1, 0.999_999), 2_500);
+});
+
+test('accepts one semantically complete Scorebot state without requiring it to stop changing', () => {
+  const liveRound = {
+    present: true,
+    score: '7:5',
+    round: '13 - Ancient',
+    teamNames: ['Alpha', 'Bravo'],
+    playerRows: 10,
+    scrollHeight: 2_400,
+    visibleLogRows: 18,
+  };
+  assert.equal(isScorebotSemanticallyReady(liveRound), true);
+  assert.equal(isScorebotSemanticallyReady({ ...liveRound, round: 'R: 13 - Ancient' }), false);
+  assert.equal(isScorebotSemanticallyReady({ ...liveRound, round: '1 - Unknown' }), false);
+  assert.equal(isScorebotSemanticallyReady({ ...liveRound, playerRows: 0 }), false);
+  assert.equal(isScorebotSemanticallyReady({ ...liveRound, scrollHeight: 0, visibleLogRows: 0 }), false);
+  assert.equal(isScorebotSemanticallyReady({
+    ...liveRound,
+    score: '0:0',
+    round: '1 - Dust2',
+    scrollHeight: 0,
+    visibleLogRows: 0,
+  }), true);
+});
+
+test('keeps one match page open and reuses an unchanged semantic snapshot', async () => {
+  const pageData: RawExtractedPage = {
+    title: 'Alpha vs Bravo',
+    url: 'https://www.hltv.org/matches/2395901/alpha-vs-bravo-event',
+    match: {
+      id: 2395901,
+      status: 'LIVE',
+      scheduledUnixMs: 1_784_000_000_000,
+      event: { id: 1, name: 'Event', url: 'https://www.hltv.org/events/1/event' },
+    },
+    teams: [
+      { id: 1, name: 'Alpha', url: null, country: null, logo: null },
+      { id: 2, name: 'Bravo', url: null, country: null, logo: null },
+    ],
+    maps: {
+      format: 'Best of 1',
+      stage: 'Group stage',
+      veto: [],
+      maps: [{
+        name: 'Dust2',
+        optional: false,
+        halfScores: '',
+        teams: [
+          { name: 'Alpha', score: '-', picked: false },
+          { name: 'Bravo', score: '-', picked: false },
+        ],
+      }],
+    },
+    streams: [],
+    lineups: [],
+    mapStats: null,
+    recentMatches: [],
+    headToHead: null,
+    sections: { matchPage: true, maps: true, scoreboard: true, gameLog: true },
+  };
+  const players = Array.from({ length: 5 }, (_, index) => ({
+    player: `player-${index}`,
+    cells: [],
+  }));
+  const scoreboard: RawScoreboard = {
+    mode: 'Normal',
+    round: '2 - Dust2',
+    fact: '',
+    score: '1:0',
+    teams: [
+      { team: 'Alpha', players },
+      { team: 'Bravo', players },
+    ],
+  };
+  const log = {
+    scrollHeight: 400,
+    chronological: [
+      { top: 2, type: [], text: 'Round started', players: [], weapon: null, headshot: false },
+      { top: 1, type: [], text: 'Round over - Winner: CT (1 - 0) - Enemy eliminated', players: [], weapon: null, headshot: false },
+    ] satisfies RawLogEvent[],
+    positionsVisited: 2,
+  };
+  let newPageCalls = 0;
+  let closeCalls = 0;
+  const page = {
+    addInitScript: async () => undefined,
+    goto: async () => ({ status: () => 200 }),
+    url: () => pageData.url,
+    isClosed: () => closeCalls > 0,
+    close: async () => { closeCalls += 1; },
+    waitForTimeout: async () => undefined,
+    locator: () => ({
+      filter: () => ({ count: async () => 0, click: async () => undefined }),
+    }),
+    evaluate: async (expression: string | (() => unknown)) => {
+      if (typeof expression === 'function') {
+        if (expression.toString().includes('dynamicText')) {
+          return {
+            present: true,
+            score: '1:0',
+            round: '2 - Dust2',
+            teamNames: ['Alpha', 'Bravo'],
+            playerRows: 10,
+            scrollHeight: 400,
+            visibleLogRows: 2,
+            signature: 'steady-scorebot-state',
+          };
+        }
+        return log;
+      }
+      if (expression === 'globalThis.__name = (target) => target') return undefined;
+      if (expression.includes('dynamicText')) {
+        return {
+          present: true,
+          score: '1:0',
+          round: '2 - Dust2',
+          teamNames: ['Alpha', 'Bravo'],
+          playerRows: 10,
+          scrollHeight: 400,
+          visibleLogRows: 2,
+          signature: 'steady-scorebot-state',
+        };
+      }
+      if (expression.includes("mode: clean(root.querySelector('.pro-toggle.active')")) {
+        return scoreboard;
+      }
+      return pageData;
+    },
+  };
+  const browser = {
+    newPage: async () => {
+      newPageCalls += 1;
+      return page;
+    },
+  } as unknown as Browser;
+  const session = new MatchCaptureSession(browser, {
+    id: 2395901,
+    slug: 'alpha-vs-bravo-event',
+    url: pageData.url,
+    pageReadyTimeoutMs: 1_000,
+    scorebotReadyTimeoutMs: 1_000,
+  });
+  const firstContext = createOperationContext('match-detail', { timeoutMs: 5_000 }, 5_000);
+  const secondContext = createOperationContext('match-detail', { timeoutMs: 5_000 }, 5_000);
+  try {
+    const first = await session.capture(firstContext, 1);
+    const second = await session.capture(secondContext, 1);
+    assert.equal(newPageCalls, 1);
+    assert.equal(closeCalls, 0);
+    assert.equal(first.session?.reused, false);
+    assert.equal(first.session?.snapshotCacheHit, false);
+    assert.equal(second.session?.reused, true);
+    assert.equal(second.session?.snapshotCacheHit, true);
+    assert.equal(second.timings?.navigationMs, 0);
+    assert.notEqual(first.snapshot, second.snapshot);
+    assert.equal(second.snapshot.capturedAt, second.completedAt);
+  } finally {
+    firstContext.dispose();
+    secondContext.dispose();
+    await session.close();
+  }
+  assert.equal(closeCalls, 1);
 });
 
 test('preserves bounded attempt evidence on a terminal HLTV error', () => {
@@ -440,6 +608,26 @@ test('returns a warning-bearing partial snapshot when Scorebot is unavailable be
   assert.ok(result.diagnostics.warnings.some((warning) => warning.code === 'SCOREBOT_UNAVAILABLE'));
   assert.equal(result.diagnostics.mapChecks.Ancient?.consistent, false);
   validateMatch(result.data, result.diagnostics, page, 2395891);
+
+  const skeletonCapture = structuredClone(capture);
+  skeletonCapture.snapshot.scoreboardNormal = {
+    mode: 'Normal',
+    round: '',
+    fact: '',
+    score: '',
+    teams: [
+      { team: '', players: [] },
+      { team: '', players: [] },
+    ],
+  };
+  const skeleton = buildConsumerFromCapture(skeletonCapture, []);
+  assert.equal(skeleton.data.current, null);
+  assert.equal(
+    (skeleton.diagnostics.capture.scorebot as { scoreboardPresent?: boolean }).scoreboardPresent,
+    false,
+  );
+  assert.ok(skeleton.diagnostics.warnings.some((warning) => warning.code === 'SCOREBOT_UNAVAILABLE'));
+  validateMatch(skeleton.data, skeleton.diagnostics, page, 2395891);
 });
 
 test('reconciles overlapping Scorebot replay fragments across maps', () => {

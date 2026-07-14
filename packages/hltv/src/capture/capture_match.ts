@@ -26,6 +26,7 @@ export interface MatchCaptureOptions extends MatchIdentity {
 }
 
 const STABILITY_POLL_MS = 250;
+const SCOREBOT_POLL_MS = 100;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -234,41 +235,28 @@ function formalGameLog(events: RawLogEvent[]): RawLogEvent[] {
   return formal;
 }
 
-function fallbackConfig(options: MatchCaptureOptions, page: RawExtractedPage): Record<string, string> {
-  const [first, second] = page.teams;
-  if (!first?.id || !second?.id) {
-    throw new HltvError('cannot restore Scorebot without two identified teams', {
-      code: 'INCOMPLETE_CAPTURE', operation: 'match-detail', stage: 'extracting-scorebot', retryable: false,
-    });
-  }
-  return {
-    scorebotUrl: 'https://scorebot-lb.hltv.org', scorebotId: String(options.id), hideMapBeforeLive: 'false',
-    team1Id: String(first.id), team1Name: first.name, team1Logo: first.logo ?? '',
-    team2Id: String(second.id), team2Name: second.name, team2Logo: second.logo ?? '',
-    csVersion: 'CS2', maxRoundsRegulation: '12', maxRoundsOvertime: '3',
-  };
-}
-
-async function installScorebotFallback(page: Page, config: Record<string, string>): Promise<void> {
-  await page.addInitScript(`
-    document.addEventListener('DOMContentLoaded', () => {
-      if (document.querySelector('#scoreboardElement')) return;
-      const element = document.createElement('div');
-      element.id = 'scoreboardElement';
-      Object.assign(element.dataset, ${JSON.stringify(config)});
-      document.body.prepend(element);
-    }, { once: true });
-  `);
-}
-
 async function collectSnapshot(
   page: Page,
   httpStatus: number | null,
   timings: MatchCaptureTimings,
+  scorebotUsable: boolean,
 ): Promise<RawSnapshot> {
   const pageStarted = performance.now();
   const pageData = await evaluatePage(page);
   timings.snapshotPageMs = Math.round(performance.now() - pageStarted);
+  if (!scorebotUsable) {
+    return {
+      capturedAt: new Date().toISOString(), httpStatus, page: pageData,
+      scoreboardNormal: null, scoreboardAdvanced: null,
+      gameLog: {
+        scrollHeight: 0,
+        chronological: [],
+        excludedNoiseEvents: 0,
+        positionsVisited: 0,
+      },
+      note: 'Scorebot was not semantically usable for this match state.',
+    };
+  }
   const scoreboardsStarted = performance.now();
   const normal = await extractScoreboard(page);
   let advanced: RawScoreboard | null = null;
@@ -280,6 +268,19 @@ async function collectSnapshot(
   const gameLogStarted = performance.now();
   const rawLog = await extractFullGameLog(page);
   timings.gameLogMs = Math.round(performance.now() - gameLogStarted);
+  if (!isExtractedScorebotUsable(normal, rawLog)) {
+    return {
+      capturedAt: new Date().toISOString(), httpStatus, page: pageData,
+      scoreboardNormal: null, scoreboardAdvanced: null,
+      gameLog: {
+        scrollHeight: 0,
+        chronological: [],
+        excludedNoiseEvents: 0,
+        positionsVisited: rawLog.positionsVisited,
+      },
+      note: 'Scorebot became incomplete while the snapshot was being extracted.',
+    };
+  }
   const chronological = formalGameLog(rawLog.chronological);
   return {
     capturedAt: new Date().toISOString(), httpStatus, page: pageData,
@@ -298,37 +299,100 @@ type ScorebotState = {
   present: boolean;
   ready: boolean;
   signature: string;
+  score: string;
+  round: string;
+  teamNames: string[];
+  playerRows: number;
+  scrollHeight: number;
+  visibleLogRows: number;
 };
 
+export type ScorebotReadinessProbe = Omit<ScorebotState, 'ready' | 'signature'>;
+
+export function isScorebotSemanticallyReady(probe: ScorebotReadinessProbe): boolean {
+  if (!probe.present || !/^\d+\s*:\s*\d+$/.test(probe.score)) return false;
+  const roundMatch = probe.round.match(/^(\d+)\s*-\s*(.+)$/);
+  if (!roundMatch) return false;
+  const map = roundMatch[2]!.trim().toLowerCase();
+  if (!map || map === 'unknown' || map === 'tbd' || map === '-') return false;
+  if (probe.teamNames.length !== 2 || probe.teamNames.some((name) => !name)) return false;
+  if (probe.playerRows < 8) return false;
+  const scoreTotal = probe.score.split(/\D+/).reduce(
+    (sum, value) => sum + (Number(value) || 0),
+    0,
+  );
+  const needsGameLog = scoreTotal > 0 || Number(roundMatch[1]) > 1;
+  return !needsGameLog || (probe.scrollHeight > 0 && probe.visibleLogRows > 0);
+}
+
+function isExtractedScorebotUsable(
+  scoreboard: RawScoreboard | null,
+  log: { scrollHeight: number; chronological: RawLogEvent[] },
+): boolean {
+  if (!scoreboard) return false;
+  return isScorebotSemanticallyReady({
+    present: true,
+    score: scoreboard.score,
+    round: scoreboard.round,
+    teamNames: scoreboard.teams.map((team) => team.team),
+    playerRows: scoreboard.teams.reduce((sum, team) => sum + team.players.length, 0),
+    scrollHeight: log.scrollHeight,
+    visibleLogRows: log.chronological.length,
+  });
+}
+
 async function scorebotState(page: Page): Promise<ScorebotState> {
-  return await page.evaluate(() => {
+  const probe = await page.evaluate(() => {
     const root = document.querySelector('#scoreboardElement .scoreboard');
     const list = document.querySelector<HTMLElement>('#scoreboardElement .gamelog .list.desktop');
-    if (!root) return { present: false, ready: false, signature: '' };
     const clean = (value: string | null | undefined): string =>
       (value || '').replace(/\s+/g, ' ').trim();
+    if (!root) {
+      return {
+        present: false,
+        score: '',
+        round: '',
+        teamNames: [],
+        playerRows: 0,
+        scrollHeight: 0,
+        visibleLogRows: 0,
+        signature: '',
+      };
+    }
     const score = clean(root.querySelector('.scoreText')?.textContent);
     const round = clean(root.querySelector('.currentRoundText')?.textContent);
-    const playerRows = root.querySelectorAll('table.team tr').length;
-    const visibleLogRows = list?.querySelectorAll('.topPadding').length ?? 0;
-    const scoreTotal = score.split(/\D+/).reduce(
-      (sum, value) => sum + (Number(value) || 0),
+    const tables = Array.from(root.querySelectorAll('table.team'));
+    const teamNames = tables.map((table) =>
+      clean(table.querySelector('tr .identityColumns')?.textContent));
+    const playerRows = tables.reduce(
+      (sum, table) => sum + Math.max(0, table.querySelectorAll('tr').length - 1),
       0,
     );
-    const needsGameLog = scoreTotal > 0 || !/^1\b/.test(round);
-    const gameLogReady = Boolean(list) && (!needsGameLog || visibleLogRows > 0);
+    const visibleLogRows = list?.querySelectorAll('.topPadding').length ?? 0;
+    const scrollHeight = list?.scrollHeight ?? 0;
+    const dynamicText = clean(root.textContent);
+    const staticText = Array.from(document.querySelectorAll('.mapholder,.timeAndEvent'))
+      .map((element) => clean(element.textContent))
+      .join('|');
     return {
       present: true,
-      ready: playerRows >= 4 && Boolean(score) && Boolean(round) && gameLogReady,
+      score,
+      round,
+      teamNames,
+      playerRows,
+      scrollHeight,
+      visibleLogRows,
       signature: JSON.stringify({
-        score,
-        round,
-        playerRows,
-        scrollHeight: list?.scrollHeight ?? 0,
-        visibleLogRows,
+        dynamicText,
+        staticText,
+        scrollHeight,
       }),
     };
   });
+  return {
+    ...probe,
+    ready: isScorebotSemanticallyReady(probe),
+  };
 }
 
 async function waitForStableScorebot(
@@ -336,15 +400,23 @@ async function waitForStableScorebot(
   options: MatchCaptureOptions,
 ): Promise<ScorebotState> {
   const started = performance.now();
-  let previousSignature: string | null = null;
-  let latest: ScorebotState = { present: false, ready: false, signature: '' };
+  let latest: ScorebotState = {
+    present: false,
+    ready: false,
+    signature: '',
+    score: '',
+    round: '',
+    teamNames: [],
+    playerRows: 0,
+    scrollHeight: 0,
+    visibleLogRows: 0,
+  };
   while (performance.now() - started < options.scorebotReadyTimeoutMs) {
     throwIfStopped(options.context, 'extracting-scorebot', options.id);
     latest = await scorebotState(page);
-    if (latest.ready && latest.signature === previousSignature) return latest;
-    previousSignature = latest.ready ? latest.signature : null;
+    if (latest.ready) return latest;
     await abortableDelay(
-      STABILITY_POLL_MS,
+      SCOREBOT_POLL_MS,
       options.context,
       'extracting-scorebot',
       options.id,
@@ -373,9 +445,31 @@ export async function captureMatch(
   options: MatchCaptureOptions,
   attempt: number,
 ): Promise<CaptureAttempt> {
-  const startedAt = new Date().toISOString();
-  const started = performance.now();
-  const timings: MatchCaptureTimings = {
+  const session = new MatchCaptureSession(browser, options);
+  let capture: CaptureAttempt | undefined;
+  try {
+    capture = await session.capture(options.context, attempt);
+    return capture;
+  } finally {
+    const pageCloseStarted = performance.now();
+    await session.close();
+    if (capture?.timings) {
+      capture.timings.pageCloseMs = Math.round(performance.now() - pageCloseStarted);
+    }
+  }
+}
+
+type InitializedMatchSession = {
+  page: Page;
+  initialPage: RawExtractedPage;
+  versions: Awaited<ReturnType<typeof collectorVersions>>;
+  httpStatus: number | null;
+  timings: MatchCaptureTimings;
+  openedAtMs: number;
+};
+
+function emptyTimings(): MatchCaptureTimings {
+  return {
     metadataMs: 0,
     newPageMs: 0,
     navigationMs: 0,
@@ -387,106 +481,253 @@ export async function captureMatch(
     gameLogMs: 0,
     pageCloseMs: 0,
   };
-  const metadataStarted = performance.now();
-  const versions = await collectorVersions();
-  timings.metadataMs = Math.round(performance.now() - metadataStarted);
-  let page: Page | null = null;
-  const stopPage = (): void => { void page?.close().catch(() => undefined); };
-  try {
-    throwIfStopped(options.context, 'navigating', options.id);
-    const newPageStarted = performance.now();
-    page = await browser.newPage();
-    timings.newPageMs = Math.round(performance.now() - newPageStarted);
-    await page.addInitScript('globalThis.__name = (target) => target');
-    options.context.signal.addEventListener('abort', stopPage, { once: true });
-    emitProgress(options.context, { stage: 'navigating', attempt, message: `Opening ${options.url}` });
-    const navigationStarted = performance.now();
-    let response;
-    try {
-      response = await page.goto(options.url, {
-        waitUntil: 'domcontentloaded',
-        timeout: navigationTimeout(options.context),
-      });
-    } catch (cause) {
-      throwIfStopped(options.context, 'navigating', options.id);
-      throw new HltvError('failed to navigate to the HLTV match page', {
-        code: 'NAVIGATION_FAILED', operation: 'match-detail', stage: 'navigating', retryable: true,
-        matchId: options.id, cause,
-      });
-    }
-    timings.navigationMs = Math.round(performance.now() - navigationStarted);
-    classifyHttp(response?.status() ?? null);
-    validateFinalUrl(page.url(), options);
-    emitProgress(options.context, { stage: 'extracting-page', attempt, message: 'Waiting for and extracting match sections' });
-    const pageReadyStarted = performance.now();
-    const initialPage = await waitForStableMatchPage(page, options);
-    timings.pageReadyMs = Math.round(performance.now() - pageReadyStarted);
-    validateFinalUrl(initialPage.url, options);
-    if (initialPage.match.id !== options.id) {
-      throw new HltvError('the loaded page contains a different match ID', {
-        code: 'INCOMPLETE_CAPTURE', operation: 'match-detail', stage: 'validating-source', retryable: false,
-        matchId: options.id,
-        details: { expectedId: options.id, pageId: initialPage.match.id },
-      });
-    }
-    if (initialPage.sections.cloudflareChallenge) {
-      throw new HltvError('HLTV returned an access challenge', {
-        code: 'ACCESS_BLOCKED', operation: 'match-detail', stage: 'navigating', retryable: true, matchId: options.id,
-      });
-    }
-    if (!initialPage.sections.matchPage) {
-      throw new HltvError('the HLTV match page root did not load', {
-        code: 'NAVIGATION_FAILED', operation: 'match-detail', stage: 'extracting-page', retryable: true, matchId: options.id,
-      });
-    }
+}
 
-    emitProgress(options.context, { stage: 'extracting-scorebot', attempt, message: 'Extracting Normal/Advanced scoreboard and Game log' });
-    const status = initialPage.match.status.toLowerCase();
-    const requiresScorebot = status.includes('live') || status.includes('over');
-    let state = await scorebotState(page);
-    if (requiresScorebot && !state.present) {
-      await installScorebotFallback(page, fallbackConfig(options, initialPage));
-      const reloadStarted = performance.now();
-      response = await page.reload({ waitUntil: 'domcontentloaded', timeout: navigationTimeout(options.context) });
-      timings.scorebotReloadMs = Math.round(performance.now() - reloadStarted);
-      classifyHttp(response?.status() ?? null);
-      validateFinalUrl(page.url(), options);
+export class MatchCaptureSession {
+  readonly #browser: Browser;
+  readonly #identity: MatchIdentity;
+  readonly #pageReadyTimeoutMs: number;
+  readonly #scorebotReadyTimeoutMs: number;
+  #initialized: InitializedMatchSession | undefined;
+  #captureTail: Promise<void> = Promise.resolve();
+  #closing = false;
+  #closePromise: Promise<void> | undefined;
+  #successfulCaptures = 0;
+  #lastCapture: CaptureAttempt | undefined;
+  #lastScorebotSignature: string | undefined;
+
+  constructor(
+    browser: Browser,
+    options: Pick<MatchCaptureOptions, 'id' | 'slug' | 'url' | 'pageReadyTimeoutMs' | 'scorebotReadyTimeoutMs'>,
+  ) {
+    this.#browser = browser;
+    this.#identity = { id: options.id, slug: options.slug, url: options.url };
+    this.#pageReadyTimeoutMs = options.pageReadyTimeoutMs;
+    this.#scorebotReadyTimeoutMs = options.scorebotReadyTimeoutMs;
+  }
+
+  get id(): number {
+    return this.#identity.id;
+  }
+
+  get url(): string {
+    return this.#identity.url;
+  }
+
+  capture(context: OperationContext, attempt: number): Promise<CaptureAttempt> {
+    if (this.#closing) {
+      return Promise.reject(new HltvError('match session is closed', {
+        code: 'CLIENT_CLOSED', operation: 'match-detail', stage: 'queued', retryable: false,
+        matchId: this.id,
+      }));
     }
-    if (requiresScorebot) {
-      const scorebotReadyStarted = performance.now();
-      await waitForStableScorebot(page, options);
-      timings.scorebotReadyMs = Math.round(performance.now() - scorebotReadyStarted);
-    }
-    const snapshot = await collectSnapshot(page, response?.status() ?? null, timings);
-    validateFinalUrl(snapshot.page.url, options);
-    if (snapshot.page.match.id !== options.id) {
-      throw new HltvError('the final page snapshot contains a different match ID', {
-        code: 'INCOMPLETE_CAPTURE', operation: 'match-detail', stage: 'validating-source', retryable: false,
-        matchId: options.id, details: { pageId: snapshot.page.match.id },
+    const operation = this.#captureTail.then(async () => await this.#capture(context, attempt));
+    this.#captureTail = operation.then(() => undefined, () => undefined);
+    return operation;
+  }
+
+  async close(): Promise<void> {
+    if (this.#closePromise) return this.#closePromise;
+    this.#closing = true;
+    this.#closePromise = (async () => {
+      await this.#captureTail;
+      await this.#initialized?.page.close().catch(() => undefined);
+    })();
+    return this.#closePromise;
+  }
+
+  async #capture(context: OperationContext, attempt: number): Promise<CaptureAttempt> {
+    const startedAt = new Date().toISOString();
+    const started = performance.now();
+    try {
+      throwIfStopped(context, 'navigating', this.id);
+      const initialized = await this.#initialize(context, attempt);
+      if (initialized.page.isClosed()) {
+        throw new HltvError('the persistent HLTV match page was closed', {
+          code: 'NAVIGATION_FAILED', operation: 'match-detail', stage: 'extracting-page', retryable: true,
+          matchId: this.id,
+        });
+      }
+      const reused = this.#successfulCaptures > 0;
+      const timings = reused ? emptyTimings() : { ...initialized.timings };
+      const options: MatchCaptureOptions = {
+        ...this.#identity,
+        context,
+        pageReadyTimeoutMs: this.#pageReadyTimeoutMs,
+        scorebotReadyTimeoutMs: reused
+          ? Math.min(this.#scorebotReadyTimeoutMs, 6_000)
+          : this.#scorebotReadyTimeoutMs,
+      };
+      emitProgress(context, {
+        stage: 'extracting-scorebot',
+        attempt,
+        message: reused
+          ? 'Reading the persistent Scorebot session'
+          : 'Extracting Normal/Advanced scoreboard and Game log',
+      });
+      const status = initialized.initialPage.match.status.toLowerCase();
+      const requiresScorebot = status.includes('live') || status.includes('over');
+      let state = await scorebotState(initialized.page);
+      if (requiresScorebot && !state.ready) {
+        const scorebotReadyStarted = performance.now();
+        state = await waitForStableScorebot(initialized.page, options);
+        timings.scorebotReadyMs = Math.round(performance.now() - scorebotReadyStarted);
+      }
+
+      if (state.ready && this.#lastCapture && state.signature === this.#lastScorebotSignature) {
+        const completedAt = new Date().toISOString();
+        const capture: CaptureAttempt = {
+          ...this.#lastCapture,
+          snapshot: { ...this.#lastCapture.snapshot, capturedAt: completedAt },
+          navigationSeconds: 0,
+          totalSeconds: Number(((performance.now() - started) / 1000).toFixed(3)),
+          timings,
+          attempt,
+          startedAt,
+          completedAt,
+          session: {
+            reused: true,
+            snapshotCacheHit: true,
+            ageMs: Date.now() - initialized.openedAtMs,
+          },
+        };
+        this.#lastCapture = capture;
+        this.#successfulCaptures += 1;
+        return capture;
+      }
+
+      const snapshot = await collectSnapshot(
+        initialized.page,
+        initialized.httpStatus,
+        timings,
+        state.ready,
+      );
+      validateFinalUrl(snapshot.page.url, options);
+      if (snapshot.page.match.id !== this.id) {
+        throw new HltvError('the final page snapshot contains a different match ID', {
+          code: 'INCOMPLETE_CAPTURE', operation: 'match-detail', stage: 'validating-source', retryable: false,
+          matchId: this.id, details: { pageId: snapshot.page.match.id },
+        });
+      }
+      let finalState: ScorebotState | undefined;
+      if (snapshot.scoreboardNormal) {
+        finalState = await scorebotState(initialized.page);
+      }
+      const completedAt = new Date().toISOString();
+      const capture: CaptureAttempt = {
+        initialPage: initialized.initialPage,
+        snapshot,
+        collector: initialized.versions,
+        httpStatus: initialized.httpStatus,
+        navigationSeconds: reused ? 0 : Number((timings.navigationMs / 1000).toFixed(3)),
+        totalSeconds: Number(((performance.now() - started) / 1000).toFixed(3)),
+        timings,
+        attempt,
+        startedAt,
+        completedAt,
+        session: {
+          reused,
+          snapshotCacheHit: false,
+          ageMs: Date.now() - initialized.openedAtMs,
+        },
+      };
+      this.#lastCapture = capture;
+      this.#lastScorebotSignature = finalState?.ready && finalState.signature === state.signature
+        ? finalState.signature
+        : undefined;
+      this.#successfulCaptures += 1;
+      return capture;
+    } catch (error) {
+      throwIfStopped(context, 'extracting-page', this.id);
+      throw asHltvError(error, {
+        code: 'INTERNAL_ERROR', operation: 'match-detail', stage: 'extracting-page', retryable: false,
+        matchId: this.id,
       });
     }
-    const completedAt = new Date().toISOString();
-    return {
-      initialPage,
-      snapshot,
-      collector: versions,
-      httpStatus: response?.status() ?? null,
-      navigationSeconds: Number((timings.navigationMs / 1000).toFixed(3)),
-      totalSeconds: Number(((performance.now() - started) / 1000).toFixed(3)),
-      timings,
-      attempt,
-      startedAt,
-      completedAt,
-    };
-  } catch (error) {
-    throwIfStopped(options.context, 'extracting-page', options.id);
-    throw asHltvError(error, {
-      code: 'INTERNAL_ERROR', operation: 'match-detail', stage: 'extracting-page', retryable: false, matchId: options.id,
-    });
-  } finally {
-    options.context.signal.removeEventListener('abort', stopPage);
-    const pageCloseStarted = performance.now();
-    await page?.close().catch(() => undefined);
-    timings.pageCloseMs = Math.round(performance.now() - pageCloseStarted);
+  }
+
+  async #initialize(context: OperationContext, attempt: number): Promise<InitializedMatchSession> {
+    if (this.#initialized) return this.#initialized;
+    const timings = emptyTimings();
+    const metadataStarted = performance.now();
+    const versions = await collectorVersions();
+    timings.metadataMs = Math.round(performance.now() - metadataStarted);
+    let page: Page | undefined;
+    const stopPage = (): void => { void page?.close().catch(() => undefined); };
+    try {
+      throwIfStopped(context, 'navigating', this.id);
+      const newPageStarted = performance.now();
+      page = await this.#browser.newPage();
+      timings.newPageMs = Math.round(performance.now() - newPageStarted);
+      await page.addInitScript('globalThis.__name = (target) => target');
+      context.signal.addEventListener('abort', stopPage, { once: true });
+      emitProgress(context, { stage: 'navigating', attempt, message: `Opening ${this.url}` });
+      const navigationStarted = performance.now();
+      let response;
+      try {
+        response = await page.goto(this.url, {
+          waitUntil: 'domcontentloaded',
+          timeout: navigationTimeout(context),
+        });
+      } catch (cause) {
+        throwIfStopped(context, 'navigating', this.id);
+        throw new HltvError('failed to navigate to the HLTV match page', {
+          code: 'NAVIGATION_FAILED', operation: 'match-detail', stage: 'navigating', retryable: true,
+          matchId: this.id, cause,
+        });
+      }
+      timings.navigationMs = Math.round(performance.now() - navigationStarted);
+      const httpStatus = response?.status() ?? null;
+      classifyHttp(httpStatus);
+      const options: MatchCaptureOptions = {
+        ...this.#identity,
+        context,
+        pageReadyTimeoutMs: this.#pageReadyTimeoutMs,
+        scorebotReadyTimeoutMs: this.#scorebotReadyTimeoutMs,
+      };
+      validateFinalUrl(page.url(), options);
+      emitProgress(context, {
+        stage: 'extracting-page',
+        attempt,
+        message: 'Waiting for and extracting match sections',
+      });
+      const pageReadyStarted = performance.now();
+      const initialPage = await waitForStableMatchPage(page, options);
+      timings.pageReadyMs = Math.round(performance.now() - pageReadyStarted);
+      validateFinalUrl(initialPage.url, options);
+      if (initialPage.match.id !== this.id) {
+        throw new HltvError('the loaded page contains a different match ID', {
+          code: 'INCOMPLETE_CAPTURE', operation: 'match-detail', stage: 'validating-source', retryable: false,
+          matchId: this.id,
+          details: { expectedId: this.id, pageId: initialPage.match.id },
+        });
+      }
+      if (initialPage.sections.cloudflareChallenge) {
+        throw new HltvError('HLTV returned an access challenge', {
+          code: 'ACCESS_BLOCKED', operation: 'match-detail', stage: 'navigating', retryable: true,
+          matchId: this.id,
+        });
+      }
+      if (!initialPage.sections.matchPage) {
+        throw new HltvError('the HLTV match page root did not load', {
+          code: 'NAVIGATION_FAILED', operation: 'match-detail', stage: 'extracting-page', retryable: true,
+          matchId: this.id,
+        });
+      }
+      this.#initialized = {
+        page,
+        initialPage,
+        versions,
+        httpStatus,
+        timings,
+        openedAtMs: Date.now(),
+      };
+      return this.#initialized;
+    } catch (error) {
+      await page?.close().catch(() => undefined);
+      throw error;
+    } finally {
+      context.signal.removeEventListener('abort', stopPage);
+    }
   }
 }

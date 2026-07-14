@@ -581,6 +581,11 @@ export interface CaptureAttempt {
   attempt: number;
   startedAt: string;
   completedAt: string;
+  session?: {
+    reused: boolean;
+    snapshotCacheHit: boolean;
+    ageMs: number;
+  };
 }
 
 export interface RawLiveTeam {

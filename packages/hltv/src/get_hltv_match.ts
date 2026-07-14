@@ -1,5 +1,9 @@
 import type { Browser } from 'playwright-core';
-import { captureMatch, type MatchCaptureOptions } from './capture/capture_match.js';
+import {
+  captureMatch,
+  MatchCaptureSession,
+  type MatchCaptureOptions,
+} from './capture/capture_match.js';
 import { matchIdentityFromUrl } from './config.js';
 import { HltvError, asHltvError, withHltvErrorDetails } from './errors.js';
 import {
@@ -11,7 +15,104 @@ import {
 } from './runtime.js';
 import { buildConsumerFromCapture } from './transform/build_consumer.js';
 import { validateMatch } from './transform/validate_match.js';
-import type { GetHltvMatchResult, MatchDiagnostics } from './types.js';
+import type { CaptureAttempt, GetHltvMatchResult, MatchDiagnostics } from './types.js';
+
+const PAGE_READY_TIMEOUT_MS = 12_000;
+const SCOREBOT_READY_TIMEOUT_MS = 12_000;
+
+function captureOptions(
+  matchUrl: string,
+  context: OperationContext,
+): MatchCaptureOptions {
+  const identity = matchIdentityFromUrl(matchUrl);
+  if (!identity) {
+    throw new HltvError('matchUrl must be a canonical https://www.hltv.org/matches/<id>/<slug> URL', {
+      code: 'INVALID_INPUT', operation: 'match-detail', stage: 'validating-input', retryable: false,
+    });
+  }
+  return {
+    ...identity,
+    context,
+    pageReadyTimeoutMs: PAGE_READY_TIMEOUT_MS,
+    scorebotReadyTimeoutMs: SCOREBOT_READY_TIMEOUT_MS,
+  };
+}
+
+async function buildAndValidate(
+  capture: CaptureAttempt,
+  attempts: MatchDiagnostics['attempts'],
+  context: OperationContext,
+  matchId: number,
+  attempt: number,
+): Promise<GetHltvMatchResult> {
+  throwIfStopped(context, 'building-output', matchId);
+  emitProgress(context, { stage: 'building-output', attempt, message: 'Building match data' });
+  const result = buildConsumerFromCapture(capture, attempts);
+  throwIfStopped(context, 'validating-output', matchId);
+  emitProgress(context, { stage: 'validating-output', attempt, message: 'Validating match data' });
+  validateMatch(result.data, result.diagnostics, capture.snapshot.page, matchId);
+  emitProgress(context, { stage: 'completed', attempt, message: 'Match capture completed' });
+  return result;
+}
+
+export function createMatchCaptureSession(
+  browser: Browser,
+  matchUrl: string,
+): MatchCaptureSession {
+  const identity = matchIdentityFromUrl(matchUrl);
+  if (!identity) {
+    throw new HltvError('matchUrl must be a canonical https://www.hltv.org/matches/<id>/<slug> URL', {
+      code: 'INVALID_INPUT', operation: 'match-detail', stage: 'validating-input', retryable: false,
+    });
+  }
+  return new MatchCaptureSession(browser, {
+    ...identity,
+    pageReadyTimeoutMs: PAGE_READY_TIMEOUT_MS,
+    scorebotReadyTimeoutMs: SCOREBOT_READY_TIMEOUT_MS,
+  });
+}
+
+export async function getMatchWithSession(
+  session: MatchCaptureSession,
+  matchUrl: string,
+  context: OperationContext,
+  attempt = 1,
+): Promise<GetHltvMatchResult> {
+  const options = captureOptions(matchUrl, context);
+  if (options.id !== session.id) {
+    throw new HltvError('the match session belongs to a different match', {
+      code: 'INVALID_INPUT', operation: 'match-detail', stage: 'validating-input', retryable: false,
+      matchId: options.id, details: { sessionMatchId: session.id },
+    });
+  }
+  throwIfStopped(context, 'validating-input', options.id);
+  const attempts: MatchDiagnostics['attempts'] = [];
+  const startedAt = new Date().toISOString();
+  try {
+    const capture = await session.capture(context, attempt);
+    attempts.push({
+      attempt,
+      startedAt: capture.startedAt,
+      completedAt: capture.completedAt,
+      httpStatus: capture.httpStatus,
+    });
+    return await buildAndValidate(capture, attempts, context, options.id, attempt);
+  } catch (error) {
+    throwIfStopped(context, 'extracting-page', options.id);
+    const normalized = asHltvError(error, {
+      code: 'INTERNAL_ERROR', operation: 'match-detail', stage: 'extracting-page', retryable: false,
+      matchId: options.id,
+    });
+    attempts.push({
+      attempt,
+      startedAt,
+      completedAt: new Date().toISOString(),
+      httpStatus: typeof normalized.details?.httpStatus === 'number' ? normalized.details.httpStatus : null,
+      error: { code: normalized.code, message: normalized.message },
+    });
+    throw withHltvErrorDetails(normalized, { attempts });
+  }
+}
 
 async function retryDelay(
   context: OperationContext,
@@ -32,19 +133,8 @@ export async function getMatchWithBrowser(
   matchUrl: string,
   context: OperationContext,
 ): Promise<GetHltvMatchResult> {
-  const identity = typeof matchUrl === 'string' ? matchIdentityFromUrl(matchUrl) : null;
-  if (!identity) {
-    throw new HltvError('matchUrl must be a canonical https://www.hltv.org/matches/<id>/<slug> URL', {
-      code: 'INVALID_INPUT', operation: 'match-detail', stage: 'validating-input', retryable: false,
-    });
-  }
-  throwIfStopped(context, 'validating-input', identity.id);
-  const options: MatchCaptureOptions = {
-    ...identity,
-    context,
-    pageReadyTimeoutMs: 12_000,
-    scorebotReadyTimeoutMs: 30_000,
-  };
+  const options = captureOptions(matchUrl, context);
+  throwIfStopped(context, 'validating-input', options.id);
   const attempts: MatchDiagnostics['attempts'] = [];
 
   emitProgress(context, { stage: 'validating-input', attempt: 1, message: 'Validated HLTV match URL' });
@@ -58,14 +148,7 @@ export async function getMatchWithBrowser(
         completedAt: capture.completedAt,
         httpStatus: capture.httpStatus,
       });
-      throwIfStopped(context, 'building-output', options.id);
-      emitProgress(context, { stage: 'building-output', attempt, message: 'Building match data' });
-      const result = buildConsumerFromCapture(capture, attempts);
-      throwIfStopped(context, 'validating-output', options.id);
-      emitProgress(context, { stage: 'validating-output', attempt, message: 'Validating match data' });
-      validateMatch(result.data, result.diagnostics, capture.snapshot.page, options.id);
-      emitProgress(context, { stage: 'completed', attempt, message: 'Match capture completed' });
-      return result;
+      return await buildAndValidate(capture, attempts, context, options.id, attempt);
     } catch (error) {
       throwIfStopped(context, 'extracting-page', options.id);
       const normalized = asHltvError(error, {

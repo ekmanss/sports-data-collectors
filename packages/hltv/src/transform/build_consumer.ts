@@ -14,6 +14,16 @@ type RawSegment = { rounds: RawRound[]; completedRounds: number };
 
 const jsonEqual = (left: unknown, right: unknown): boolean => JSON.stringify(left) === JSON.stringify(right);
 
+function hasSemanticScoreboard(scoreboard: RawScoreboard | null): boolean {
+  if (!scoreboard || !/^\d+\s*:\s*\d+$/.test(scoreboard.score)) return false;
+  const round = scoreboard.round.match(/^\d+\s*-\s*(.+)$/);
+  if (!round) return false;
+  const map = round[1]!.trim().toLowerCase();
+  return Boolean(map && map !== 'unknown' && map !== 'tbd' && map !== '-')
+    && scoreboard.teams.length === 2
+    && scoreboard.teams.every((team) => Boolean(team.team));
+}
+
 function mergeLatestWithRich(latest: RawExtractedPage, rich: RawExtractedPage | null): { data: RawExtractedPage; fallbackSections: string[] } {
   if (!rich) return { data: latest, fallbackSections: [] };
   const data = structuredClone(latest);
@@ -655,7 +665,21 @@ export function buildConsumerFromCapture(
   if (!identity) throw new Error('final snapshot has an invalid HLTV match URL');
   const mergedStatic = mergeLatestWithRich(snapshot.page, capture.initialPage);
   const staticData = mergedStatic.data;
-  const snapshotsByMap = new Map([[mapName(snapshot), snapshot]]);
+  const matchOver = String(staticData.match.status).toLowerCase().includes('over');
+  const matchLive = String(staticData.match.status).toLowerCase().includes('live');
+  const scorebotUsable = hasSemanticScoreboard(snapshot.scoreboardNormal);
+  const stateSnapshot: RawSnapshot = scorebotUsable ? snapshot : {
+    ...snapshot,
+    scoreboardNormal: null,
+    scoreboardAdvanced: null,
+    gameLog: {
+      scrollHeight: 0,
+      chronological: [],
+      excludedNoiseEvents: snapshot.gameLog.chronological.length + snapshot.gameLog.excludedNoiseEvents,
+      positionsVisited: snapshot.gameLog.positionsVisited,
+    },
+  };
+  const snapshotsByMap = new Map([[mapName(stateSnapshot), stateSnapshot]]);
 
   const teams: HltvTeam[] = staticData.teams.map((team) => ({ id: requireId(team.id, `team ${team.name}`), name: team.name, country: team.country, url: team.url, logo: team.logo }));
   const players: HltvPlayer[] = staticData.lineups.flatMap((lineup) => lineup.players.map((player) => ({
@@ -706,12 +730,10 @@ export function buildConsumerFromCapture(
     playerIds: lineup.players.map((player) => requireId(player.id, `player ${player.nickname}`)),
   }));
 
-  const filtered = formalEvents(snapshot.gameLog.chronological);
+  const filtered = formalEvents(stateSnapshot.gameLog.chronological);
   const deduplicated = deduplicateAdjacent(filtered.events);
   const rawRounds = groupRounds(deduplicated.events);
   const segments = segmentRounds(rawRounds);
-  const matchOver = String(staticData.match.status).toLowerCase().includes('over');
-  const stateSnapshot = snapshot;
   let currentMap = mapName(stateSnapshot);
   if (matchOver) {
     for (const map of staticData.maps.maps) {
@@ -727,8 +749,7 @@ export function buildConsumerFromCapture(
     section,
     reason: 'A later snapshot in this capture omitted data that was present earlier in the same capture.',
   }));
-  const scorebotUnavailable = (matchOver || String(staticData.match.status).toLowerCase().includes('live'))
-    && snapshot.scoreboardNormal === null;
+  const scorebotUnavailable = (matchOver || matchLive) && !scorebotUsable;
   if (scorebotUnavailable) warnings.push({
     code: 'SCOREBOT_UNAVAILABLE',
     reason: 'HLTV marked the match live or over, but Scorebot did not become available within the bounded capture window.',
@@ -847,18 +868,23 @@ export function buildConsumerFromCapture(
       navigationSeconds: capture.navigationSeconds,
       totalSeconds: capture.totalSeconds,
       timings: capture.timings ?? {},
+      session: capture.session ?? {
+        reused: false,
+        snapshotCacheHit: false,
+        ageMs: 0,
+      },
       fallbackSections: mergedStatic.fallbackSections,
       scorebot: {
-        capturedAt: snapshot.capturedAt,
-        httpStatus: snapshot.httpStatus,
-        map: mapName(snapshot),
-        scoreboardPresent: Boolean(snapshot.scoreboardNormal),
-        normalPlayers: snapshot.scoreboardNormal?.teams.flatMap((team) => team.players).length ?? 0,
-        advancedPlayers: snapshot.scoreboardAdvanced?.teams.flatMap((team) => team.players).length ?? 0,
-        sourceEvents: snapshot.gameLog.chronological.length,
-        excludedNonFormalEvents: filtered.excluded + snapshot.gameLog.excludedNoiseEvents,
+        capturedAt: stateSnapshot.capturedAt,
+        httpStatus: stateSnapshot.httpStatus,
+        map: mapName(stateSnapshot),
+        scoreboardPresent: Boolean(stateSnapshot.scoreboardNormal),
+        normalPlayers: stateSnapshot.scoreboardNormal?.teams.flatMap((team) => team.players).length ?? 0,
+        advancedPlayers: stateSnapshot.scoreboardAdvanced?.teams.flatMap((team) => team.players).length ?? 0,
+        sourceEvents: stateSnapshot.gameLog.chronological.length,
+        excludedNonFormalEvents: filtered.excluded + stateSnapshot.gameLog.excludedNoiseEvents,
         adjacentDuplicatesRemoved: deduplicated.removed,
-        positionsVisited: snapshot.gameLog.positionsVisited ?? 0,
+        positionsVisited: stateSnapshot.gameLog.positionsVisited ?? 0,
       },
     },
     reconciliation: split.diagnostics,

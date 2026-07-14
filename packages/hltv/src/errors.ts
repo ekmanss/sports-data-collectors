@@ -45,3 +45,18 @@ export function asHltvError(error: unknown, fallback: HltvErrorOptions): HltvErr
     cause: error,
   });
 }
+
+export function withHltvErrorDetails(
+  error: HltvError,
+  details: Record<string, unknown>,
+): HltvError {
+  return new HltvError(error.message, {
+    code: error.code,
+    operation: error.operation,
+    stage: error.stage,
+    retryable: error.retryable,
+    ...(error.matchId === undefined ? {} : { matchId: error.matchId }),
+    details: { ...error.details, ...details },
+    cause: error.cause,
+  });
+}

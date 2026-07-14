@@ -77,6 +77,12 @@ try {
 
 The client also implements `AsyncDisposable`. `close()` rejects queued work, allows active work to finish, and then closes the browser.
 
+Match Detail waits for stable page and Scorebot signals instead of sleeping for a fixed successful
+path. Its virtual Game log is traversed inside one browser evaluation, avoiding one protocol round
+trip per scroll position. Inspect `diagnostics.capture.timings` and
+`diagnostics.capture.scorebot.positionsVisited` when profiling a capture; `navigationSeconds` is the
+pure `page.goto()` duration.
+
 ## Options
 
 Client options:

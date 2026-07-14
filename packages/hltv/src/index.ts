@@ -19,5 +19,6 @@ export type {
   HltvProgressEvent,
   HltvProxyOptions,
   HltvRequestOptions,
+  MatchCaptureTimings,
   MatchDiagnostics,
 } from './types.js';

@@ -40,4 +40,30 @@ assert.equal(detail.data.teams.length, 2);
 assert.ok(detail.data.maps.length > 0);
 assert.ok(Object.values(detail.diagnostics.mapChecks).every((check) => check.consistent));
 
-process.stdout.write(`Real HLTV validation OK: ${live.data.matches.length} live match(es), detail ${detail.data.match.id}\n`);
+const capture = detail.diagnostics.capture as {
+  navigationSeconds?: number;
+  totalSeconds?: number;
+  timings?: Record<string, number>;
+  scorebot?: { positionsVisited?: number };
+};
+assert.ok(capture.timings);
+for (const [stage, durationMs] of Object.entries(capture.timings)) {
+  assert.ok(Number.isFinite(durationMs) && durationMs >= 0, `${stage} timing must be finite`);
+}
+assert.ok((capture.navigationSeconds ?? Infinity) <= (capture.totalSeconds ?? -Infinity));
+const positionsVisited = capture.scorebot?.positionsVisited ?? 0;
+if (positionsVisited > 0) {
+  assert.ok(
+    (capture.timings.gameLogMs ?? Infinity) < Math.max(5_000, positionsVisited * 100),
+    'Game log extraction must stay below the legacy 100ms-per-position wait budget',
+  );
+}
+
+process.stdout.write(`${JSON.stringify({
+  message: 'Real HLTV validation OK',
+  liveMatches: live.data.matches.length,
+  matchId: detail.data.match.id,
+  captureSeconds: capture.totalSeconds,
+  timings: capture.timings,
+  positionsVisited,
+})}\n`);

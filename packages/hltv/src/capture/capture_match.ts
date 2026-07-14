@@ -7,12 +7,12 @@ import {
   abortableDelay,
   emitProgress,
   navigationTimeout,
-  remainingMs,
   throwIfStopped,
   type OperationContext,
 } from '../runtime.js';
 import type {
   CaptureAttempt,
+  MatchCaptureTimings,
   RawExtractedPage,
   RawLogEvent,
   RawScoreboard,
@@ -21,9 +21,11 @@ import type {
 
 export interface MatchCaptureOptions extends MatchIdentity {
   context: OperationContext;
-  pageSettleMs: number;
-  scorebotSettleMs: number;
+  pageReadyTimeoutMs: number;
+  scorebotReadyTimeoutMs: number;
 }
+
+const STABILITY_POLL_MS = 250;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -57,6 +59,50 @@ async function evaluatePage(page: Page): Promise<RawExtractedPage> {
   const extracted: unknown = await page.evaluate(`(${extractHltvMatchPage.toString()})()`);
   assertExtractedPage(extracted);
   return extracted;
+}
+
+function matchPageSignature(page: RawExtractedPage): string {
+  return JSON.stringify({
+    match: page.match,
+    teams: page.teams.map((team) => [team.id, team.name]),
+    maps: page.maps.maps.map((map) => [
+      map.name,
+      map.teams.map((team) => [team.name, team.score]),
+    ]),
+    lineups: page.lineups.map((lineup) => [
+      lineup.id,
+      lineup.players.map((player) => player.id),
+    ]),
+    matchStatsViews: page.matchStats?.views.length ?? 0,
+    sections: page.sections,
+  });
+}
+
+async function waitForStableMatchPage(
+  page: Page,
+  options: MatchCaptureOptions,
+): Promise<RawExtractedPage> {
+  const started = performance.now();
+  let previousSignature: string | null = null;
+  let latest: RawExtractedPage | null = null;
+  let lastError: unknown;
+  while (performance.now() - started < options.pageReadyTimeoutMs) {
+    throwIfStopped(options.context, 'extracting-page', options.id);
+    try {
+      latest = await evaluatePage(page);
+      if (latest.sections.matchPage && latest.match.id === options.id) {
+        const signature = matchPageSignature(latest);
+        if (signature === previousSignature) return latest;
+        previousSignature = signature;
+      }
+    } catch (error) {
+      lastError = error;
+    }
+    await abortableDelay(STABILITY_POLL_MS, options.context, 'extracting-page', options.id);
+  }
+  if (latest?.sections.matchPage && latest.match.id === options.id) return latest;
+  if (lastError) throw lastError;
+  return await evaluatePage(page);
 }
 
 async function extractScoreboard(page: Page): Promise<RawScoreboard | null> {
@@ -99,59 +145,81 @@ async function switchScoreboard(page: Page, label: 'Normal' | 'Advanced'): Promi
   return true;
 }
 
-async function extractFullGameLog(page: Page): Promise<{ scrollHeight: number; chronological: RawLogEvent[] }> {
-  const dimensions = await page.evaluate(`(() => {
-    const list = document.querySelector('#scoreboardElement .gamelog .list.desktop');
-    return list ? { scrollHeight: list.scrollHeight, clientHeight: list.clientHeight } : null;
-  })()`) as { scrollHeight: number; clientHeight: number } | null;
-  if (!dimensions) return { scrollHeight: 0, chronological: [] };
+async function extractFullGameLog(page: Page): Promise<{
+  scrollHeight: number;
+  chronological: RawLogEvent[];
+  positionsVisited: number;
+}> {
+  const result = await page.evaluate(async () => {
+    const list = document.querySelector<HTMLElement>('#scoreboardElement .gamelog .list.desktop');
+    if (!list) return { scrollHeight: 0, chronological: [], positionsVisited: 0 };
 
-  const step = Math.max(dimensions.clientHeight - 104, 156);
-  const positions = Array.from({ length: Math.ceil(dimensions.scrollHeight / step) + 1 }, (_, index) => index * step);
-  positions.push(dimensions.scrollHeight);
-  const byTop = new Map<number, RawLogEvent>();
-  for (const position of positions) {
-    await page.evaluate(`(() => {
-      const list = document.querySelector('#scoreboardElement .gamelog .list.desktop');
-      if (list) {
-        list.scrollTop = ${position};
-        list.dispatchEvent(new Event('scroll', { bubbles: true }));
-      }
-    })()`);
-    await page.waitForTimeout(100);
-    const events = await page.evaluate(`(() => {
-      const clean = (value) => (value || '').replace(/\\s+/g, ' ').trim();
-      const list = document.querySelector('#scoreboardElement .gamelog .list.desktop');
-      if (!list) return [];
-      return [...list.querySelectorAll('.topPadding')].flatMap((row) => {
-        const box = row.querySelector('.gamelogBox');
-        if (!box) return [];
-        const tokens = [];
-        const visit = (node) => {
+    const clean = (value: string | null | undefined): string =>
+      (value || '').replace(/\s+/g, ' ').trim();
+    const step = Math.max(list.clientHeight - 104, 156);
+    const positions = [...new Set([
+      ...Array.from(
+        { length: Math.ceil(list.scrollHeight / step) + 1 },
+        (_, index) => index * step,
+      ),
+      list.scrollHeight,
+    ])];
+    const byTop = new Map<number, RawLogEvent>();
+    const waitForRender = async (): Promise<void> => {
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      });
+    };
+
+    for (const position of positions) {
+      list.scrollTop = position;
+      list.dispatchEvent(new Event('scroll', { bubbles: true }));
+      await waitForRender();
+      const rows = Array.from(list.querySelectorAll('.topPadding')) as HTMLElement[];
+      for (const row of rows) {
+        const box = row.querySelector('.gamelogBox') as HTMLElement | null;
+        if (!box) continue;
+        const tokens: string[] = [];
+        const visit = (node: Node): void => {
           if (node.nodeType === Node.TEXT_NODE) {
             const value = clean(node.textContent);
             if (value) tokens.push(value);
           } else if (node instanceof HTMLImageElement) {
             const alt = clean(node.alt);
             if (alt) tokens.push(alt);
-          } else node.childNodes.forEach(visit);
+          } else {
+            node.childNodes.forEach(visit);
+          }
         };
         visit(box);
-        return [{
-          top: Number.parseInt(row.style.top || '0', 10),
-          type: [...box.classList].filter((name) => name !== 'gamelogBox'),
-          text: clean(tokens.join(' ')).replace(/\\s+([),])/g, '$1').replace(/([(])\\s+/g, '$1'),
-          players: [...box.querySelectorAll('.ctplayer,.tplayer')].map((player) => ({
-            name: clean(player.textContent), side: player.classList.contains('ctplayer') ? 'CT' : 'T',
+        const top = Number.parseInt(row.style.top || '0', 10);
+        byTop.set(top, {
+          top,
+          type: Array.from(box.classList).filter((name) => name !== 'gamelogBox'),
+          text: clean(tokens.join(' '))
+            .replace(/\s+([),])/g, '$1')
+            .replace(/([(])\s+/g, '$1'),
+          players: (Array.from(box.querySelectorAll('.ctplayer,.tplayer')) as HTMLElement[]).map((player) => ({
+            name: clean(player.textContent),
+            side: player.classList.contains('ctplayer') ? 'CT' as const : 'T' as const,
           })),
-          weapon: box.querySelector('.playerWeapon')?.src.split('/').pop()?.replace('.png', '') || null,
+          weapon: (box.querySelector('.playerWeapon') as HTMLImageElement | null)?.src
+            .split('/').pop()?.replace('.png', '') || null,
           headshot: Boolean(box.querySelector('.headshotIcon')),
-        }];
-      });
-    })()`) as RawLogEvent[];
-    for (const event of events) byTop.set(event.top, event);
-  }
-  return { scrollHeight: dimensions.scrollHeight, chronological: [...byTop.values()].sort((left, right) => right.top - left.top) };
+        });
+      }
+    }
+    return {
+      scrollHeight: list.scrollHeight,
+      chronological: [...byTop.values()].sort((left, right) => right.top - left.top),
+      positionsVisited: positions.length,
+    };
+  });
+  return result as {
+    scrollHeight: number;
+    chronological: RawLogEvent[];
+    positionsVisited: number;
+  };
 }
 
 function formalGameLog(events: RawLogEvent[]): RawLogEvent[] {
@@ -193,15 +261,25 @@ async function installScorebotFallback(page: Page, config: Record<string, string
   `);
 }
 
-async function collectSnapshot(page: Page, httpStatus: number | null): Promise<RawSnapshot> {
+async function collectSnapshot(
+  page: Page,
+  httpStatus: number | null,
+  timings: MatchCaptureTimings,
+): Promise<RawSnapshot> {
+  const pageStarted = performance.now();
   const pageData = await evaluatePage(page);
+  timings.snapshotPageMs = Math.round(performance.now() - pageStarted);
+  const scoreboardsStarted = performance.now();
   const normal = await extractScoreboard(page);
   let advanced: RawScoreboard | null = null;
   if (await switchScoreboard(page, 'Advanced')) {
     advanced = await extractScoreboard(page);
     await switchScoreboard(page, 'Normal');
   }
+  timings.scoreboardsMs = Math.round(performance.now() - scoreboardsStarted);
+  const gameLogStarted = performance.now();
   const rawLog = await extractFullGameLog(page);
+  timings.gameLogMs = Math.round(performance.now() - gameLogStarted);
   const chronological = formalGameLog(rawLog.chronological);
   return {
     capturedAt: new Date().toISOString(), httpStatus, page: pageData,
@@ -210,9 +288,69 @@ async function collectSnapshot(page: Page, httpStatus: number | null): Promise<R
       scrollHeight: rawLog.scrollHeight,
       chronological,
       excludedNoiseEvents: rawLog.chronological.length - chronological.length,
+      positionsVisited: rawLog.positionsVisited,
     },
     note: normal ? null : 'Scorebot was not present for this match state.',
   };
+}
+
+type ScorebotState = {
+  present: boolean;
+  ready: boolean;
+  signature: string;
+};
+
+async function scorebotState(page: Page): Promise<ScorebotState> {
+  return await page.evaluate(() => {
+    const root = document.querySelector('#scoreboardElement .scoreboard');
+    const list = document.querySelector<HTMLElement>('#scoreboardElement .gamelog .list.desktop');
+    if (!root) return { present: false, ready: false, signature: '' };
+    const clean = (value: string | null | undefined): string =>
+      (value || '').replace(/\s+/g, ' ').trim();
+    const score = clean(root.querySelector('.scoreText')?.textContent);
+    const round = clean(root.querySelector('.currentRoundText')?.textContent);
+    const playerRows = root.querySelectorAll('table.team tr').length;
+    const visibleLogRows = list?.querySelectorAll('.topPadding').length ?? 0;
+    const scoreTotal = score.split(/\D+/).reduce(
+      (sum, value) => sum + (Number(value) || 0),
+      0,
+    );
+    const needsGameLog = scoreTotal > 0 || !/^1\b/.test(round);
+    const gameLogReady = Boolean(list) && (!needsGameLog || visibleLogRows > 0);
+    return {
+      present: true,
+      ready: playerRows >= 4 && Boolean(score) && Boolean(round) && gameLogReady,
+      signature: JSON.stringify({
+        score,
+        round,
+        playerRows,
+        scrollHeight: list?.scrollHeight ?? 0,
+        visibleLogRows,
+      }),
+    };
+  });
+}
+
+async function waitForStableScorebot(
+  page: Page,
+  options: MatchCaptureOptions,
+): Promise<ScorebotState> {
+  const started = performance.now();
+  let previousSignature: string | null = null;
+  let latest: ScorebotState = { present: false, ready: false, signature: '' };
+  while (performance.now() - started < options.scorebotReadyTimeoutMs) {
+    throwIfStopped(options.context, 'extracting-scorebot', options.id);
+    latest = await scorebotState(page);
+    if (latest.ready && latest.signature === previousSignature) return latest;
+    previousSignature = latest.ready ? latest.signature : null;
+    await abortableDelay(
+      STABILITY_POLL_MS,
+      options.context,
+      'extracting-scorebot',
+      options.id,
+    );
+  }
+  return latest;
 }
 
 function classifyHttp(status: number | null): void {
@@ -237,12 +375,29 @@ export async function captureMatch(
 ): Promise<CaptureAttempt> {
   const startedAt = new Date().toISOString();
   const started = performance.now();
+  const timings: MatchCaptureTimings = {
+    metadataMs: 0,
+    newPageMs: 0,
+    navigationMs: 0,
+    pageReadyMs: 0,
+    scorebotReloadMs: 0,
+    scorebotReadyMs: 0,
+    snapshotPageMs: 0,
+    scoreboardsMs: 0,
+    gameLogMs: 0,
+    pageCloseMs: 0,
+  };
+  const metadataStarted = performance.now();
   const versions = await collectorVersions();
+  timings.metadataMs = Math.round(performance.now() - metadataStarted);
   let page: Page | null = null;
   const stopPage = (): void => { void page?.close().catch(() => undefined); };
   try {
     throwIfStopped(options.context, 'navigating', options.id);
+    const newPageStarted = performance.now();
     page = await browser.newPage();
+    timings.newPageMs = Math.round(performance.now() - newPageStarted);
+    await page.addInitScript('globalThis.__name = (target) => target');
     options.context.signal.addEventListener('abort', stopPage, { once: true });
     emitProgress(options.context, { stage: 'navigating', attempt, message: `Opening ${options.url}` });
     const navigationStarted = performance.now();
@@ -259,11 +414,13 @@ export async function captureMatch(
         matchId: options.id, cause,
       });
     }
+    timings.navigationMs = Math.round(performance.now() - navigationStarted);
     classifyHttp(response?.status() ?? null);
     validateFinalUrl(page.url(), options);
     emitProgress(options.context, { stage: 'extracting-page', attempt, message: 'Waiting for and extracting match sections' });
-    await abortableDelay(options.pageSettleMs, options.context, 'extracting-page', options.id);
-    const initialPage = await evaluatePage(page);
+    const pageReadyStarted = performance.now();
+    const initialPage = await waitForStableMatchPage(page, options);
+    timings.pageReadyMs = Math.round(performance.now() - pageReadyStarted);
     validateFinalUrl(initialPage.url, options);
     if (initialPage.match.id !== options.id) {
       throw new HltvError('the loaded page contains a different match ID', {
@@ -284,22 +441,23 @@ export async function captureMatch(
     }
 
     emitProgress(options.context, { stage: 'extracting-scorebot', attempt, message: 'Extracting Normal/Advanced scoreboard and Game log' });
-    let scorebotPresent = await page.locator('#scoreboardElement .scoreboard').count() > 0;
-    if (!scorebotPresent) {
+    const status = initialPage.match.status.toLowerCase();
+    const requiresScorebot = status.includes('live') || status.includes('over');
+    let state = await scorebotState(page);
+    if (requiresScorebot && !state.present) {
       await installScorebotFallback(page, fallbackConfig(options, initialPage));
+      const reloadStarted = performance.now();
       response = await page.reload({ waitUntil: 'domcontentloaded', timeout: navigationTimeout(options.context) });
+      timings.scorebotReloadMs = Math.round(performance.now() - reloadStarted);
       classifyHttp(response?.status() ?? null);
       validateFinalUrl(page.url(), options);
     }
-    await abortableDelay(options.scorebotSettleMs, options.context, 'extracting-scorebot', options.id);
-    if (!scorebotPresent) {
-      await page.waitForSelector('#scoreboardElement .scoreboard', {
-        timeout: Math.max(1, Math.min(10_000, remainingMs(options.context))),
-      }).catch(() => null);
-      throwIfStopped(options.context, 'extracting-scorebot', options.id);
-      scorebotPresent = await page.locator('#scoreboardElement .scoreboard').count() > 0;
+    if (requiresScorebot) {
+      const scorebotReadyStarted = performance.now();
+      state = await waitForStableScorebot(page, options);
+      timings.scorebotReadyMs = Math.round(performance.now() - scorebotReadyStarted);
     }
-    const snapshot = await collectSnapshot(page, response?.status() ?? null);
+    const snapshot = await collectSnapshot(page, response?.status() ?? null, timings);
     validateFinalUrl(snapshot.page.url, options);
     if (snapshot.page.match.id !== options.id) {
       throw new HltvError('the final page snapshot contains a different match ID', {
@@ -307,9 +465,7 @@ export async function captureMatch(
         matchId: options.id, details: { pageId: snapshot.page.match.id },
       });
     }
-    const status = initialPage.match.status.toLowerCase();
-    const requiresScorebot = status.includes('live') || status.includes('over');
-    if (requiresScorebot && !scorebotPresent) {
+    if (requiresScorebot && !state.present) {
       throw new HltvError('Scorebot data is required for this match state but was unavailable', {
         code: 'INCOMPLETE_CAPTURE', operation: 'match-detail', stage: 'extracting-scorebot', retryable: false,
         matchId: options.id,
@@ -321,8 +477,9 @@ export async function captureMatch(
       snapshot,
       collector: versions,
       httpStatus: response?.status() ?? null,
-      navigationSeconds: Number(((performance.now() - navigationStarted) / 1000).toFixed(3)),
+      navigationSeconds: Number((timings.navigationMs / 1000).toFixed(3)),
       totalSeconds: Number(((performance.now() - started) / 1000).toFixed(3)),
+      timings,
       attempt,
       startedAt,
       completedAt,
@@ -334,6 +491,8 @@ export async function captureMatch(
     });
   } finally {
     options.context.signal.removeEventListener('abort', stopPage);
+    const pageCloseStarted = performance.now();
     await page?.close().catch(() => undefined);
+    timings.pageCloseMs = Math.round(performance.now() - pageCloseStarted);
   }
 }

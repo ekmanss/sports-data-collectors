@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import test from 'node:test';
 import { matchIdentityFromUrl, normalizeClientOptions } from '../src/config.js';
-import { HltvError } from '../src/errors.js';
+import { HltvError, withHltvErrorDetails } from '../src/errors.js';
 import { retryDelayMilliseconds } from '../src/runtime.js';
 import { buildConsumerFromCapture } from '../src/transform/build_consumer.js';
 import { validateMatch } from '../src/transform/validate_match.js';
@@ -86,6 +86,32 @@ test('uses a longer bounded cooldown for an access challenge', () => {
   assert.equal(retryDelayMilliseconds('ACCESS_BLOCKED', 2, 0.999_999), 25_000);
   assert.equal(retryDelayMilliseconds('NAVIGATION_FAILED', 1, 0), 2_000);
   assert.equal(retryDelayMilliseconds('NAVIGATION_FAILED', 1, 0.999_999), 2_500);
+});
+
+test('preserves bounded attempt evidence on a terminal HLTV error', () => {
+  const error = new HltvError('scorebot unavailable', {
+    code: 'INCOMPLETE_CAPTURE',
+    operation: 'match-detail',
+    stage: 'extracting-scorebot',
+    retryable: false,
+    matchId: 2395900,
+    details: { httpStatus: 200 },
+  });
+  const attempts = [{
+    attempt: 1,
+    startedAt: '2026-07-14T00:00:00.000Z',
+    completedAt: '2026-07-14T00:00:30.000Z',
+    httpStatus: 200,
+    error: { code: 'INCOMPLETE_CAPTURE', message: 'scorebot unavailable' },
+  }];
+
+  const enriched = withHltvErrorDetails(error, { attempts });
+
+  assert.equal(enriched.code, error.code);
+  assert.equal(enriched.stage, error.stage);
+  assert.equal(enriched.matchId, error.matchId);
+  assert.equal(enriched.details?.httpStatus, 200);
+  assert.deepEqual(enriched.details?.attempts, attempts);
 });
 
 test('accepts complete completed-match data', () => {

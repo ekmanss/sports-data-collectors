@@ -840,6 +840,7 @@ export function buildConsumerFromCapture(
       httpStatus: capture.httpStatus,
       navigationSeconds: capture.navigationSeconds,
       totalSeconds: capture.totalSeconds,
+      timings: capture.timings ?? {},
       fallbackSections: mergedStatic.fallbackSections,
       scorebot: {
         capturedAt: snapshot.capturedAt,
@@ -851,6 +852,7 @@ export function buildConsumerFromCapture(
         sourceEvents: snapshot.gameLog.chronological.length,
         excludedNonFormalEvents: filtered.excluded + snapshot.gameLog.excludedNoiseEvents,
         adjacentDuplicatesRemoved: deduplicated.removed,
+        positionsVisited: snapshot.gameLog.positionsVisited ?? 0,
       },
     },
     reconciliation: split.diagnostics,

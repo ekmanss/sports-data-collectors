@@ -548,8 +548,26 @@ export interface RawSnapshot {
   page: RawExtractedPage;
   scoreboardNormal: RawScoreboard | null;
   scoreboardAdvanced: RawScoreboard | null;
-  gameLog: { scrollHeight: number; chronological: RawLogEvent[]; excludedNoiseEvents: number };
+  gameLog: {
+    scrollHeight: number;
+    chronological: RawLogEvent[];
+    excludedNoiseEvents: number;
+    positionsVisited?: number;
+  };
   note: string | null;
+}
+
+export interface MatchCaptureTimings {
+  metadataMs: number;
+  newPageMs: number;
+  navigationMs: number;
+  pageReadyMs: number;
+  scorebotReloadMs: number;
+  scorebotReadyMs: number;
+  snapshotPageMs: number;
+  scoreboardsMs: number;
+  gameLogMs: number;
+  pageCloseMs: number;
 }
 
 export interface CaptureAttempt {
@@ -559,6 +577,7 @@ export interface CaptureAttempt {
   httpStatus: number | null;
   navigationSeconds: number;
   totalSeconds: number;
+  timings?: MatchCaptureTimings;
   attempt: number;
   startedAt: string;
   completedAt: string;

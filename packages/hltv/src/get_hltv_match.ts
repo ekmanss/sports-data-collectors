@@ -1,7 +1,7 @@
 import type { Browser } from 'playwright-core';
 import { captureMatch, type MatchCaptureOptions } from './capture/capture_match.js';
 import { matchIdentityFromUrl } from './config.js';
-import { HltvError, asHltvError } from './errors.js';
+import { HltvError, asHltvError, withHltvErrorDetails } from './errors.js';
 import {
   abortableDelay,
   emitProgress,
@@ -42,8 +42,8 @@ export async function getMatchWithBrowser(
   const options: MatchCaptureOptions = {
     ...identity,
     context,
-    pageSettleMs: 12_000,
-    scorebotSettleMs: 10_000,
+    pageReadyTimeoutMs: 12_000,
+    scorebotReadyTimeoutMs: 30_000,
   };
   const attempts: MatchDiagnostics['attempts'] = [];
 
@@ -80,7 +80,7 @@ export async function getMatchWithBrowser(
         error: { code: normalized.code, message: normalized.message },
       });
       if (!normalized.retryable || normalized.code === 'ACCESS_BLOCKED' || attempt === 2) {
-        throw normalized;
+        throw withHltvErrorDetails(normalized, { attempts });
       }
       emitProgress(context, {
         stage: 'navigating',

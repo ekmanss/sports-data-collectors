@@ -81,7 +81,7 @@ Violations fail with `INCOMPLETE_CAPTURE`; they are not converted into a superfi
 
 ## Diagnostics
 
-Match diagnostics use schema `3.0.0`; live diagnostics use schema `1.0.0`. Both include operation identity, start/end/duration, collector versions, capture attempts, and warnings. Match diagnostics additionally include reconciliation and per-map checks. Live diagnostics include card counts, skipped cards, and duplicate merges.
+Match diagnostics use schema `3.0.0`; live diagnostics use schema `1.0.0`. Both include operation identity, start/end/duration, collector versions, capture attempts, and warnings. Match diagnostics additionally include reconciliation and per-map checks. During a live inter-map window, HLTV can temporarily omit Scorebot while still exposing canonical map-card scores. The collector returns that bounded partial snapshot with `SCOREBOT_UNAVAILABLE`, `current: null`, and any incomplete Game log checks preserved as inconsistent; consumers must abstain from decisions that require current-round evidence. Live diagnostics include card counts, skipped cards, and duplicate merges.
 
 `match-detail` diagnostics expose pure navigation time separately from capture work. The additive
 `capture.timings` object reports milliseconds spent in metadata lookup, page creation, navigation,

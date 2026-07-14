@@ -361,6 +361,87 @@ test('rejects Match stats that reference an unknown player', () => {
   );
 });
 
+test('returns a warning-bearing partial snapshot when Scorebot is unavailable between maps', () => {
+  const capturedAt = '2026-07-14T15:09:49.336Z';
+  const page: RawExtractedPage = {
+    title: 'BIG Academy vs ex-MANA',
+    url: 'https://www.hltv.org/matches/2395891/big-academy-vs-ex-mana-event',
+    match: {
+      id: 2395891,
+      status: 'LIVE',
+      scheduledUnixMs: 1_784_000_000_000,
+      event: { id: 1, name: 'Event', url: 'https://www.hltv.org/events/1/event' },
+    },
+    teams: [
+      { id: 10254, name: 'BIG Academy', url: null, country: null, logo: null },
+      { id: 13892, name: 'ex-MANA', url: null, country: null, logo: null },
+    ],
+    maps: {
+      format: 'Best of 3',
+      stage: 'Group stage',
+      veto: [],
+      maps: [
+        { name: 'Ancient', optional: false, halfScores: '', teams: [
+          { name: 'BIG Academy', score: '16', picked: true },
+          { name: 'ex-MANA', score: '14', picked: false },
+        ] },
+        { name: 'Dust2', optional: false, halfScores: '', teams: [
+          { name: 'BIG Academy', score: '-', picked: false },
+          { name: 'ex-MANA', score: '-', picked: true },
+        ] },
+        { name: 'Mirage', optional: false, halfScores: '', teams: [
+          { name: 'BIG Academy', score: '-', picked: false },
+          { name: 'ex-MANA', score: '-', picked: false },
+        ] },
+      ],
+    },
+    streams: [],
+    lineups: [],
+    mapStats: null,
+    recentMatches: [],
+    headToHead: null,
+    sections: { matchPage: true, maps: true, scoreboard: false, gameLog: false },
+  };
+  const capture: CaptureAttempt = {
+    initialPage: page,
+    snapshot: {
+      capturedAt,
+      httpStatus: 200,
+      page,
+      scoreboardNormal: null,
+      scoreboardAdvanced: null,
+      gameLog: { scrollHeight: 0, chronological: [], excludedNoiseEvents: 0 },
+      note: 'Scorebot was not present for this match state.',
+    },
+    collector: {
+      packageVersion: '0.0.0',
+      cloakbrowserVersion: '0.4.10',
+      playwrightVersion: '1.61.0',
+    },
+    httpStatus: 200,
+    navigationSeconds: 1,
+    totalSeconds: 31,
+    attempt: 1,
+    startedAt: capturedAt,
+    completedAt: capturedAt,
+  };
+
+  const result = buildConsumerFromCapture(capture, []);
+
+  assert.equal(result.data.current, null);
+  assert.deepEqual(
+    result.data.maps.map((map) => [map.name, map.status, map.score]),
+    [
+      ['Ancient', 'completed', [{ teamId: 10254, score: 16 }, { teamId: 13892, score: 14 }]],
+      ['Dust2', 'upcoming', []],
+      ['Mirage', 'upcoming', []],
+    ],
+  );
+  assert.ok(result.diagnostics.warnings.some((warning) => warning.code === 'SCOREBOT_UNAVAILABLE'));
+  assert.equal(result.diagnostics.mapChecks.Ancient?.consistent, false);
+  validateMatch(result.data, result.diagnostics, page, 2395891);
+});
+
 test('reconciles overlapping Scorebot replay fragments across maps', () => {
   let top = 0;
   const event = (text: string): RawLogEvent => ({

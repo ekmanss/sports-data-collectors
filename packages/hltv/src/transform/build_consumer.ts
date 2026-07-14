@@ -727,6 +727,12 @@ export function buildConsumerFromCapture(
     section,
     reason: 'A later snapshot in this capture omitted data that was present earlier in the same capture.',
   }));
+  const scorebotUnavailable = (matchOver || String(staticData.match.status).toLowerCase().includes('live'))
+    && snapshot.scoreboardNormal === null;
+  if (scorebotUnavailable) warnings.push({
+    code: 'SCOREBOT_UNAVAILABLE',
+    reason: 'HLTV marked the match live or over, but Scorebot did not become available within the bounded capture window.',
+  });
   const maps: MatchMap[] = staticData.maps.maps.map((rawMap) => {
     const staticScores = rawMap.teams.map((team) => Number(team.score));
     // Numeric map-card scores during LIVE can be only the completed half, not

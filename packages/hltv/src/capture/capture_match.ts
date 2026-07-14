@@ -454,7 +454,7 @@ export async function captureMatch(
     }
     if (requiresScorebot) {
       const scorebotReadyStarted = performance.now();
-      state = await waitForStableScorebot(page, options);
+      await waitForStableScorebot(page, options);
       timings.scorebotReadyMs = Math.round(performance.now() - scorebotReadyStarted);
     }
     const snapshot = await collectSnapshot(page, response?.status() ?? null, timings);
@@ -463,12 +463,6 @@ export async function captureMatch(
       throw new HltvError('the final page snapshot contains a different match ID', {
         code: 'INCOMPLETE_CAPTURE', operation: 'match-detail', stage: 'validating-source', retryable: false,
         matchId: options.id, details: { pageId: snapshot.page.match.id },
-      });
-    }
-    if (requiresScorebot && !state.present) {
-      throw new HltvError('Scorebot data is required for this match state but was unavailable', {
-        code: 'INCOMPLETE_CAPTURE', operation: 'match-detail', stage: 'extracting-scorebot', retryable: false,
-        matchId: options.id,
       });
     }
     const completedAt = new Date().toISOString();

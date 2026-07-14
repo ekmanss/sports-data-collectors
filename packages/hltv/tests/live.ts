@@ -38,14 +38,22 @@ assert.equal(detail.data.schemaVersion, '3.1.0');
 assert.equal(detail.data.match.id, matchIdentityFromUrl(matchUrl)?.id);
 assert.equal(detail.data.teams.length, 2);
 assert.ok(detail.data.maps.length > 0);
-assert.ok(Object.values(detail.diagnostics.mapChecks).every((check) => check.consistent));
 
 const capture = detail.diagnostics.capture as {
   navigationSeconds?: number;
   totalSeconds?: number;
   timings?: Record<string, number>;
-  scorebot?: { positionsVisited?: number };
+  scorebot?: { positionsVisited?: number; scoreboardPresent?: boolean };
 };
+const scorebotUnavailable = detail.diagnostics.warnings.some(
+  (warning) => warning.code === 'SCOREBOT_UNAVAILABLE',
+);
+if (scorebotUnavailable) {
+  assert.equal(capture.scorebot?.scoreboardPresent, false);
+  assert.equal(detail.data.current, null);
+} else {
+  assert.ok(Object.values(detail.diagnostics.mapChecks).every((check) => check.consistent));
+}
 assert.ok(capture.timings);
 for (const [stage, durationMs] of Object.entries(capture.timings)) {
   assert.ok(Number.isFinite(durationMs) && durationMs >= 0, `${stage} timing must be finite`);

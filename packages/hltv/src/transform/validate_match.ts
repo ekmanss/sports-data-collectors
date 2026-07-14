@@ -14,6 +14,9 @@ export function validateMatch(
   raw: Pick<RawExtractedPage, 'sections'>,
   requestedId: number,
 ): void {
+  const scorebotUnavailable = diagnostics.warnings.some(
+    (warning) => warning.code === 'SCOREBOT_UNAVAILABLE',
+  );
   const identity = matchIdentityFromUrl(match.source.url);
   if (match.schemaVersion !== '3.1.0') fail('unexpected consumer schema version');
   if (!identity || match.match.id !== requestedId || identity.id !== requestedId || match.match.slug !== identity.slug) {
@@ -59,7 +62,7 @@ export function validateMatch(
   for (const map of match.maps) {
     const completedRounds = map.gameLog.rounds.filter((round) => round.result !== null).length;
     const scoreSum = map.score.reduce((sum, score) => sum + score.score, 0);
-    if (map.status !== 'upcoming' && scoreSum !== completedRounds) {
+    if (map.status !== 'upcoming' && scoreSum !== completedRounds && !scorebotUnavailable) {
       fail(`map ${map.name} has ${scoreSum} score rounds but ${completedRounds} completed Game log rounds`, {
         map: map.name,
         scoreSum,
@@ -74,7 +77,13 @@ export function validateMatch(
     });
   }
 
-  if (Object.values(diagnostics.mapChecks).some((check) => !check.consistent)) {
+  if (scorebotUnavailable && match.current !== null) {
+    fail('Scorebot-unavailable captures cannot expose a current map');
+  }
+  if (
+    Object.values(diagnostics.mapChecks).some((check) => !check.consistent)
+    && !scorebotUnavailable
+  ) {
     fail('map scores and Game log rounds are inconsistent');
   }
 }

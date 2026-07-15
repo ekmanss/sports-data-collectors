@@ -28,12 +28,14 @@ const delay = async (milliseconds: number): Promise<void> => await new Promise(
   (resolve) => setTimeout(resolve, milliseconds),
 );
 let live: GetHltvLiveMatchesResult | undefined;
+let warmLive: GetHltvLiveMatchesResult | undefined;
 let detail: GetHltvMatchResult | undefined;
 let warmDetail: GetHltvMatchResult | undefined;
 for (let browserAttempt = 1; browserAttempt <= 3; browserAttempt += 1) {
   const client = await createLiveClient();
   try {
     live = await client.getLiveMatches({ onProgress });
+    warmLive = await client.getLiveMatches({ onProgress });
     detail = await client.getMatch(matchUrl, { onProgress });
     warmDetail = await client.getMatch(matchUrl, { onProgress });
     break;
@@ -47,7 +49,9 @@ for (let browserAttempt = 1; browserAttempt <= 3; browserAttempt += 1) {
   }
   await delay(browserAttempt * 10_000);
 }
-if (!live || !detail || !warmDetail) throw new Error('real-network smoke did not produce results');
+if (!live || !warmLive || !detail || !warmDetail) {
+  throw new Error('real-network smoke did not produce results');
+}
 assert.equal(live.data.schemaVersion, '1.0.0');
 assert.equal(live.data.sport, 'cs2');
 assert.equal(live.data.source.url, 'https://www.hltv.org/matches');
@@ -59,6 +63,10 @@ for (const match of live.data.matches) {
   assert.equal(match.teams.length, 2);
   assert.ok(match.teams.every((team) => team.name.length > 0));
 }
+assert.equal(live.diagnostics.capture?.session.reused, false);
+assert.equal(live.diagnostics.capture?.session.navigated, true);
+assert.equal(warmLive.diagnostics.capture?.session.reused, true);
+assert.equal(warmLive.diagnostics.capture?.session.navigated, false);
 
 assert.equal(detail.data.schemaVersion, '3.1.0');
 assert.equal(detail.data.match.id, matchIdentityFromUrl(matchUrl)?.id);
@@ -112,6 +120,9 @@ if (positionsVisited > 0) {
 process.stdout.write(`${JSON.stringify({
   message: 'Real HLTV validation OK',
   liveMatches: live.data.matches.length,
+  coldLiveDurationMs: live.diagnostics.durationMs,
+  warmLiveDurationMs: warmLive.diagnostics.durationMs,
+  warmLiveSession: warmLive.diagnostics.capture?.session,
   matchId: detail.data.match.id,
   coldCaptureSeconds: capture.totalSeconds,
   warmCaptureSeconds: warmCapture.totalSeconds,

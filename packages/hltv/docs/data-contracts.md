@@ -89,7 +89,14 @@ inconsistent current map.
 
 ## Diagnostics
 
-Match diagnostics use schema `3.0.0`; live diagnostics use schema `1.0.0`. Both include operation identity, start/end/duration, collector versions, capture attempts, and warnings. Match diagnostics additionally include reconciliation and per-map checks. The first cold match page gets a bounded twelve-second Scorebot readiness window. During a later live inter-map window, HLTV can temporarily omit Scorebot while still exposing canonical map-card scores; the established session waits for at most six seconds and returns a bounded partial snapshot with `SCOREBOT_UNAVAILABLE`, `current: null`, and any incomplete Game log checks preserved as inconsistent. Consumers must abstain from decisions that require current-round evidence. A non-null Scorebot DOM skeleton is also treated as unavailable unless its score, round/map, teams, player rows, and required Game log are semantically usable. Live diagnostics include card counts, skipped cards, and duplicate merges.
+Match diagnostics use schema `3.0.0`; live diagnostics use schema `1.0.0`. Both include operation identity, start/end/duration, collector versions, capture attempts, and warnings. Match diagnostics additionally include reconciliation and per-map checks. The first cold match page gets a bounded twelve-second Scorebot readiness window. During a later live inter-map window, HLTV can temporarily omit Scorebot while still exposing canonical map-card scores; the established session waits for at most six seconds and returns a bounded partial snapshot with `SCOREBOT_UNAVAILABLE`, `current: null`, and any incomplete Game log checks preserved as inconsistent. Consumers must abstain from decisions that require current-round evidence. A non-null Scorebot DOM skeleton is also treated as unavailable unless its score, round/map, teams, player rows, and required Game log are semantically usable. Live diagnostics include card counts, skipped cards, duplicate merges, and additive `capture.session` evidence showing whether the persistent `/matches` page was reused, whether this call navigated, and the page age.
+
+The reusable client keeps one `/matches` page open. Warm live-list calls read one semantically hydrated
+DOM snapshot without refreshing; the page's native WebSocket continues updating current scores. A
+two-minute fallback navigation bounds lifecycle staleness for newly started and completed cards.
+Page closure, abort, access challenge, or unrecognized structure discards that session so the next
+bounded attempt starts with a fresh page. This behavior changes collection cost, not the
+`HltvLiveMatchesData` business schema.
 
 The browser toolbar's transition from stop to reload is not a Match Detail readiness contract. Full
 document `load` may wait on unrelated images, advertising, or frames, while the native Scorebot

@@ -48,6 +48,9 @@ export interface HltvClientOptions {
   timezone?: string;
   maxConcurrency?: number;
   minRequestIntervalMs?: number;
+  livePageRefreshIntervalMs?: number;
+  matchSessionIdleTimeoutMs?: number;
+  maxMatchSessions?: number;
 }
 
 export interface HltvRequestOptions {
@@ -409,6 +412,13 @@ export interface HltvLiveMatchesDiagnostics {
     matchesReturned: number;
     cardsSkipped: number;
     duplicatesMerged: number;
+  };
+  capture?: {
+    session: {
+      reused: boolean;
+      navigated: boolean;
+      ageMs: number;
+    };
   };
   warnings: HltvLiveWarning[];
 }

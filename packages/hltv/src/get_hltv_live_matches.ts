@@ -1,5 +1,4 @@
-import type { HltvBrowserAdapter } from './browser_adapter.js';
-import { captureLiveMatches } from './capture/capture_live.js';
+import type { LiveCaptureSession } from './capture/capture_live.js';
 import { matchIdentityFromUrl } from './config.js';
 import { HltvError, asHltvError } from './errors.js';
 import { collectorVersions } from './metadata.js';
@@ -149,8 +148,8 @@ function validateData(data: HltvLiveMatchesData): void {
   }
 }
 
-export async function getLiveMatchesWithBrowser(
-  browser: HltvBrowserAdapter,
+export async function getLiveMatchesWithSession(
+  session: LiveCaptureSession,
   context: OperationContext,
 ): Promise<GetHltvLiveMatchesResult> {
   const attempts: HltvLiveMatchesDiagnostics['attempts'] = [];
@@ -158,7 +157,7 @@ export async function getLiveMatchesWithBrowser(
   for (let attempt = 1; attempt <= 2; attempt += 1) {
     const startedAt = new Date().toISOString();
     try {
-      const capture = await captureLiveMatches(browser, context, attempt);
+      const capture = await session.capture(context, attempt);
       attempts.push({ attempt, startedAt: capture.startedAt, completedAt: capture.completedAt, httpStatus: capture.httpStatus });
       throwIfStopped(context, 'building-output');
       emitProgress(context, { stage: 'building-output', attempt, message: 'Building live match data' });
@@ -206,6 +205,7 @@ export async function getLiveMatchesWithBrowser(
           cardsSkipped,
           duplicatesMerged,
         },
+        capture: { session: capture.session },
         warnings,
       };
       emitProgress(context, { stage: 'completed', attempt, message: 'Live-list capture completed' });

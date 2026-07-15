@@ -3,7 +3,8 @@ import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import test from 'node:test';
 import type { HltvBrowserAdapter } from '../src/browser_adapter.js';
-import { createHltvClientWithBrowser } from '../src/client.js';
+import { createHltvClientWithBrowser, selectMatchSessionEvictions } from '../src/client.js';
+import { LiveCaptureSession } from '../src/capture/capture_live.js';
 import {
   extractFullGameLog,
   isExtractedScorebotUsable,
@@ -16,7 +17,8 @@ import { createOperationContext, retryDelayMilliseconds } from '../src/runtime.j
 import { buildConsumerFromCapture } from '../src/transform/build_consumer.js';
 import { validateMatch } from '../src/transform/validate_match.js';
 import type {
-  CaptureAttempt, HltvMatch, MatchDiagnostics, MatchMap, RawExtractedPage, RawLogEvent, RawScoreboard,
+  CaptureAttempt, HltvMatch, MatchDiagnostics, MatchMap, RawExtractedPage, RawLivePage, RawLogEvent,
+  RawScoreboard,
 } from '../src/types.js';
 
 const fixturePath = resolve(
@@ -77,14 +79,112 @@ test('parses and canonicalizes a complete HLTV match URL', () => {
 });
 
 test('defaults browser timezone to the runtime timezone and accepts an explicit egress timezone', () => {
+  const defaults = normalizeClientOptions();
   assert.equal(
-    normalizeClientOptions().timezone,
+    defaults.timezone,
     Intl.DateTimeFormat().resolvedOptions().timeZone,
   );
+  assert.equal(defaults.livePageRefreshIntervalMs, 2 * 60_000);
+  assert.equal(defaults.matchSessionIdleTimeoutMs, 30 * 60_000);
+  assert.equal(defaults.maxMatchSessions, 10);
   assert.equal(
     normalizeClientOptions({ timezone: 'America/Los_Angeles' }).timezone,
     'America/Los_Angeles',
   );
+});
+
+test('keeps one live-list page open, reads it directly, and periodically refreshes the same page', async () => {
+  const livePage: RawLivePage = {
+    title: 'Counter-Strike Matches & livescore',
+    url: 'https://www.hltv.org/matches',
+    recognized: true,
+    challenge: false,
+    cardsSeen: 1,
+    cards: [{
+      id: 2395902,
+      url: 'https://www.hltv.org/matches/2395902/alpha-vs-bravo-event',
+      bestOf: 3,
+      region: 'Europe',
+      isLan: false,
+      event: { id: 1, name: 'Event', type: 'Online', logoUrl: null },
+      teams: [
+        { id: 1, name: 'Alpha', logoUrl: null, currentMap: 3, mapsWon: 0 },
+        { id: 2, name: 'Bravo', logoUrl: null, currentMap: 2, mapsWon: 0 },
+      ],
+    }],
+  };
+  let now = 0;
+  let newPageCalls = 0;
+  let navigationCalls = 0;
+  let closeCalls = 0;
+  const page = {
+    addInitScript: async () => undefined,
+    close: async () => { closeCalls += 1; },
+    evaluate: async (expression: string | (() => unknown)) =>
+      expression === 'globalThis.__name = (target) => target' ? undefined : livePage,
+    goto: async () => {
+      navigationCalls += 1;
+      return { status: () => 200 };
+    },
+    isClosed: () => closeCalls > 0,
+    locator: () => ({ filter: () => ({ count: async () => 0, click: async () => undefined }) }),
+    url: () => livePage.url,
+    waitForTimeout: async () => undefined,
+  };
+  const browser = {
+    newPage: async () => {
+      newPageCalls += 1;
+      return page;
+    },
+  } as unknown as HltvBrowserAdapter;
+  const session = new LiveCaptureSession(browser, {
+    refreshIntervalMs: 10_000,
+    now: () => now,
+  });
+  const firstContext = createOperationContext('live-list', { timeoutMs: 5_000 }, 5_000);
+  const secondContext = createOperationContext('live-list', { timeoutMs: 5_000 }, 5_000);
+  const thirdContext = createOperationContext('live-list', { timeoutMs: 5_000 }, 5_000);
+  try {
+    const first = await session.capture(firstContext, 1);
+    now = 5_000;
+    const second = await session.capture(secondContext, 1);
+    now = 10_000;
+    const third = await session.capture(thirdContext, 1);
+
+    assert.equal(newPageCalls, 1);
+    assert.equal(navigationCalls, 2);
+    assert.deepEqual(first.session, { reused: false, navigated: true, ageMs: 0 });
+    assert.deepEqual(second.session, { reused: true, navigated: false, ageMs: 5_000 });
+    assert.deepEqual(third.session, { reused: true, navigated: true, ageMs: 10_000 });
+  } finally {
+    firstContext.dispose();
+    secondContext.dispose();
+    thirdContext.dispose();
+    await session.close();
+  }
+  assert.equal(closeCalls, 1);
+});
+
+test('evicts idle match pages first, then the least recently used inactive page', () => {
+  const entries = [
+    { matchId: 1, lastUsedAt: 0, activeCaptures: 0 },
+    { matchId: 2, lastUsedAt: 90_000, activeCaptures: 0 },
+    { matchId: 3, lastUsedAt: 10_000, activeCaptures: 1 },
+    { matchId: 4, lastUsedAt: 80_000, activeCaptures: 0 },
+  ];
+
+  assert.deepEqual(selectMatchSessionEvictions(entries, {
+    now: 100_000,
+    idleTimeoutMs: 50_000,
+    maxSessions: 3,
+    reserve: 1,
+  }), [1, 4]);
+  assert.deepEqual(selectMatchSessionEvictions(entries, {
+    now: 100_000,
+    idleTimeoutMs: 200_000,
+    maxSessions: 4,
+    reserve: 1,
+  }), [1]);
 });
 
 test('uses a longer bounded cooldown for an access challenge', () => {

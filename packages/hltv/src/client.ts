@@ -1,9 +1,10 @@
 import { launch } from 'cloakbrowser';
 import type { Browser } from 'playwright-core';
 import type { HltvBrowserAdapter } from './browser_adapter.js';
+import { LiveCaptureSession } from './capture/capture_live.js';
 import { matchIdentityFromUrl, normalizeClientOptions, splitCombinedOptions } from './config.js';
 import { HltvError } from './errors.js';
-import { getLiveMatchesWithBrowser } from './get_hltv_live_matches.js';
+import { getLiveMatchesWithSession } from './get_hltv_live_matches.js';
 import {
   createMatchCaptureSession,
   getMatchWithSession,
@@ -128,17 +129,52 @@ interface QueueTask<T = unknown> {
   onAbort: () => void;
 }
 
-const MATCH_SESSION_IDLE_TIMEOUT_MS = 10 * 60_000;
-
 type MatchSessionEntry = {
   session: ReturnType<typeof createMatchCaptureSession>;
   lastUsedAt: number;
+  activeCaptures: number;
 };
+
+export function selectMatchSessionEvictions(
+  entries: ReadonlyArray<{
+    matchId: number;
+    lastUsedAt: number;
+    activeCaptures: number;
+  }>,
+  options: {
+    now: number;
+    idleTimeoutMs: number;
+    maxSessions: number;
+    reserve: number;
+  },
+): number[] {
+  const inactive = entries
+    .filter((entry) => entry.activeCaptures === 0)
+    .sort((left, right) => left.lastUsedAt - right.lastUsedAt);
+  const selected = inactive
+    .filter((entry) => options.now - entry.lastUsedAt >= options.idleTimeoutMs)
+    .map((entry) => entry.matchId);
+  const selectedIds = new Set(selected);
+  const remainingCount = entries.length - selected.length;
+  const capacityEvictions = Math.max(
+    0,
+    remainingCount + options.reserve - options.maxSessions,
+  );
+  for (const entry of inactive) {
+    if (selectedIds.has(entry.matchId)) continue;
+    if (selected.length >= capacityEvictions + selectedIds.size) break;
+    selected.push(entry.matchId);
+  }
+  return selected;
+}
 
 class HltvClientImpl implements HltvClient {
   readonly #browser: HltvBrowserAdapter;
+  readonly #liveSession: LiveCaptureSession;
   readonly #maxConcurrency: number;
   readonly #minRequestIntervalMs: number;
+  readonly #matchSessionIdleTimeoutMs: number;
+  readonly #maxMatchSessions: number;
   readonly #queue: QueueTask[] = [];
   readonly #matchSessions = new Map<number, MatchSessionEntry>();
   #active = 0;
@@ -150,15 +186,20 @@ class HltvClientImpl implements HltvClient {
 
   constructor(browser: HltvBrowserAdapter, options: ReturnType<typeof normalizeClientOptions>) {
     this.#browser = browser;
+    this.#liveSession = new LiveCaptureSession(browser, {
+      refreshIntervalMs: options.livePageRefreshIntervalMs,
+    });
     this.#maxConcurrency = options.maxConcurrency;
     this.#minRequestIntervalMs = options.minRequestIntervalMs;
+    this.#matchSessionIdleTimeoutMs = options.matchSessionIdleTimeoutMs;
+    this.#maxMatchSessions = options.maxMatchSessions;
   }
 
   async getLiveMatches(options?: HltvRequestOptions): Promise<GetHltvLiveMatchesResult> {
     const context = createOperationContext('live-list', options, 60_000);
     try {
-      this.#pruneIdleMatchSessions();
-      return await this.#schedule(context, () => getLiveMatchesWithBrowser(this.#browser, context));
+      await this.#evictMatchSessions();
+      return await this.#schedule(context, () => getLiveMatchesWithSession(this.#liveSession, context));
     } finally {
       context.dispose();
     }
@@ -173,26 +214,26 @@ class HltvClientImpl implements HltvClient {
     const identity = matchIdentityFromUrl(matchUrl)!;
     const context = createOperationContext('match-detail', options, 180_000);
     try {
-      this.#pruneIdleMatchSessions();
+      await this.#evictMatchSessions();
       emitProgress(context, { stage: 'validating-input', attempt: 1, message: 'Validated HLTV match URL' });
       for (let attempt = 1; attempt <= 2; attempt += 1) {
         try {
           const existing = this.#matchSessions.get(identity.id);
           if (existing) {
-            existing.lastUsedAt = Date.now();
-            return await getMatchWithSession(existing.session, matchUrl, context, attempt);
+            return await this.#captureMatch(existing, matchUrl, context, attempt);
           }
           return await this.#schedule(context, async () => {
             let entry = this.#matchSessions.get(identity.id);
             if (!entry) {
+              await this.#evictMatchSessions(1);
               entry = {
                 session: createMatchCaptureSession(this.#browser, matchUrl),
                 lastUsedAt: Date.now(),
+                activeCaptures: 0,
               };
               this.#matchSessions.set(identity.id, entry);
             }
-            entry.lastUsedAt = Date.now();
-            return await getMatchWithSession(entry.session, matchUrl, context, attempt);
+            return await this.#captureMatch(entry, matchUrl, context, attempt);
           });
         } catch (error) {
           const entry = this.#matchSessions.get(identity.id);
@@ -242,7 +283,10 @@ class HltvClientImpl implements HltvClient {
       }
       const sessions = [...this.#matchSessions.values()];
       this.#matchSessions.clear();
-      await Promise.all(sessions.map(async ({ session }) => await session.close()));
+      await Promise.all([
+        this.#liveSession.close(),
+        ...sessions.map(async ({ session }) => await session.close()),
+      ]);
       await this.#browser.close();
       this.#closed = true;
     })();
@@ -312,12 +356,43 @@ class HltvClientImpl implements HltvClient {
     }
   }
 
-  #pruneIdleMatchSessions(now = Date.now()): void {
-    for (const [matchId, entry] of this.#matchSessions) {
-      if (now - entry.lastUsedAt < MATCH_SESSION_IDLE_TIMEOUT_MS) continue;
-      this.#matchSessions.delete(matchId);
-      void entry.session.close().catch(() => undefined);
+  async #captureMatch(
+    entry: MatchSessionEntry,
+    matchUrl: string,
+    context: OperationContext,
+    attempt: number,
+  ): Promise<GetHltvMatchResult> {
+    entry.activeCaptures += 1;
+    entry.lastUsedAt = Date.now();
+    try {
+      return await getMatchWithSession(entry.session, matchUrl, context, attempt);
+    } finally {
+      entry.activeCaptures -= 1;
+      entry.lastUsedAt = Date.now();
     }
+  }
+
+  async #evictMatchSessions(reserve = 0): Promise<void> {
+    const ids = selectMatchSessionEvictions(
+      [...this.#matchSessions].map(([matchId, entry]) => ({
+        matchId,
+        lastUsedAt: entry.lastUsedAt,
+        activeCaptures: entry.activeCaptures,
+      })),
+      {
+        now: Date.now(),
+        idleTimeoutMs: this.#matchSessionIdleTimeoutMs,
+        maxSessions: this.#maxMatchSessions,
+        reserve,
+      },
+    );
+    const closes = ids.flatMap((matchId) => {
+      const entry = this.#matchSessions.get(matchId);
+      if (!entry) return [];
+      this.#matchSessions.delete(matchId);
+      return [entry.session.close().catch(() => undefined)];
+    });
+    await Promise.all(closes);
   }
 }
 

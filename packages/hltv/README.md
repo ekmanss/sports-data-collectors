@@ -61,6 +61,9 @@ const client = await createHltvClient({
   timezone: 'America/Los_Angeles',
   maxConcurrency: 1,
   minRequestIntervalMs: 5_000,
+  livePageRefreshIntervalMs: 120_000,
+  matchSessionIdleTimeoutMs: 1_800_000,
+  maxMatchSessions: 10,
 });
 
 try {
@@ -89,6 +92,9 @@ const client = createHltvClientWithBrowser(browser, {
   maxConcurrency: 1,
   minRequestIntervalMs: 5_000,
   timezone: 'America/Los_Angeles',
+  livePageRefreshIntervalMs: 120_000,
+  matchSessionIdleTimeoutMs: 1_800_000,
+  maxMatchSessions: 10,
 });
 ```
 
@@ -97,13 +103,22 @@ adapter attached to a user-owned browser must detach and close its managed HLTV 
 terminating the surrounding browser or touching unrelated tabs. The exported adapter surface is
 intentionally limited to the page operations used by this collector.
 
-The reusable client separates cold navigation from live state collection. The first `getMatch()` for
-a match opens one page and lets that page establish HLTV's native Scorebot connection. Later calls
-reuse the same page and never enter the global cold-navigation queue. A semantically complete
-Scorebot state is accepted immediately; the collector does not wait for a changing live scoreboard
-to produce two identical samples. If the lightweight Scorebot and static-map signature is unchanged,
-the latest verified snapshot is reused without re-extracting the virtual Game log. Idle match pages
-are closed after ten minutes, and `client.close()` closes the rest.
+The reusable client separates cold navigation from live state collection. The first
+`getLiveMatches()` opens one `/matches` page; later calls read its hydrated DOM directly while the
+native WebSocket keeps scores current. The same page performs a bounded fallback navigation every
+two minutes so newly started or completed cards cannot remain stale indefinitely. An invalid,
+closed, challenged, or aborted list page is discarded and rebuilt on the bounded retry. Live
+diagnostics expose `capture.session.reused`, `navigated`, and page `ageMs` so consumers can distinguish
+millisecond warm reads from periodic navigation.
+
+The first `getMatch()` for a match opens one page and lets that page establish HLTV's native
+Scorebot connection. Later calls reuse the same page and never enter the global cold-navigation
+queue. A semantically complete Scorebot state is accepted immediately; the collector does not wait
+for a changing live scoreboard to produce two identical samples. If the lightweight Scorebot and
+static-map signature is unchanged, the latest verified snapshot is reused without re-extracting the
+virtual Game log. Inactive match pages are closed after thirty minutes. The client retains at most
+ten match pages and evicts the least recently used inactive page before exceeding that bound; active
+captures are never evicted. `client.close()` closes the live-list page and every remaining match page.
 
 The collector does not inject a synthetic Scorebot configuration or reload a page when native
 Scorebot is temporarily absent. The first cold page gets a bounded twelve-second readiness window;

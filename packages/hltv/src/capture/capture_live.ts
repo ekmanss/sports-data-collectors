@@ -18,6 +18,11 @@ export interface LiveCaptureAttempt {
   attempt: number;
   startedAt: string;
   completedAt: string;
+  session: {
+    reused: boolean;
+    navigated: boolean;
+    ageMs: number;
+  };
 }
 
 const LIVE_URL = 'https://www.hltv.org/matches';
@@ -103,19 +108,178 @@ async function stableSnapshot(
   });
 }
 
-export async function captureLiveMatches(
-  browser: HltvBrowserAdapter,
+async function currentSnapshot(
+  page: HltvPageAdapter,
   context: OperationContext,
   attempt: number,
-): Promise<LiveCaptureAttempt> {
-  const startedAt = new Date().toISOString();
-  let page: HltvPageAdapter | null = null;
-  const stopPage = (): void => { void page?.close().catch(() => undefined); };
-  try {
-    throwIfStopped(context, 'navigating');
-    page = await browser.newPage();
-    context.signal.addEventListener('abort', stopPage, { once: true });
-    emitProgress(context, { stage: 'navigating', attempt, message: `Opening ${LIVE_URL}` });
+): Promise<{ page: RawLivePage; stable: boolean }> {
+  const current = await extract(page);
+  if (current.challenge) {
+    throw new HltvError('HLTV returned an access challenge', {
+      code: 'ACCESS_BLOCKED', operation: 'live-list', stage: 'navigating', retryable: true,
+    });
+  }
+  if (current.recognized && (current.cards.length === 0 || hasHydratedLiveState(current))) {
+    return { page: current, stable: true };
+  }
+  return await stableSnapshot(page, context, attempt);
+}
+
+type InitializedLiveSession = {
+  page: HltvPageAdapter;
+  httpStatus: number | null;
+  openedAtMs: number;
+  navigatedAtMs: number;
+  snapshot: { page: RawLivePage; stable: boolean };
+};
+
+export class LiveCaptureSession {
+  readonly #browser: HltvBrowserAdapter;
+  readonly #refreshIntervalMs: number;
+  readonly #now: () => number;
+  #initialized: InitializedLiveSession | undefined;
+  #captureTail: Promise<void> = Promise.resolve();
+  #closing = false;
+  #closePromise: Promise<void> | undefined;
+
+  constructor(
+    browser: HltvBrowserAdapter,
+    options: { refreshIntervalMs: number; now?: () => number },
+  ) {
+    this.#browser = browser;
+    this.#refreshIntervalMs = options.refreshIntervalMs;
+    this.#now = options.now ?? Date.now;
+  }
+
+  capture(context: OperationContext, attempt: number): Promise<LiveCaptureAttempt> {
+    if (this.#closing) {
+      return Promise.reject(new HltvError('live-list session is closed', {
+        code: 'CLIENT_CLOSED', operation: 'live-list', stage: 'queued', retryable: false,
+      }));
+    }
+    const operation = this.#captureTail.then(async () => await this.#capture(context, attempt));
+    this.#captureTail = operation.then(() => undefined, () => undefined);
+    return operation;
+  }
+
+  async close(): Promise<void> {
+    if (this.#closePromise) return this.#closePromise;
+    this.#closing = true;
+    this.#closePromise = (async () => {
+      await this.#captureTail;
+      await this.#discardPage();
+    })();
+    return this.#closePromise;
+  }
+
+  async #capture(context: OperationContext, attempt: number): Promise<LiveCaptureAttempt> {
+    const startedAt = new Date().toISOString();
+    let page: HltvPageAdapter | undefined;
+    const stopPage = (): void => {
+      if (page) void this.#discardPage(page);
+    };
+    try {
+      throwIfStopped(context, 'navigating');
+      if (this.#initialized?.page.isClosed()) await this.#discardPage(this.#initialized.page);
+      const existingPage = this.#initialized?.page;
+      const initialized = await this.#initialize(context, attempt);
+      page = initialized.page;
+      context.signal.addEventListener('abort', stopPage, { once: true });
+      const reused = existingPage === page;
+      const refreshDue = reused
+        && this.#now() - initialized.navigatedAtMs >= this.#refreshIntervalMs;
+      let navigated = !reused;
+      let snapshot = initialized.snapshot;
+
+      if (refreshDue) {
+        emitProgress(context, {
+          stage: 'navigating',
+          attempt,
+          message: 'Refreshing the persistent HLTV matches page',
+        });
+        const refreshed = await this.#navigate(page, context, attempt);
+        initialized.httpStatus = refreshed.httpStatus;
+        initialized.navigatedAtMs = this.#now();
+        initialized.snapshot = refreshed.snapshot;
+        snapshot = refreshed.snapshot;
+        navigated = true;
+      } else if (reused) {
+        emitProgress(context, {
+          stage: 'extracting-page',
+          attempt,
+          message: 'Reading the persistent HLTV matches page',
+        });
+        snapshot = await currentSnapshot(page, context, attempt);
+        initialized.snapshot = snapshot;
+      }
+
+      throwIfStopped(context, 'extracting-page');
+      validateUrl(snapshot.page.url);
+      const completedAt = new Date().toISOString();
+      return {
+        page: snapshot.page,
+        capturedAt: completedAt,
+        stable: snapshot.stable,
+        httpStatus: initialized.httpStatus,
+        attempt,
+        startedAt,
+        completedAt,
+        session: {
+          reused,
+          navigated,
+          ageMs: Math.max(0, this.#now() - initialized.openedAtMs),
+        },
+      };
+    } catch (error) {
+      if (page) await this.#discardPage(page);
+      throwIfStopped(context, 'extracting-page');
+      throw asHltvError(error, {
+        code: 'INTERNAL_ERROR', operation: 'live-list', stage: 'extracting-page', retryable: false,
+      });
+    } finally {
+      context.signal.removeEventListener('abort', stopPage);
+    }
+  }
+
+  async #initialize(
+    context: OperationContext,
+    attempt: number,
+  ): Promise<InitializedLiveSession> {
+    if (this.#initialized) return this.#initialized;
+    let page: HltvPageAdapter | undefined;
+    const stopPage = (): void => { void page?.close().catch(() => undefined); };
+    try {
+      throwIfStopped(context, 'navigating');
+      page = await this.#browser.newPage();
+      await page.addInitScript('globalThis.__name = (target) => target');
+      context.signal.addEventListener('abort', stopPage, { once: true });
+      emitProgress(context, { stage: 'navigating', attempt, message: `Opening ${LIVE_URL}` });
+      const navigated = await this.#navigate(page, context, attempt);
+      const now = this.#now();
+      this.#initialized = {
+        page,
+        httpStatus: navigated.httpStatus,
+        openedAtMs: now,
+        navigatedAtMs: now,
+        snapshot: navigated.snapshot,
+      };
+      return this.#initialized;
+    } catch (error) {
+      await page?.close().catch(() => undefined);
+      throw error;
+    } finally {
+      context.signal.removeEventListener('abort', stopPage);
+    }
+  }
+
+  async #navigate(
+    page: HltvPageAdapter,
+    context: OperationContext,
+    attempt: number,
+  ): Promise<{
+      httpStatus: number | null;
+      snapshot: { page: RawLivePage; stable: boolean };
+    }> {
     let response;
     try {
       response = await page.goto(LIVE_URL, {
@@ -128,28 +292,35 @@ export async function captureLiveMatches(
         code: 'NAVIGATION_FAILED', operation: 'live-list', stage: 'navigating', retryable: true, cause,
       });
     }
-    classifyHttp(response?.status() ?? null);
+    const httpStatus = response?.status() ?? null;
+    classifyHttp(httpStatus);
     validateUrl(page.url());
     emitProgress(context, { stage: 'extracting-page', attempt, message: 'Extracting live match cards' });
     const snapshot = await stableSnapshot(page, context, attempt);
     validateUrl(snapshot.page.url);
-    const completedAt = new Date().toISOString();
-    return {
-      page: snapshot.page,
-      capturedAt: completedAt,
-      stable: snapshot.stable,
-      httpStatus: response?.status() ?? null,
-      attempt,
-      startedAt,
-      completedAt,
-    };
-  } catch (error) {
-    throwIfStopped(context, 'extracting-page');
-    throw asHltvError(error, {
-      code: 'INTERNAL_ERROR', operation: 'live-list', stage: 'extracting-page', retryable: false,
-    });
+    return { httpStatus, snapshot };
+  }
+
+  async #discardPage(expected?: HltvPageAdapter): Promise<void> {
+    const initialized = this.#initialized;
+    if (!initialized || (expected && initialized.page !== expected)) {
+      if (expected) await expected.close().catch(() => undefined);
+      return;
+    }
+    this.#initialized = undefined;
+    await initialized.page.close().catch(() => undefined);
+  }
+}
+
+export async function captureLiveMatches(
+  browser: HltvBrowserAdapter,
+  context: OperationContext,
+  attempt: number,
+): Promise<LiveCaptureAttempt> {
+  const session = new LiveCaptureSession(browser, { refreshIntervalMs: 2 * 60_000 });
+  try {
+    return await session.capture(context, attempt);
   } finally {
-    context.signal.removeEventListener('abort', stopPage);
-    await page?.close().catch(() => undefined);
+    await session.close();
   }
 }

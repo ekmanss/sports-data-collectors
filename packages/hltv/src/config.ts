@@ -13,6 +13,9 @@ export interface NormalizedClientOptions {
   timezone: string;
   maxConcurrency: number;
   minRequestIntervalMs: number;
+  livePageRefreshIntervalMs: number;
+  matchSessionIdleTimeoutMs: number;
+  maxMatchSessions: number;
 }
 
 const MATCH_PATH = /^\/matches\/([1-9]\d*)\/([a-z0-9]+(?:-[a-z0-9]+)*)\/?$/;
@@ -88,6 +91,21 @@ export function normalizeClientOptions(options: HltvClientOptions = {}): Normali
     timezone,
     maxConcurrency: integerInRange('maxConcurrency', options.maxConcurrency, 1, 1, 3),
     minRequestIntervalMs: integerInRange('minRequestIntervalMs', options.minRequestIntervalMs, 5_000, 0, 300_000),
+    livePageRefreshIntervalMs: integerInRange(
+      'livePageRefreshIntervalMs',
+      options.livePageRefreshIntervalMs,
+      2 * 60_000,
+      10_000,
+      60 * 60_000,
+    ),
+    matchSessionIdleTimeoutMs: integerInRange(
+      'matchSessionIdleTimeoutMs',
+      options.matchSessionIdleTimeoutMs,
+      30 * 60_000,
+      60_000,
+      12 * 60 * 60_000,
+    ),
+    maxMatchSessions: integerInRange('maxMatchSessions', options.maxMatchSessions, 10, 1, 50),
   };
 }
 

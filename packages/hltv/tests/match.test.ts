@@ -186,6 +186,106 @@ function completedStatsPage(): RawExtractedPage {
   };
 }
 
+function captureForPage(page: RawExtractedPage): CaptureAttempt {
+  const capturedAt = '2026-07-15T22:26:28.954Z';
+  return {
+    initialPage: page,
+    snapshot: {
+      capturedAt,
+      httpStatus: 200,
+      page,
+      scoreboardNormal: null,
+      scoreboardAdvanced: null,
+      gameLog: { scrollHeight: 0, chronological: [], excludedNoiseEvents: 0 },
+      note: null,
+    },
+    collector: {
+      packageVersion: '0.0.0',
+      cloakbrowserVersion: '0.4.10',
+      playwrightVersion: '1.61.0',
+    },
+    httpStatus: 200,
+    navigationSeconds: 0,
+    totalSeconds: 0,
+    attempt: 1,
+    startedAt: capturedAt,
+    completedAt: capturedAt,
+  };
+}
+
+test('ignores an empty recent-match placeholder without hiding partial source data', () => {
+  const page = completedStatsPage();
+  page.recentMatches = [{
+    mode: 'team',
+    teams: [
+      {
+        teamId: 1,
+        matches: [{
+          opponentId: 2,
+          opponent: 'Bravo',
+          opponentCountry: null,
+          opponentUrl: 'https://www.hltv.org/team/2/bravo',
+          timeAgo: '1 week ago',
+          format: 'bo3',
+          score: '2 - 0',
+          result: 'won',
+          matchId: 2395000,
+          matchUrl: 'https://www.hltv.org/matches/2395000/alpha-vs-bravo-event',
+        }],
+      },
+      {
+        teamId: 2,
+        matches: [
+          {
+            opponentId: null,
+            opponent: '',
+            opponentCountry: null,
+            opponentUrl: null,
+            timeAgo: '',
+            format: '',
+            score: '',
+            result: null,
+            matchId: null,
+            matchUrl: null,
+          },
+          {
+            opponentId: null,
+            opponent: 'Visible but incomplete opponent',
+            opponentCountry: null,
+            opponentUrl: null,
+            timeAgo: '',
+            format: '',
+            score: '',
+            result: null,
+            matchId: null,
+            matchUrl: null,
+          },
+        ],
+      },
+    ],
+  }];
+
+  const result = buildConsumerFromCapture(captureForPage(page), []);
+
+  assert.deepEqual(result.data.recentMatches.views[0]!.teams[0]!.matches[0]!.match, {
+    id: 2395000,
+    url: 'https://www.hltv.org/matches/2395000/alpha-vs-bravo-event',
+  });
+  assert.deepEqual(result.data.recentMatches.views[0]!.teams[1]!.matches, [{
+    opponent: {
+      id: null,
+      name: 'Visible but incomplete opponent',
+      country: null,
+      url: null,
+    },
+    timeAgo: null,
+    format: '',
+    score: null,
+    result: null,
+    match: { id: null, url: null },
+  }]);
+});
+
 test('keeps team scores stable when the same team wins on both sides of a swap', () => {
   const rounds = assignRoundTeamResults([
     {

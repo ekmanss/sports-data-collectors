@@ -84,6 +84,10 @@ playing the corresponding side on that map and must not be interpreted as team s
 derived from the round winners because the two numeric values rendered in HLTV's `Round over` text
 follow team ordering, not stable CT/T ordering.
 
+`recentMatches` excludes HLTV's fully empty table row used to represent a team with no matches in
+the period. A partially populated source row remains present with nullable identity fields so a
+consumer can distinguish incomplete source data from a genuine empty history.
+
 ### Match consistency
 
 - `match.id`, `match.slug`, and `source.url` must describe the same canonical HLTV match.

@@ -715,7 +715,25 @@ function normalizeRecent(input: unknown[]): RecentMatches {
     modes: [view.mode],
     teams: view.teams.map((team) => ({
       teamId: team.teamId,
-      matches: team.matches.map((match) => {
+      matches: team.matches.filter((match) => {
+        // HLTV renders an empty table row when a team has no recent matches. It is
+        // presentation structure, not an unresolved match reference. Keep any
+        // partially populated row so consumers can still fail closed on genuinely
+        // incomplete source data.
+        return [
+          match.opponentId,
+          match.opponent,
+          match.opponentCountry,
+          match.opponentUrl,
+          match.timeAgo,
+          match.format,
+          match.score,
+          match.result,
+          match.matchId,
+          match.matchUrl,
+        ].some((value) => typeof value === 'number'
+          || (typeof value === 'string' && value.trim().length > 0));
+      }).map((match) => {
         const scores = String(match.score).split('-').map((part) => Number(part.trim()));
         return {
           opponent: { id: match.opponentId, name: match.opponent, country: match.opponentCountry, url: match.opponentUrl },

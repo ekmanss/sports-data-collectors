@@ -82,6 +82,24 @@ assert.equal(detail.data.schemaVersion, '3.2.0');
 assert.equal(detail.data.match.id, matchIdentityFromUrl(matchUrl)?.id);
 assert.equal(detail.data.teams.length, 2);
 assert.ok(detail.data.maps.length > 0);
+for (const view of detail.data.recentMatches.views) {
+  for (const team of view.teams) {
+    for (const match of team.matches) {
+      assert.ok(
+        match.match.id !== null
+          || match.match.url !== null
+          || match.opponent.id !== null
+          || match.opponent.name.trim().length > 0
+          || match.opponent.url !== null
+          || match.timeAgo !== null
+          || match.format.trim().length > 0
+          || match.score !== null
+          || match.result !== null,
+        'Recent matches must not contain HLTV empty-table placeholders',
+      );
+    }
+  }
+}
 let resolvedRoundWinners = 0;
 let unresolvedRoundWinners = 0;
 for (const map of detail.data.maps) {
@@ -182,6 +200,10 @@ process.stdout.write(`${JSON.stringify({
   positionsVisited,
   resolvedRoundWinners,
   unresolvedRoundWinners,
+  recentMatchCounts: detail.data.recentMatches.views.map((view) => ({
+    modes: view.modes,
+    teams: view.teams.map((team) => ({ teamId: team.teamId, matches: team.matches.length })),
+  })),
   completedMatchStats: {
     matchId: completedStats.data.match.id,
     availability: completedStats.data.availability,

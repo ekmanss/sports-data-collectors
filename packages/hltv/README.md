@@ -141,6 +141,13 @@ virtual Game log. Inactive match pages are closed after thirty minutes. The clie
 ten match pages and evicts the least recently used inactive page before exceeding that bound; active
 captures are never evicted. `client.close()` closes the live-list page and every remaining match page.
 
+HLTV updates the current Scorebot over its native connection, but the static map cards on an already
+open document can remain at their pre-match values after the series advances to another map. When a
+reused session observes a different semantic Scorebot map, the collector navigates that same page to
+the canonical match URL exactly once for the boundary. The refreshed map cards then provide the
+authoritative completed-map score while the new Scorebot remains the authoritative current-map
+source. Ordinary warm reads still do not navigate.
+
 The collector does not inject a synthetic Scorebot configuration or reload a page when native
 Scorebot is temporarily absent. The first cold page gets a bounded twelve-second readiness window;
 an established session uses a six-second inter-map window. A visible scoreboard is not accepted

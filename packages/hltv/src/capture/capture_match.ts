@@ -33,6 +33,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+function scorebotMap(state: Pick<ScorebotState, 'round'>): string | null {
+  const match = state.round.match(/^\d+\s*-\s*(.+)$/);
+  const map = match?.[1]?.trim();
+  return map ? map : null;
+}
+
 function assertExtractedPage(value: unknown): asserts value is RawExtractedPage {
   if (!isRecord(value) || !isRecord(value.match) || !Array.isArray(value.teams) || !isRecord(value.maps) || !Array.isArray(value.lineups)) {
     throw new HltvError('HLTV page returned an unrecognized match payload', {
@@ -658,6 +664,7 @@ export class MatchCaptureSession {
   #successfulCaptures = 0;
   #lastCapture: CaptureAttempt | undefined;
   #lastScorebotSignature: string | undefined;
+  #lastScorebotMap: string | undefined;
 
   constructor(
     browser: HltvBrowserAdapter,
@@ -735,6 +742,23 @@ export class MatchCaptureSession {
       if (requiresScorebot && !state.ready) {
         state = await waitForStableScorebot(initialized.page, options);
       }
+      const observedMap = state.ready ? scorebotMap(state) : null;
+      let expectedScorebotMap: string | null = null;
+      if (
+        reused
+        && observedMap
+        && this.#lastScorebotMap
+        && observedMap !== this.#lastScorebotMap
+      ) {
+        expectedScorebotMap = observedMap;
+        state = await this.#refreshAtMapBoundary(
+          initialized,
+          options,
+          attempt,
+          timings,
+          expectedScorebotMap,
+        );
+      }
 
       if (state.ready && this.#lastCapture && state.signature === this.#lastScorebotSignature) {
         const completedAt = new Date().toISOString();
@@ -776,7 +800,10 @@ export class MatchCaptureSession {
           options.id,
         );
         state = await scorebotState(initialized.page);
-        if (!state.ready) continue;
+        if (
+          !state.ready
+          || (expectedScorebotMap && scorebotMap(state) !== expectedScorebotMap)
+        ) continue;
         snapshot = await collectSnapshot(
           initialized.page,
           initialized.httpStatus,
@@ -820,6 +847,10 @@ export class MatchCaptureSession {
       this.#lastScorebotSignature = finalState?.ready && finalState.signature === state.signature
         ? finalState.signature
         : undefined;
+      const capturedMap = snapshot.scoreboardNormal?.round
+        ? scorebotMap({ round: snapshot.scoreboardNormal.round })
+        : null;
+      if (capturedMap) this.#lastScorebotMap = capturedMap;
       this.#successfulCaptures += 1;
       return capture;
     } catch (error) {
@@ -829,6 +860,77 @@ export class MatchCaptureSession {
         matchId: this.id,
       });
     }
+  }
+
+  async #refreshAtMapBoundary(
+    initialized: InitializedMatchSession,
+    options: MatchCaptureOptions,
+    attempt: number,
+    timings: MatchCaptureTimings,
+    expectedMap: string,
+  ): Promise<ScorebotState> {
+    emitProgress(options.context, {
+      stage: 'extracting-scorebot',
+      attempt,
+      message: `Scorebot advanced to ${expectedMap}; refreshing the persistent page once for authoritative completed-map cards`,
+    });
+    const started = performance.now();
+    let response;
+    try {
+      response = await initialized.page.goto(this.url, {
+        waitUntil: 'domcontentloaded',
+        timeout: navigationTimeout(options.context),
+      });
+    } catch (cause) {
+      throwIfStopped(options.context, 'navigating', this.id);
+      throw new HltvError('failed to refresh the HLTV match page at a map boundary', {
+        code: 'NAVIGATION_FAILED',
+        operation: 'match-detail',
+        stage: 'navigating',
+        retryable: true,
+        matchId: this.id,
+        cause,
+      });
+    }
+    initialized.httpStatus = response?.status() ?? null;
+    classifyMatchPageHttp(initialized.httpStatus, {
+      context: options.context,
+      id: this.id,
+    });
+    validateFinalMatchUrl(initialized.page.url(), options);
+    const refreshedPage = await waitForStableMatchPage(initialized.page, options);
+    validateFinalMatchUrl(refreshedPage.url, options);
+    if (refreshedPage.match.id !== this.id) {
+      throw new HltvError('the refreshed page contains a different match ID', {
+        code: 'INCOMPLETE_CAPTURE',
+        operation: 'match-detail',
+        stage: 'validating-source',
+        retryable: false,
+        matchId: this.id,
+        details: { expectedId: this.id, pageId: refreshedPage.match.id },
+      });
+    }
+    if (refreshedPage.sections.cloudflareChallenge) {
+      throw new HltvError('HLTV returned an access challenge after a map-boundary refresh', {
+        code: 'ACCESS_BLOCKED',
+        operation: 'match-detail',
+        stage: 'navigating',
+        retryable: true,
+        matchId: this.id,
+      });
+    }
+    if (!refreshedPage.sections.matchPage) {
+      throw new HltvError('the HLTV match page root did not reload at a map boundary', {
+        code: 'NAVIGATION_FAILED',
+        operation: 'match-detail',
+        stage: 'extracting-page',
+        retryable: true,
+        matchId: this.id,
+      });
+    }
+    timings.scorebotReloadMs = Math.round(performance.now() - started);
+    const state = await waitForStableScorebot(initialized.page, options);
+    return scorebotMap(state) === expectedMap ? state : { ...state, ready: false };
   }
 
   async #initialize(context: OperationContext, attempt: number): Promise<InitializedMatchSession> {

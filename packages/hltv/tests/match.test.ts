@@ -838,6 +838,189 @@ test('waits for a complete Game log, then keeps one match page open and reuses i
   assert.equal(closeCalls, 1);
 });
 
+test('refreshes the persistent page once when Scorebot advances to the next map', async () => {
+  const url = 'https://www.hltv.org/matches/2395739/alka-vs-borracheiros-event';
+  const players = Array.from({ length: 5 }, (_, index) => ({
+    player: `player-${index}`,
+    cells: [],
+  }));
+  const rounds = (count: number): RawLogEvent[] => Array.from(
+    { length: count },
+    (_, index) => index + 1,
+  ).flatMap((score) => [
+    { top: score * 2, type: [], text: 'Round started', players: [], weapon: null, headshot: false },
+    {
+      top: score * 2 - 1,
+      type: [],
+      text: `Round over - Winner: CT (${score} - 0) - Enemy eliminated`,
+      players: [],
+      weapon: null,
+      headshot: false,
+    },
+  ] satisfies RawLogEvent[]);
+  const basePage = (): RawExtractedPage => ({
+    title: 'ALKA vs Borracheiros',
+    url,
+    match: {
+      id: 2395739,
+      status: 'LIVE',
+      scheduledUnixMs: 1_784_000_000_000,
+      event: { id: 1, name: 'Event', url: 'https://www.hltv.org/events/1/event' },
+    },
+    teams: [
+      { id: 1, name: 'ALKA', url: null, country: null, logo: null },
+      { id: 2, name: 'Borracheiros', url: null, country: null, logo: null },
+    ],
+    maps: {
+      format: 'Best of 3',
+      stage: 'Group stage',
+      veto: [],
+      maps: [
+        { name: 'Ancient', optional: false, halfScores: '', teams: [
+          { name: 'ALKA', score: '-', picked: true },
+          { name: 'Borracheiros', score: '-', picked: false },
+        ] },
+        { name: 'Inferno', optional: false, halfScores: '', teams: [
+          { name: 'ALKA', score: '-', picked: false },
+          { name: 'Borracheiros', score: '-', picked: true },
+        ] },
+        { name: 'Nuke', optional: true, halfScores: '', teams: [
+          { name: 'ALKA', score: '-', picked: false },
+          { name: 'Borracheiros', score: '-', picked: false },
+        ] },
+      ],
+    },
+    streams: [],
+    lineups: [],
+    mapStats: null,
+    recentMatches: [],
+    headToHead: null,
+    sections: { matchPage: true, maps: true, scoreboard: true, gameLog: true },
+  });
+  let map: 'Ancient' | 'Inferno' = 'Ancient';
+  let gotoCalls = 0;
+  let closeCalls = 0;
+  const currentPage = (): RawExtractedPage => {
+    const page = basePage();
+    if (map === 'Inferno') {
+      page.maps.maps[0]!.teams[0]!.score = '2';
+      page.maps.maps[0]!.teams[1]!.score = '13';
+    }
+    return page;
+  };
+  const currentScoreboard = (): RawScoreboard => ({
+    mode: 'Normal',
+    round: map === 'Ancient' ? '16 - Ancient' : '2 - Inferno',
+    fact: '',
+    score: map === 'Ancient' ? '2:13' : '1:0',
+    teams: [
+      { team: 'ALKA', side: 'CT', players },
+      { team: 'Borracheiros', side: 'T', players },
+    ],
+  });
+  const currentLog = () => {
+    const chronological = map === 'Ancient' ? rounds(15) : rounds(1);
+    return {
+      scrollHeight: chronological.length * 26,
+      chronological,
+      positionsVisited: 0,
+    };
+  };
+  const page = {
+    addInitScript: async () => undefined,
+    goto: async () => {
+      gotoCalls += 1;
+      return { status: () => 200 };
+    },
+    url: () => url,
+    isClosed: () => closeCalls > 0,
+    close: async () => { closeCalls += 1; },
+    waitForTimeout: async () => undefined,
+    locator: () => ({
+      filter: () => ({ count: async () => 0, click: async () => undefined }),
+    }),
+    evaluate: async (expression: string | (() => unknown)) => {
+      if (typeof expression === 'function') {
+        if (expression.toString().includes('dynamicText')) {
+          const scoreboard = currentScoreboard();
+          const log = currentLog();
+          return {
+            present: true,
+            score: scoreboard.score,
+            round: scoreboard.round,
+            teamNames: scoreboard.teams.map((team) => team.team),
+            playerRows: 10,
+            scrollHeight: log.scrollHeight,
+            visibleLogRows: log.chronological.length,
+            signature: `${map}-${scoreboard.score}`,
+          };
+        }
+        return currentLog();
+      }
+      if (expression === 'globalThis.__name = (target) => target') return undefined;
+      if (expression.includes('const requestedMode =')) return true;
+      if (expression.includes('dynamicText')) {
+        const scoreboard = currentScoreboard();
+        const log = currentLog();
+        return {
+          present: true,
+          score: scoreboard.score,
+          round: scoreboard.round,
+          teamNames: scoreboard.teams.map((team) => team.team),
+          playerRows: 10,
+          scrollHeight: log.scrollHeight,
+          visibleLogRows: log.chronological.length,
+          signature: `${map}-${scoreboard.score}`,
+        };
+      }
+      if (expression.includes("mode: clean(root.querySelector('.pro-toggle.active')")) {
+        return currentScoreboard();
+      }
+      return currentPage();
+    },
+  };
+  const browser = {
+    newPage: async () => page,
+  } as unknown as HltvBrowserAdapter;
+  const session = new MatchCaptureSession(browser, {
+    id: 2395739,
+    slug: 'alka-vs-borracheiros-event',
+    url,
+    pageReadyTimeoutMs: 1_000,
+    scorebotReadyTimeoutMs: 1_000,
+  });
+  const firstContext = createOperationContext('match-detail', { timeoutMs: 5_000 }, 5_000);
+  const secondContext = createOperationContext('match-detail', { timeoutMs: 5_000 }, 5_000);
+  try {
+    const first = await session.capture(firstContext, 1);
+    assert.equal(first.snapshot.scoreboardNormal?.round, '16 - Ancient');
+    map = 'Inferno';
+    const second = await session.capture(secondContext, 1);
+    const result = buildConsumerFromCapture(second, []);
+
+    assert.equal(gotoCalls, 2);
+    assert.equal(second.session?.reused, true);
+    assert.equal(second.session?.snapshotCacheHit, false);
+    assert.deepEqual(
+      result.data.maps.map((item) => [item.name, item.status, item.score]),
+      [
+        ['Ancient', 'completed', [{ teamId: 1, score: 2 }, { teamId: 2, score: 13 }]],
+        ['Inferno', 'current', [{ teamId: 1, score: 1 }, { teamId: 2, score: 0 }]],
+        ['Nuke', 'upcoming', []],
+      ],
+    );
+    assert.ok(result.diagnostics.warnings.some((warning) =>
+      warning.code === 'INCOMPLETE_GAME_LOG'
+      && warning.map === 'Ancient'
+      && warning.expectedCompletedRounds === 15));
+  } finally {
+    firstContext.dispose();
+    secondContext.dispose();
+    await session.close();
+  }
+  assert.equal(closeCalls, 1);
+});
+
 test('preserves bounded attempt evidence on a terminal HLTV error', () => {
   const error = new HltvError('scorebot unavailable', {
     code: 'INCOMPLETE_CAPTURE',

@@ -125,6 +125,13 @@ inconsistent current map.
 
 Match diagnostics use schema `3.0.0`; live diagnostics use schema `1.0.0`. Both include operation identity, start/end/duration, collector versions, capture attempts, and warnings. Match diagnostics additionally include reconciliation and per-map checks. The first cold match page gets a bounded twelve-second Scorebot readiness window. During a later live inter-map window, HLTV can temporarily omit Scorebot while still exposing canonical map-card scores; the established session waits for at most six seconds and returns a bounded partial snapshot with `SCOREBOT_UNAVAILABLE`, `current: null`, and any incomplete Game log checks preserved as inconsistent. Consumers must abstain from decisions that require current-round evidence. A non-null Scorebot DOM skeleton is also treated as unavailable unless its score, round/map, teams, player rows, and required Game log are semantically usable. Live diagnostics include card counts, skipped cards, duplicate merges, and additive `capture.session` evidence showing whether the persistent `/matches` page was reused, whether this call navigated, and the page age.
 
+The Scorebot connection can advance to a new map while the static map cards in the persistent
+document remain at their earlier values. A reused match session that observes a different semantic
+Scorebot map performs one same-page canonical navigation at that map boundary, waits for the
+expected new-map Scorebot, and then builds the result from refreshed authoritative map cards. This
+boundary refresh is reported in `capture.timings.scorebotReloadMs`; it is not a periodic refresh and
+is never triggered merely because Scorebot is temporarily absent.
+
 The reusable client keeps one `/matches` page open. Warm live-list calls read one semantically hydrated
 DOM snapshot without refreshing; the page's native WebSocket continues updating current scores. A
 two-minute fallback navigation bounds lifecycle staleness for newly started and completed cards.

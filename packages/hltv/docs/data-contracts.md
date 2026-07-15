@@ -87,7 +87,8 @@ Match diagnostics use schema `3.0.0`; live diagnostics use schema `1.0.0`. Both 
 `capture.timings` object reports milliseconds spent in metadata lookup, page creation, navigation,
 page readiness, Scorebot reload/readiness, final page extraction, scoreboards, Game log extraction,
 and page close. `capture.scorebot.positionsVisited` reports how many virtual Game log positions were
-read. `capture.session` reports whether the match page was reused, whether the verified snapshot
+read by the compatibility fallback; it is zero when the complete rendered component state was
+available directly. `capture.session` reports whether the match page was reused, whether the verified snapshot
 cache was hit, and the age of the persistent page. A reused match read does not enter the global
 cold-navigation queue; unchanged warm reads normally report zero navigation time. These fields are
 diagnostic evidence and do not change the `HltvMatch` business schema.

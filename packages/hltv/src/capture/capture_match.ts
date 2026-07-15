@@ -146,7 +146,7 @@ async function switchScoreboard(page: Page, label: 'Normal' | 'Advanced'): Promi
   return true;
 }
 
-async function extractFullGameLog(page: Page): Promise<{
+export async function extractFullGameLog(page: Page): Promise<{
   scrollHeight: number;
   chronological: RawLogEvent[];
   positionsVisited: number;
@@ -157,6 +157,109 @@ async function extractFullGameLog(page: Page): Promise<{
 
     const clean = (value: string | null | undefined): string =>
       (value || '').replace(/\s+/g, ' ').trim();
+    type ReactElementLike = {
+      type?: unknown;
+      props?: { children?: unknown; className?: unknown; alt?: unknown; src?: unknown };
+    };
+    type ReactInternalInstance = {
+      _currentElement?: { _owner?: ReactInternalInstance | null };
+      _instance?: { formattedLines?: Array<{ render?: unknown }> };
+    };
+    const walkReactTree = (node: unknown, visit: (value: unknown) => void): void => {
+      if (node === null || node === undefined || typeof node === 'boolean') return;
+      if (Array.isArray(node)) {
+        node.forEach((child) => walkReactTree(child, visit));
+        return;
+      }
+      visit(node);
+      if (typeof node !== 'object') return;
+      walkReactTree((node as ReactElementLike).props?.children, visit);
+    };
+    const classesOf = (node: unknown): string[] => {
+      if (typeof node !== 'object' || node === null) return [];
+      const className = (node as ReactElementLike).props?.className;
+      return typeof className === 'string' ? className.split(/\s+/).filter(Boolean) : [];
+    };
+    const textOf = (node: unknown): string => {
+      const tokens: string[] = [];
+      walkReactTree(node, (value) => {
+        if (typeof value === 'string' || typeof value === 'number') {
+          const token = clean(String(value));
+          if (token) tokens.push(token);
+          return;
+        }
+        if (typeof value !== 'object' || value === null) return;
+        const element = value as ReactElementLike;
+        if (element.type !== 'img' || typeof element.props?.alt !== 'string') return;
+        const alt = clean(element.props.alt);
+        if (alt) tokens.push(alt);
+      });
+      return clean(tokens.join(' '))
+        .replace(/\s+([),])/g, '$1')
+        .replace(/([(])\s+/g, '$1');
+    };
+    const fromReactState = (): RawLogEvent[] | null => {
+      const reactKey = Object.getOwnPropertyNames(list)
+        .find((name) => name.startsWith('__reactInternalInstance$'));
+      if (!reactKey) return null;
+      let current = (list as unknown as Record<string, unknown>)[reactKey] as
+        ReactInternalInstance | undefined;
+      let formattedLines: Array<{ render?: unknown }> | undefined;
+      for (let depth = 0; current && depth < 12; depth += 1) {
+        if (Array.isArray(current._instance?.formattedLines)) {
+          formattedLines = current._instance.formattedLines;
+          break;
+        }
+        current = current._currentElement?._owner ?? undefined;
+      }
+      if (!formattedLines?.length || Math.abs(formattedLines.length * 26 - list.scrollHeight) > 26) {
+        return null;
+      }
+      const newestFirst = formattedLines.flatMap((line, index): RawLogEvent[] => {
+        let box: ReactElementLike | null = null;
+        walkReactTree(line.render, (node) => {
+          if (!box && classesOf(node).includes('gamelogBox')) box = node as ReactElementLike;
+        });
+        if (!box) return [];
+        const players: RawLogEvent['players'] = [];
+        let weapon: string | null = null;
+        let headshot = false;
+        walkReactTree(box, (node) => {
+          if (typeof node !== 'object' || node === null) return;
+          const element = node as ReactElementLike;
+          const classes = classesOf(element);
+          if (classes.includes('ctplayer') || classes.includes('tplayer')) {
+            players.push({
+              name: textOf(element),
+              side: classes.includes('ctplayer') ? 'CT' : 'T',
+            });
+          }
+          if (classes.includes('playerWeapon') && typeof element.props?.src === 'string') {
+            weapon = element.props.src.split('/').pop()?.replace('.png', '') || null;
+          }
+          if (classes.includes('headshotIcon')) headshot = true;
+        });
+        return [{
+          top: index * 26,
+          type: classesOf(box).filter((name) => name !== 'gamelogBox'),
+          text: textOf(box),
+          players,
+          weapon,
+          headshot,
+        }];
+      });
+      return newestFirst.length ? newestFirst.reverse() : null;
+    };
+
+    const stateEvents = fromReactState();
+    if (stateEvents) {
+      return {
+        scrollHeight: list.scrollHeight,
+        chronological: stateEvents,
+        positionsVisited: 0,
+      };
+    }
+
     const step = Math.max(list.clientHeight - 104, 156);
     const positions = [...new Set([
       ...Array.from(
@@ -172,43 +275,49 @@ async function extractFullGameLog(page: Page): Promise<{
       });
     };
 
-    for (const position of positions) {
-      list.scrollTop = position;
-      list.dispatchEvent(new Event('scroll', { bubbles: true }));
-      await waitForRender();
-      const rows = Array.from(list.querySelectorAll('.topPadding')) as HTMLElement[];
-      for (const row of rows) {
-        const box = row.querySelector('.gamelogBox') as HTMLElement | null;
-        if (!box) continue;
-        const tokens: string[] = [];
-        const visit = (node: Node): void => {
-          if (node.nodeType === Node.TEXT_NODE) {
-            const value = clean(node.textContent);
-            if (value) tokens.push(value);
-          } else if (node instanceof HTMLImageElement) {
-            const alt = clean(node.alt);
-            if (alt) tokens.push(alt);
-          } else {
-            node.childNodes.forEach(visit);
-          }
-        };
-        visit(box);
-        const top = Number.parseInt(row.style.top || '0', 10);
-        byTop.set(top, {
-          top,
-          type: Array.from(box.classList).filter((name) => name !== 'gamelogBox'),
-          text: clean(tokens.join(' '))
-            .replace(/\s+([),])/g, '$1')
-            .replace(/([(])\s+/g, '$1'),
-          players: (Array.from(box.querySelectorAll('.ctplayer,.tplayer')) as HTMLElement[]).map((player) => ({
-            name: clean(player.textContent),
-            side: player.classList.contains('ctplayer') ? 'CT' as const : 'T' as const,
-          })),
-          weapon: (box.querySelector('.playerWeapon') as HTMLImageElement | null)?.src
-            .split('/').pop()?.replace('.png', '') || null,
-          headshot: Boolean(box.querySelector('.headshotIcon')),
-        });
+    const initialScrollTop = list.scrollTop;
+    try {
+      for (const position of positions) {
+        list.scrollTop = position;
+        list.dispatchEvent(new Event('scroll', { bubbles: true }));
+        await waitForRender();
+        const rows = Array.from(list.querySelectorAll('.topPadding')) as HTMLElement[];
+        for (const row of rows) {
+          const box = row.querySelector('.gamelogBox') as HTMLElement | null;
+          if (!box) continue;
+          const tokens: string[] = [];
+          const visit = (node: Node): void => {
+            if (node.nodeType === Node.TEXT_NODE) {
+              const value = clean(node.textContent);
+              if (value) tokens.push(value);
+            } else if (node instanceof HTMLImageElement) {
+              const alt = clean(node.alt);
+              if (alt) tokens.push(alt);
+            } else {
+              node.childNodes.forEach(visit);
+            }
+          };
+          visit(box);
+          const top = Number.parseInt(row.style.top || '0', 10);
+          byTop.set(top, {
+            top,
+            type: Array.from(box.classList).filter((name) => name !== 'gamelogBox'),
+            text: clean(tokens.join(' '))
+              .replace(/\s+([),])/g, '$1')
+              .replace(/([(])\s+/g, '$1'),
+            players: (Array.from(box.querySelectorAll('.ctplayer,.tplayer')) as HTMLElement[]).map((player) => ({
+              name: clean(player.textContent),
+              side: player.classList.contains('ctplayer') ? 'CT' as const : 'T' as const,
+            })),
+            weapon: (box.querySelector('.playerWeapon') as HTMLImageElement | null)?.src
+              .split('/').pop()?.replace('.png', '') || null,
+            headshot: Boolean(box.querySelector('.headshotIcon')),
+          });
+        }
       }
+    } finally {
+      list.scrollTop = initialScrollTop;
+      list.dispatchEvent(new Event('scroll', { bubbles: true }));
     }
     return {
       scrollHeight: list.scrollHeight,

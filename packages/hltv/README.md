@@ -89,8 +89,9 @@ are closed after ten minutes, and `client.close()` closes the rest.
 The collector does not inject a synthetic Scorebot configuration or reload a page when native
 Scorebot is temporarily absent. The first cold page gets a bounded twelve-second readiness window;
 an established session uses a six-second inter-map window. Exhausting either window returns a
-fail-closed partial snapshot with `SCOREBOT_UNAVAILABLE`. Its virtual Game log is traversed inside one browser
-evaluation, avoiding one protocol round trip per scroll position. Inspect
+fail-closed partial snapshot with `SCOREBOT_UNAVAILABLE`. The complete Game log is read directly
+from the rendered Scorebot component state; virtual-list traversal remains a compatibility fallback
+when that internal representation is unavailable. Inspect
 `diagnostics.capture.timings`, `diagnostics.capture.session`, and
 `diagnostics.capture.scorebot.positionsVisited` when profiling a capture; `navigationSeconds` is the
 pure `page.goto()` duration.

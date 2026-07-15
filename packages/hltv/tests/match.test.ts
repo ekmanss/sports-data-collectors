@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import test from 'node:test';
 import type { Browser } from 'playwright-core';
 import {
+  extractFullGameLog,
   isScorebotSemanticallyReady,
   MatchCaptureSession,
 } from '../src/capture/capture_match.js';
@@ -115,6 +116,80 @@ test('accepts one semantically complete Scorebot state without requiring it to s
     scrollHeight: 0,
     visibleLogRows: 0,
   }), true);
+});
+
+test('reads the complete virtual Game log from rendered component state without scrolling', async () => {
+  const element = (
+    type: string,
+    className: string,
+    children: unknown,
+    props: Record<string, unknown> = {},
+  ): Record<string, unknown> => ({ type, props: { ...props, className, children } });
+  const formattedLines = [
+    {
+      render: element('div', 'winnerCT gamelogBox', [
+        'Round over - Winner: ',
+        element('span', 'ctplayer', 'CT'),
+        ' (',
+        element('span', 'tplayer', '1'),
+        ' - ',
+        element('span', 'ctplayer', '2'),
+        ') - ',
+        element('span', 'ctplayer', 'Enemy eliminated'),
+      ]),
+    },
+    {
+      render: element('div', 'playerKill gamelogBox', [
+        element('span', 'ctplayer', 'alice'),
+        ' killed ',
+        element('span', 'tplayer', 'bob'),
+        ' with ',
+        element('img', 'playerWeapon', null, { src: '/weapons/ak47.png', alt: 'ak47' }),
+        ' ',
+        element('img', 'headshotIcon', null, { alt: '(headshot)' }),
+      ]),
+    },
+    { render: element('div', 'roundStart gamelogBox', 'Round started') },
+    { render: element('div', 'emptyRow', null) },
+  ];
+  const list = {
+    scrollHeight: formattedLines.length * 26,
+    __reactInternalInstance$test: {
+      _currentElement: {
+        _owner: {
+          _instance: { formattedLines },
+        },
+      },
+    },
+  };
+  const previousDocument = Object.getOwnPropertyDescriptor(globalThis, 'document');
+  Object.defineProperty(globalThis, 'document', {
+    configurable: true,
+    value: { querySelector: () => list },
+  });
+  try {
+    const page = {
+      evaluate: async (callback: () => unknown) => await callback(),
+    } as unknown as Parameters<typeof extractFullGameLog>[0];
+    const result = await extractFullGameLog(page);
+    assert.equal(result.positionsVisited, 0);
+    assert.deepEqual(result.chronological.map((event) => event.text), [
+      'Round started',
+      'alice killed bob with ak47 (headshot)',
+      'Round over - Winner: CT (1 - 2) - Enemy eliminated',
+    ]);
+    assert.deepEqual(result.chronological[1], {
+      top: 26,
+      type: ['playerKill'],
+      text: 'alice killed bob with ak47 (headshot)',
+      players: [{ name: 'alice', side: 'CT' }, { name: 'bob', side: 'T' }],
+      weapon: 'ak47',
+      headshot: true,
+    });
+  } finally {
+    if (previousDocument) Object.defineProperty(globalThis, 'document', previousDocument);
+    else delete (globalThis as { document?: unknown }).document;
+  }
 });
 
 test('keeps one match page open and reuses an unchanged semantic snapshot', async () => {

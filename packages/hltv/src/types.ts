@@ -106,7 +106,13 @@ export interface HltvPlayer {
 export interface MatchLineup {
   teamId: number;
   worldRank: number | null;
+  /** Canonical profile IDs retained for backwards-compatible consumers. */
   playerIds: number[];
+  /**
+   * Complete match roster. A stand-in can legitimately have no HLTV profile yet,
+   * while its nickname and team membership are still explicit on the match page.
+   */
+  players?: Array<{ playerId: number | null; nickname: string }>;
 }
 
 export interface VetoEntry {

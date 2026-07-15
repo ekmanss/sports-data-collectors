@@ -8,6 +8,10 @@ function fail(message: string, details?: Record<string, unknown>): never {
   });
 }
 
+function normalizeNickname(value: string): string {
+  return value.trim().toLocaleLowerCase('en-US');
+}
+
 export function validateMatch(
   match: HltvMatch,
   diagnostics: MatchDiagnostics,
@@ -38,21 +42,59 @@ export function validateMatch(
   const playerIds = new Set(match.players.map((player) => player.id));
   const teamIds = new Set(match.teams.map((team) => team.id));
   const playerTeams = new Map<number, number>();
+  const nicknameTeamCandidates = new Map<string, Set<number>>();
   for (const lineup of match.lineups) {
+    if (!teamIds.has(lineup.teamId)) {
+      fail('a lineup references an unknown team', { teamId: lineup.teamId });
+    }
     if (lineup.playerIds.some((id) => !playerIds.has(id))) {
       fail('a lineup references an unknown player', { teamId: lineup.teamId });
     }
-    for (const playerId of lineup.playerIds) {
-      const previousTeamId = playerTeams.get(playerId);
-      if (previousTeamId !== undefined && previousTeamId !== lineup.teamId) {
-        fail('a player belongs to more than one lineup', {
-          playerId,
-          teamIds: [previousTeamId, lineup.teamId],
-        });
+    const participants = lineup.players ?? lineup.playerIds.flatMap((playerId) => {
+      const nickname = match.players.find((player) => player.id === playerId)?.nickname;
+      return nickname ? [{ playerId, nickname }] : [];
+    });
+    const identifiedPlayerIds = participants.flatMap((player) =>
+      player.playerId === null ? [] : [player.playerId]);
+    if (
+      lineup.players
+      && JSON.stringify(identifiedPlayerIds) !== JSON.stringify(lineup.playerIds)
+    ) {
+      fail('a lineup player ID projection is inconsistent', { teamId: lineup.teamId });
+    }
+    if (identifiedPlayerIds.some((id) => !playerIds.has(id))) {
+      fail('a lineup references an unknown player', { teamId: lineup.teamId });
+    }
+    for (const participant of participants) {
+      const nickname = normalizeNickname(participant.nickname);
+      if (!nickname) fail('a lineup participant is missing a nickname', { teamId: lineup.teamId });
+      const nicknameTeams = nicknameTeamCandidates.get(nickname) ?? new Set<number>();
+      nicknameTeams.add(lineup.teamId);
+      nicknameTeamCandidates.set(nickname, nicknameTeams);
+      if (participant.playerId !== null) {
+        const previousTeamId = playerTeams.get(participant.playerId);
+        if (previousTeamId !== undefined && previousTeamId !== lineup.teamId) {
+          fail('a player belongs to more than one lineup', {
+            playerId: participant.playerId,
+            teamIds: [previousTeamId, lineup.teamId],
+          });
+        }
+        playerTeams.set(participant.playerId, lineup.teamId);
       }
-      playerTeams.set(playerId, lineup.teamId);
     }
   }
+  const ambiguousNickname = [...nicknameTeamCandidates]
+    .find(([, teams]) => teams.size > 1);
+  if (ambiguousNickname) {
+    fail('a lineup nickname belongs to more than one team', {
+      nickname: ambiguousNickname[0],
+      teamIds: [...ambiguousNickname[1]],
+    });
+  }
+  const nicknameTeams = new Map(
+    [...nicknameTeamCandidates].map(([nickname, teams]) =>
+      [nickname, [...teams][0]!] as const),
+  );
   for (const view of match.matchStats.views) {
     for (const team of view.teams) {
       if (team.teamId === null || !teamIds.has(team.teamId)) {
@@ -122,9 +164,14 @@ export function validateMatch(
         const candidates = new Set<number>();
         for (const event of round.events) {
           for (const player of event.players ?? []) {
-            const expectedTeamId = player.playerId === null
-              ? null
-              : playerTeams.get(player.playerId) ?? null;
+            const canonicalNickname = player.playerId === null
+              ? player.nickname
+              : match.players.find((candidate) => candidate.id === player.playerId)?.nickname;
+            const expectedTeamId = (player.playerId === null
+              ? undefined
+              : playerTeams.get(player.playerId))
+              ?? nicknameTeams.get(normalizeNickname(canonicalNickname ?? ''))
+              ?? null;
             if (player.teamId !== expectedTeamId) {
               fail(`map ${map.name} round ${round.number} has an inconsistent participant team`, {
                 map: map.name,

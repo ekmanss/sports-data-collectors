@@ -983,6 +983,125 @@ test('rejects score and Game log disagreement', () => {
   );
 });
 
+test('keeps an anonymous stand-in assigned to its explicit lineup team', () => {
+  const capturedAt = '2026-07-15T21:29:41.599Z';
+  const page = completedStatsPage();
+  page.match.status = 'LIVE';
+  page.matchStats = null;
+  for (const team of page.maps.maps[0]!.teams) team.score = '-';
+  const standIn = page.lineups[1]!.players[0]!;
+  standIn.id = null;
+  standIn.nickname = 'reset';
+  const scoreboard: RawScoreboard = {
+    mode: 'Normal',
+    round: '2 - Ancient',
+    fact: '',
+    score: '0:1',
+    teams: [
+      { team: 'Alpha', side: 'CT', players: [] },
+      { team: 'Bravo', side: 'T', players: [] },
+    ],
+  };
+  const capture: CaptureAttempt = {
+    initialPage: page,
+    snapshot: {
+      capturedAt,
+      httpStatus: 200,
+      page,
+      scoreboardNormal: scoreboard,
+      scoreboardAdvanced: null,
+      gameLog: {
+        scrollHeight: 100,
+        chronological: [
+          { top: 30, type: [], text: 'Round started', players: [], weapon: null, headshot: false },
+          {
+            top: 20,
+            type: ['playerKill'],
+            text: 'reset killed alpha-one',
+            players: [
+              { name: 'reset', side: 'T' },
+              { name: 'alpha-one', side: 'CT' },
+            ],
+            weapon: 'ak47',
+            headshot: false,
+          },
+          {
+            top: 10,
+            type: [],
+            text: 'Round over - Winner: T (0 - 1) - Enemy eliminated',
+            players: [],
+            weapon: null,
+            headshot: false,
+          },
+        ],
+        excludedNoiseEvents: 0,
+      },
+      note: null,
+    },
+    collector: {
+      packageVersion: '0.0.0',
+      cloakbrowserVersion: '0.4.10',
+      playwrightVersion: '1.61.0',
+    },
+    httpStatus: 200,
+    navigationSeconds: 0,
+    totalSeconds: 0,
+    attempt: 1,
+    startedAt: capturedAt,
+    completedAt: capturedAt,
+  };
+
+  const result = buildConsumerFromCapture(capture, []);
+
+  assert.deepEqual(result.data.lineups[1], {
+    teamId: 2,
+    worldRank: 2,
+    playerIds: [],
+    players: [{ playerId: null, nickname: 'reset' }],
+  });
+  assert.equal(result.data.players.some((player) => player.nickname === 'reset'), false);
+  assert.deepEqual(result.data.maps[0]!.gameLog.rounds[0]!.events[0]!.players, [
+    { playerId: null, nickname: 'reset', teamId: 2, side: 'T' },
+    { playerId: 11, teamId: 1, side: 'CT' },
+  ]);
+  assert.deepEqual(result.data.maps[0]!.gameLog.rounds[0]!.result, {
+    winnerSide: 'T',
+    winnerTeamId: 2,
+    teamScore: [{ teamId: 1, score: 0 }, { teamId: 2, score: 1 }],
+    sideScore: { ct: 0, t: 1 },
+    reason: 'Enemy eliminated',
+  });
+  assert.ok(result.diagnostics.warnings.some((warning) =>
+    warning.code === 'UNIDENTIFIED_LINEUP_PLAYER'
+    && warning.teamId === 2
+    && warning.nickname === 'reset'));
+  assert.doesNotThrow(() =>
+    validateMatch(result.data, result.diagnostics, page, result.data.match.id));
+});
+
+test('rejects an anonymous lineup nickname assigned to both teams', () => {
+  const match = cloneFixture();
+  match.lineups[0]!.players = [
+    ...match.lineups[0]!.playerIds.map((playerId) => ({
+      playerId,
+      nickname: match.players.find((player) => player.id === playerId)!.nickname,
+    })),
+    { playerId: null, nickname: 'stand-in' },
+  ];
+  match.lineups[1]!.players = [
+    ...match.lineups[1]!.playerIds.map((playerId) => ({
+      playerId,
+      nickname: match.players.find((player) => player.id === playerId)!.nickname,
+    })),
+    { playerId: null, nickname: 'stand-in' },
+  ];
+
+  assert.throws(
+    () => validateMatch(match, diagnosticsFor(match), rawSections, match.match.id),
+    /lineup nickname belongs to more than one team/,
+  );
+});
+
 test('rejects a winning team that disagrees with the round participants', () => {
   const match = cloneFixture();
   const result = match.maps

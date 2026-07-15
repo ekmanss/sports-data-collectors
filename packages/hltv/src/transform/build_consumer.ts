@@ -54,7 +54,9 @@ function mergeLatestWithRich(latest: RawExtractedPage, rich: RawExtractedPage | 
         ...richLineup,
         ...lineup,
         players: lineup.players.map((player) => {
-          const richPlayer = richLineup.players.find((item) => item.id === player.id);
+          const richPlayer = player.id === null
+            ? uniqueByNickname(richLineup.players, player.nickname)
+            : richLineup.players.find((item) => item.id === player.id);
           if (!richPlayer) return player;
           const output = { ...richPlayer, ...player };
           const outputValues = output as unknown as Record<string, unknown>;
@@ -98,6 +100,20 @@ function integerFrom(value: unknown): number | null {
 
 function idFromName<T extends { id: number; name: string }>(items: T[], name: string | null | undefined): number | null {
   return items.find((item) => item.name === name)?.id ?? null;
+}
+
+function normalizeNickname(value: string): string {
+  return value.trim().toLocaleLowerCase('en-US');
+}
+
+function uniqueByNickname<T extends { nickname: string }>(items: T[], nickname: string): T | undefined {
+  const normalized = normalizeNickname(nickname);
+  const matches = items.filter((item) => normalizeNickname(item.nickname) === normalized);
+  return matches.length === 1 ? matches[0] : undefined;
+}
+
+function optionalId(value: number | null, label: string): number | null {
+  return value === null ? null : requireId(value, label);
 }
 
 function mapName(snapshot: RawSnapshot): string {
@@ -436,7 +452,7 @@ function combineScoreboards(
         side: team.side ?? advancedTeam?.side ?? null,
         players: team.players.map((normalPlayer) => {
           const advancedPlayer = advancedTeam?.players.find((item) => item.nickname === normalPlayer.nickname) ?? { nickname: normalPlayer.nickname };
-          const playerId = players.find((player) => player.nickname === normalPlayer.nickname)?.id ?? null;
+          const playerId = uniqueByNickname(players, normalPlayer.nickname)?.id ?? null;
           const stateKeys = ['defuseKit', 'weapons', 'health', 'armor', 'money'];
           const normalKeys = ['kills', 'assists', 'flashAssists', 'deaths', 'adr'];
           const advancedKeys = ['openingDuels', 'multiKills', 'kast', 'clutches'];
@@ -474,16 +490,19 @@ function normalizeLogEvent(
   event: RawLogEvent,
   players: { id: number; nickname: string }[],
   playerTeams: Map<number, number>,
+  nicknameTeams: Map<string, number>,
 ): GameLogEvent {
   const sideClasses = new Set(['CT', 'T', 'TERRORIST']);
   const kind = (event.type ?? []).find((value) => !sideClasses.has(value)) ?? 'event';
   const output: GameLogEvent = { kind, text: event.text };
   if (event.players?.length) output.players = event.players.map((player) => {
-    const playerId = players.find((item) => item.nickname === player.name)?.id ?? null;
+    const playerId = uniqueByNickname(players, player.name)?.id ?? null;
     return {
       playerId,
       ...(playerId === null ? { nickname: player.name } : {}),
-      teamId: playerId === null ? null : playerTeams.get(playerId) ?? null,
+      teamId: (playerId === null ? undefined : playerTeams.get(playerId))
+        ?? nicknameTeams.get(normalizeNickname(player.name))
+        ?? null,
       side: player.side,
     };
   });
@@ -536,7 +555,11 @@ export function assignRoundTeamResults(
 function normalizeRounds(
   rounds: RawRound[],
   players: { id: number; nickname: string }[],
-  lineups: Array<{ teamId: number; playerIds: number[] }>,
+  lineups: Array<{
+    teamId: number;
+    playerIds: number[];
+    players?: Array<{ playerId: number | null; nickname: string }>;
+  }>,
   teamIds: number[],
 ): GameRound[] {
   let ctWins = 0;
@@ -544,12 +567,29 @@ function normalizeRounds(
   const playerTeams = new Map(
     lineups.flatMap((lineup) => lineup.playerIds.map((playerId) => [playerId, lineup.teamId] as const)),
   );
+  const nicknameTeamCandidates = new Map<string, Set<number>>();
+  for (const lineup of lineups) {
+    for (const player of lineup.players ?? lineup.playerIds.flatMap((playerId) => {
+      const nickname = players.find((candidate) => candidate.id === playerId)?.nickname;
+      return nickname ? [{ playerId, nickname }] : [];
+    })) {
+      const key = normalizeNickname(player.nickname);
+      const candidates = nicknameTeamCandidates.get(key) ?? new Set<number>();
+      candidates.add(lineup.teamId);
+      nicknameTeamCandidates.set(key, candidates);
+    }
+  }
+  const nicknameTeams = new Map(
+    [...nicknameTeamCandidates].flatMap(([nickname, candidates]) =>
+      candidates.size === 1 ? [[nickname, [...candidates][0]!] as const] : []),
+  );
   const normalized = rounds.map((round, index): GameRound => {
     if (round.result?.winnerSide === 'CT') ctWins += 1;
     if (round.result?.winnerSide === 'T') tWins += 1;
     return {
       number: index + 1,
-      events: round.events.map((event) => normalizeLogEvent(event, players, playerTeams)),
+      events: round.events.map((event) =>
+        normalizeLogEvent(event, players, playerTeams, nicknameTeams)),
       result: round.result ? {
         winnerSide: round.result.winnerSide,
         winnerTeamId: null,
@@ -646,7 +686,7 @@ function normalizeMatchStats(
         teamId: team.id ?? idFromName(teams, team.name),
         name: team.name,
         players: team.players.map((player) => ({
-          playerId: player.id ?? players.find((item) => item.nickname === player.nickname)?.id ?? null,
+          playerId: player.id ?? uniqueByNickname(players, player.nickname)?.id ?? null,
           nickname: player.nickname,
           traditional: {
             kills: integerFrom(player.kills),
@@ -765,25 +805,30 @@ export function buildConsumerFromCapture(
   const snapshotsByMap = new Map([[mapName(stateSnapshot), stateSnapshot]]);
 
   const teams: HltvTeam[] = staticData.teams.map((team) => ({ id: requireId(team.id, `team ${team.name}`), name: team.name, country: team.country, url: team.url, logo: team.logo }));
-  const players: HltvPlayer[] = staticData.lineups.flatMap((lineup) => lineup.players.map((player) => ({
-    id: requireId(player.id, `player ${player.nickname}`),
-    nickname: player.nickname,
-    fullName: player.fullName,
-    country: player.country,
-    image: player.image,
-    bodyshotUrl: typeof player.stats.bodyshotUrl === 'string' ? player.stats.bodyshotUrl : null,
-    profileUrl: player.profileUrl,
-    statsUrl: player.statsUrl,
-    metrics: {
-      rating: numberFrom(player.stats?.numericRating ?? player.rating),
-      killsPerRound: numberFrom(player.stats?.numericKpr ?? player.kpr),
-      deathsPerRound: numberFrom(player.stats?.numericDpr ?? player.dpr),
-      kastRate: rateFrom(player.stats?.numericKast, player.kast),
-      adr: numberFrom(player.stats?.numericAdr ?? player.adr),
-      multiKillRating: numberFrom(player.stats?.numericMultiKillRating),
-      roundSwingRate: rateFrom(player.stats?.numericRoundSwing, player.stats?.roundSwing),
-    },
-  })));
+  const players: HltvPlayer[] = [];
+  for (const player of staticData.lineups.flatMap((lineup) => lineup.players)) {
+    const id = optionalId(player.id, `player ${player.nickname}`);
+    if (id === null || players.some((item) => item.id === id)) continue;
+    players.push({
+      id,
+      nickname: player.nickname,
+      fullName: player.fullName,
+      country: player.country,
+      image: player.image,
+      bodyshotUrl: typeof player.stats.bodyshotUrl === 'string' ? player.stats.bodyshotUrl : null,
+      profileUrl: player.profileUrl,
+      statsUrl: player.statsUrl,
+      metrics: {
+        rating: numberFrom(player.stats?.numericRating ?? player.rating),
+        killsPerRound: numberFrom(player.stats?.numericKpr ?? player.kpr),
+        deathsPerRound: numberFrom(player.stats?.numericDpr ?? player.dpr),
+        kastRate: rateFrom(player.stats?.numericKast, player.kast),
+        adr: numberFrom(player.stats?.numericAdr ?? player.adr),
+        multiKillRating: numberFrom(player.stats?.numericMultiKillRating),
+        roundSwingRate: rateFrom(player.stats?.numericRoundSwing, player.stats?.roundSwing),
+      },
+    });
+  }
   for (const player of staticData.matchStats?.views.flatMap((view) =>
     view.teams.flatMap((team) => team.players)) ?? []) {
     if (player.id === null || players.some((item) => item.id === player.id)) continue;
@@ -807,11 +852,19 @@ export function buildConsumerFromCapture(
       },
     });
   }
-  const lineups = staticData.lineups.map((lineup) => ({
-    teamId: requireId(lineup.id, `lineup ${lineup.name}`),
-    worldRank: lineup.worldRank,
-    playerIds: lineup.players.map((player) => requireId(player.id, `player ${player.nickname}`)),
-  }));
+  const lineups = staticData.lineups.map((lineup) => {
+    const lineupPlayers = lineup.players.map((player) => ({
+      playerId: optionalId(player.id, `player ${player.nickname}`),
+      nickname: player.nickname,
+    }));
+    return {
+      teamId: requireId(lineup.id, `lineup ${lineup.name}`),
+      worldRank: lineup.worldRank,
+      playerIds: lineupPlayers.flatMap((player) =>
+        player.playerId === null ? [] : [player.playerId]),
+      players: lineupPlayers,
+    };
+  });
 
   const filtered = formalEvents(stateSnapshot.gameLog.chronological);
   const deduplicated = deduplicateAdjacent(filtered.events);
@@ -832,6 +885,16 @@ export function buildConsumerFromCapture(
     section,
     reason: 'A later snapshot in this capture omitted data that was present earlier in the same capture.',
   }));
+  for (const lineup of lineups) {
+    for (const player of lineup.players.filter((item) => item.playerId === null)) {
+      warnings.push({
+        code: 'UNIDENTIFIED_LINEUP_PLAYER',
+        teamId: lineup.teamId,
+        nickname: player.nickname,
+        reason: 'HLTV listed this roster participant without a canonical player profile ID; nickname and lineup team remain authoritative.',
+      });
+    }
+  }
   const scorebotUnavailable = (matchOver || matchLive) && !scorebotUsable;
   if (scorebotUnavailable) warnings.push({
     code: 'SCOREBOT_UNAVAILABLE',

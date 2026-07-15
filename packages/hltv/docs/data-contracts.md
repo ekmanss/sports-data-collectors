@@ -73,6 +73,11 @@ accruing wins after halftime or overtime side changes. If any round cannot be ma
 `winnerTeamId` is `null` for that round and cumulative `teamScore` is `null` from that point onward.
 Every Game log participant also exposes its canonical nullable `teamId` separately from its
 per-event `side`, so consumers never need to repeat lineup joins or infer team identity from color.
+`lineups[].players` is the complete roster identity source: every entry has a nickname and a
+nullable `playerId`. HLTV occasionally lists a stand-in before creating or linking a canonical
+player profile; in that case the participant remains safely assigned to the explicit lineup team,
+`playerId` is `null`, and diagnostics include `UNIDENTIFIED_LINEUP_PLAYER`. The legacy
+`lineups[].playerIds` field remains the projection of only the identified profile IDs.
 
 `sideScore.ct` and `sideScore.t` remain diagnostic side aggregates: they count rounds won while
 playing the corresponding side on that map and must not be interpreted as team scores. They are
@@ -83,7 +88,11 @@ follow team ordering, not stable CT/T ordering.
 
 - `match.id`, `match.slug`, and `source.url` must describe the same canonical HLTV match.
 - Exactly two unique primary teams are required.
-- Every lineup player ID references a canonical player.
+- Every non-null lineup player ID references a canonical player. A participant without an HLTV
+  profile ID is represented by its nickname and explicit lineup team instead of receiving an
+  invented ID or making the otherwise complete live match unusable.
+- A normalized lineup nickname belongs to at most one primary team, so anonymous Game log
+  participants can be assigned only when the team relationship is unambiguous.
 - Every Match stats team and player ID references a canonical team or player; substitutes found
   only in Match stats are added to `players` without being invented as lineup members.
 - Current map scores equal the number of completed Game log rounds. Completed maps do too when

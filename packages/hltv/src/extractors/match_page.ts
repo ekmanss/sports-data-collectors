@@ -67,12 +67,16 @@ export function extractHltvMatchPage() {
       worldRank: Number(text(box, '.teamRanking').match(/#(\d+)/)?.[1] || 0) || null,
       players: nameCells.map((cell, playerIndex) => {
         const dataNode = cell.querySelector('[data-player-id]');
-        const id = Number(dataNode?.getAttribute('data-player-id') || 0) || null;
+        const nickname = text(cell, '.text-ellipsis:last-child');
+        const matchingStats = Object.values(statsByTeam[teamIndex] || {})
+          .filter((entry) => clean(entry?.nickname).toLowerCase() === nickname.toLowerCase());
+        const fallbackStats = matchingStats.length === 1 ? matchingStats[0] : {};
+        const id = Number(dataNode?.getAttribute('data-player-id') || fallbackStats?.playerId || 0) || null;
         const image = imageCells[playerIndex]?.querySelector('img');
-        const stats = id ? (statsByTeam[teamIndex]?.[String(id)] || {}) : {};
+        const stats = id ? (statsByTeam[teamIndex]?.[String(id)] || fallbackStats) : fallbackStats;
         return {
           id,
-          nickname: text(cell, '.text-ellipsis:last-child'),
+          nickname,
           fullName: image?.getAttribute('title') || null,
           country: cell.querySelector('img.flag')?.getAttribute('title') || null,
           image: image?.getAttribute('src') || null,

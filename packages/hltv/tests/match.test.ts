@@ -14,7 +14,7 @@ import {
 import { matchIdentityFromUrl, normalizeClientOptions } from '../src/config.js';
 import { HltvError, withHltvErrorDetails } from '../src/errors.js';
 import { createOperationContext, retryDelayMilliseconds } from '../src/runtime.js';
-import { buildConsumerFromCapture } from '../src/transform/build_consumer.js';
+import { assignRoundTeamResults, buildConsumerFromCapture } from '../src/transform/build_consumer.js';
 import { validateMatch } from '../src/transform/validate_match.js';
 import type {
   CaptureAttempt, HltvMatch, MatchDiagnostics, MatchMap, RawExtractedPage, RawLivePage, RawLogEvent,
@@ -25,8 +25,8 @@ const fixturePath = resolve(
   import.meta.dirname,
   'fixtures/completed-match.json',
 );
-// Keep the legacy 3.0.0 fixture useful while testing the 3.1.0 additive contract and corrected
-// side-score semantics.
+// Keep the legacy 3.0.0 fixture useful while testing the additive contract and corrected
+// side/team-score semantics.
 const legacyCompletedFixture = JSON.parse(await readFile(fixturePath, 'utf8')) as HltvMatch;
 for (const map of legacyCompletedFixture.maps) {
   let ctWins = 0;
@@ -39,9 +39,30 @@ for (const map of legacyCompletedFixture.maps) {
 }
 const completedFixture = {
   ...legacyCompletedFixture,
-  schemaVersion: '3.1.0',
+  schemaVersion: '3.2.0',
   matchStats: { views: [] },
 } satisfies HltvMatch;
+const fixturePlayerTeams = new Map(
+  completedFixture.lineups.flatMap((lineup) =>
+    lineup.playerIds.map((playerId) => [playerId, lineup.teamId] as const)),
+);
+for (const map of completedFixture.maps) {
+  for (const round of map.gameLog.rounds) {
+    for (const event of round.events) {
+      for (const player of event.players ?? []) {
+        player.teamId ??= player.playerId === null
+          ? null
+          : fixturePlayerTeams.get(player.playerId) ?? null;
+      }
+    }
+  }
+  map.gameLog.rounds = assignRoundTeamResults(
+    map.gameLog.rounds,
+    completedFixture.teams.map((team) => team.id),
+  );
+  for (const team of map.scoreboard?.teams ?? []) team.side ??= null;
+}
+for (const team of completedFixture.current?.scoreboard?.teams ?? []) team.side ??= null;
 const rawSections = { sections: { matchPage: true, maps: true } };
 
 function diagnosticsFor(match: HltvMatch): MatchDiagnostics {
@@ -75,6 +96,54 @@ function diagnosticsFor(match: HltvMatch): MatchDiagnostics {
 function cloneFixture(): HltvMatch {
   return structuredClone(completedFixture);
 }
+
+test('keeps team scores stable when the same team wins on both sides of a swap', () => {
+  const rounds = assignRoundTeamResults([
+    {
+      number: 1,
+      events: [{
+        kind: 'playerKill',
+        text: 'alpha killed bravo',
+        players: [
+          { playerId: 11, teamId: 1, side: 'T' },
+          { playerId: 21, teamId: 2, side: 'CT' },
+        ],
+      }],
+      result: {
+        winnerSide: 'T', winnerTeamId: null, teamScore: null,
+        sideScore: { ct: 0, t: 1 }, reason: 'Enemy eliminated',
+      },
+    },
+    {
+      number: 2,
+      events: [{
+        kind: 'playerKill',
+        text: 'alpha killed bravo after side swap',
+        players: [
+          { playerId: 11, teamId: 1, side: 'CT' },
+          { playerId: 21, teamId: 2, side: 'T' },
+        ],
+      }],
+      result: {
+        winnerSide: 'CT', winnerTeamId: null, teamScore: null,
+        sideScore: { ct: 1, t: 1 }, reason: 'Enemy eliminated',
+      },
+    },
+  ], [1, 2]);
+
+  assert.deepEqual(rounds.map((round) => round.result), [
+    {
+      winnerSide: 'T', winnerTeamId: 1,
+      teamScore: [{ teamId: 1, score: 1 }, { teamId: 2, score: 0 }],
+      sideScore: { ct: 0, t: 1 }, reason: 'Enemy eliminated',
+    },
+    {
+      winnerSide: 'CT', winnerTeamId: 1,
+      teamScore: [{ teamId: 1, score: 2 }, { teamId: 2, score: 0 }],
+      sideScore: { ct: 1, t: 1 }, reason: 'Enemy eliminated',
+    },
+  ]);
+});
 
 test('parses and canonicalizes a complete HLTV match URL', () => {
   assert.deepEqual(
@@ -698,7 +767,7 @@ test('normalizes Match stats across map, side, and eco-adjusted dimensions', () 
 
   const result = buildConsumerFromCapture(capture, []);
 
-  assert.equal(result.data.schemaVersion, '3.1.0');
+  assert.equal(result.data.schemaVersion, '3.2.0');
   assert.equal(result.data.matchStats.views.length, 3);
   assert.deepEqual(result.data.matchStats.views.map((view) => [view.map, view.side]), [
     [null, 'both'],
@@ -744,6 +813,20 @@ test('rejects score and Game log disagreement', () => {
   assert.throws(
     () => validateMatch(match, diagnosticsFor(match), rawSections, match.match.id),
     (error: unknown) => error instanceof HltvError && error.code === 'INCOMPLETE_CAPTURE',
+  );
+});
+
+test('rejects a winning team that disagrees with the round participants', () => {
+  const match = cloneFixture();
+  const result = match.maps
+    .flatMap((map) => map.gameLog.rounds)
+    .find((round) => round.result?.winnerTeamId !== null)?.result;
+  assert.ok(result?.winnerTeamId);
+  result.winnerTeamId = match.teams.find((team) => team.id !== result.winnerTeamId)!.id;
+
+  assert.throws(
+    () => validateMatch(match, diagnosticsFor(match), rawSections, match.match.id),
+    /inconsistent winning team/,
   );
 });
 
@@ -992,8 +1075,8 @@ test('reconciles overlapping Scorebot replay fragments across maps', () => {
     fact: '',
     score: '4:3',
     teams: [
-      { team: 'Alpha', players: [] },
-      { team: 'Bravo', players: [] },
+      { team: 'Alpha', side: 'CT', players: [] },
+      { team: 'Bravo', side: 'T', players: [] },
     ],
   };
   const chronological = [
@@ -1040,8 +1123,14 @@ test('reconciles overlapping Scorebot replay fragments across maps', () => {
     [['Dust2', 47], ['Mirage', 18], ['Nuke', 7]],
   );
   assert.deepEqual(result.data.maps[0]!.gameLog.rounds[24]!.result?.sideScore, { ct: 24, t: 1 });
+  assert.deepEqual(
+    result.data.current?.scoreboard?.teams.map((team) => [team.teamId, team.side]),
+    [[1, 'CT'], [2, 'T']],
+  );
   assert.deepEqual(result.data.maps[1]!.gameLog.rounds[0]!.result, {
     winnerSide: 'T',
+    winnerTeamId: null,
+    teamScore: null,
     sideScore: { ct: 0, t: 1 },
     reason: 'Enemy eliminated',
   });

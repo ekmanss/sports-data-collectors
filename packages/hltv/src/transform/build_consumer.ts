@@ -376,7 +376,7 @@ type ScoreboardMode = {
   round: string;
   fact: string;
   score: string;
-  teams: Array<{ name: string; players: ScoreboardModePlayer[] }>;
+  teams: Array<{ name: string; side: 'CT' | 'T' | null; players: ScoreboardModePlayer[] }>;
 };
 
 function normalizeScoreboardMode(scoreboard: RawScoreboard | null): ScoreboardMode | null {
@@ -388,6 +388,7 @@ function normalizeScoreboardMode(scoreboard: RawScoreboard | null): ScoreboardMo
     score: scoreboard.score,
     teams: scoreboard.teams.map((team) => ({
       name: team.team,
+      side: team.side ?? null,
       players: team.players.map((raw) => {
         const player: ScoreboardModePlayer = { nickname: raw.player };
         let center = 0;
@@ -432,6 +433,7 @@ function combineScoreboards(
       return {
         teamId,
         ...(teamId === null ? { name: team.name } : {}),
+        side: team.side ?? advancedTeam?.side ?? null,
         players: team.players.map((normalPlayer) => {
           const advancedPlayer = advancedTeam?.players.find((item) => item.nickname === normalPlayer.nickname) ?? { nickname: normalPlayer.nickname };
           const playerId = players.find((player) => player.nickname === normalPlayer.nickname)?.id ?? null;
@@ -468,35 +470,96 @@ function scoresMatch(left: { teamId: number | null; score: number }[], right: { 
   return left.every((item) => right.some((other) => other.teamId === item.teamId && other.score === item.score));
 }
 
-function normalizeLogEvent(event: RawLogEvent, players: { id: number; nickname: string }[]): GameLogEvent {
+function normalizeLogEvent(
+  event: RawLogEvent,
+  players: { id: number; nickname: string }[],
+  playerTeams: Map<number, number>,
+): GameLogEvent {
   const sideClasses = new Set(['CT', 'T', 'TERRORIST']);
   const kind = (event.type ?? []).find((value) => !sideClasses.has(value)) ?? 'event';
   const output: GameLogEvent = { kind, text: event.text };
   if (event.players?.length) output.players = event.players.map((player) => {
     const playerId = players.find((item) => item.nickname === player.name)?.id ?? null;
-    return { playerId, ...(playerId === null ? { nickname: player.name } : {}), side: player.side };
+    return {
+      playerId,
+      ...(playerId === null ? { nickname: player.name } : {}),
+      teamId: playerId === null ? null : playerTeams.get(playerId) ?? null,
+      side: player.side,
+    };
   });
   if (event.weapon) output.weapon = event.weapon;
   if (event.headshot) output.headshot = true;
   return output;
 }
 
-function normalizeRounds(rounds: RawRound[], players: { id: number; nickname: string }[]): GameRound[] {
+function resolveWinnerTeamId(
+  winnerSide: 'CT' | 'T' | null,
+  events: GameLogEvent[],
+): number | null {
+  if (winnerSide === null) return null;
+  const candidates = new Set<number>();
+  for (const event of events) {
+    for (const player of event.players ?? []) {
+      if (player.side === winnerSide && player.teamId !== null) candidates.add(player.teamId);
+    }
+  }
+  return candidates.size === 1 ? [...candidates][0]! : null;
+}
+
+export function assignRoundTeamResults(
+  rounds: GameRound[],
+  teamIds: number[],
+): GameRound[] {
+  const teamScore = new Map(teamIds.map((teamId) => [teamId, 0]));
+  let teamScoreReliable = teamIds.length === 2 && new Set(teamIds).size === 2;
+  return rounds.map((round) => {
+    if (round.result === null) return round;
+    const winnerTeamId = resolveWinnerTeamId(round.result.winnerSide, round.events);
+    if (winnerTeamId === null || !teamScore.has(winnerTeamId)) {
+      teamScoreReliable = false;
+    } else {
+      teamScore.set(winnerTeamId, teamScore.get(winnerTeamId)! + 1);
+    }
+    return {
+      ...round,
+      result: {
+        ...round.result,
+        winnerTeamId,
+        teamScore: teamScoreReliable
+          ? teamIds.map((teamId) => ({ teamId, score: teamScore.get(teamId)! }))
+          : null,
+      },
+    };
+  });
+}
+
+function normalizeRounds(
+  rounds: RawRound[],
+  players: { id: number; nickname: string }[],
+  lineups: Array<{ teamId: number; playerIds: number[] }>,
+  teamIds: number[],
+): GameRound[] {
   let ctWins = 0;
   let tWins = 0;
-  return rounds.map((round, index) => {
+  const playerTeams = new Map(
+    lineups.flatMap((lineup) => lineup.playerIds.map((playerId) => [playerId, lineup.teamId] as const)),
+  );
+  const normalized = rounds.map((round, index): GameRound => {
     if (round.result?.winnerSide === 'CT') ctWins += 1;
     if (round.result?.winnerSide === 'T') tWins += 1;
     return {
       number: index + 1,
-      events: round.events.map((event) => normalizeLogEvent(event, players)),
+      events: round.events.map((event) => normalizeLogEvent(event, players, playerTeams)),
       result: round.result ? {
         winnerSide: round.result.winnerSide,
+        winnerTeamId: null,
+        teamScore: null,
         sideScore: round.result.winnerSide === null ? null : { ct: ctWins, t: tWins },
         reason: round.result.reason,
       } : null,
     };
   });
+  return assignRoundTeamResults(normalized, teamIds);
 }
 
 function parseHalfScores(value: string): { team1: number; team2: number }[] {
@@ -794,7 +857,12 @@ export function buildConsumerFromCapture(
       snapshotScore: snapshotScores,
       capturedAt: snapshot.capturedAt,
     });
-    const rounds = normalizeRounds(split.assignments.get(rawMap.name) ?? [], players);
+    const rounds = normalizeRounds(
+      split.assignments.get(rawMap.name) ?? [],
+      players,
+      lineups,
+      teams.map((team) => team.id),
+    );
     return {
       name: rawMap.name,
       status,
@@ -825,7 +893,7 @@ export function buildConsumerFromCapture(
 
   const currentRoundMatch = stateSnapshot.scoreboardNormal?.round.match(/^(\d+)/);
   const consumer: HltvMatch = {
-    schemaVersion: '3.1.0',
+    schemaVersion: '3.2.0',
     capturedAt: snapshot.capturedAt,
     sport: 'cs2',
     source: { provider: 'hltv', url: identity.url },

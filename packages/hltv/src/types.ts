@@ -134,6 +134,7 @@ export interface ScoreboardPlayer {
 export interface ScoreboardTeam {
   teamId: number | null;
   name?: string;
+  side: 'CT' | 'T' | null;
   players: ScoreboardPlayer[];
 }
 
@@ -145,6 +146,7 @@ export interface CombinedScoreboard {
 export interface GameLogPlayer {
   playerId: number | null;
   nickname?: string;
+  teamId: number | null;
   side: 'CT' | 'T';
 }
 
@@ -158,6 +160,8 @@ export interface GameLogEvent {
 
 export interface RoundResult {
   winnerSide: 'CT' | 'T' | null;
+  winnerTeamId: number | null;
+  teamScore: Array<{ teamId: number; score: number }> | null;
   sideScore: { ct: number; t: number | null } | null;
   reason: string | null;
 }
@@ -271,7 +275,7 @@ export interface HeadToHead {
 }
 
 export interface HltvMatch {
-  schemaVersion: '3.1.0';
+  schemaVersion: '3.2.0';
   capturedAt: string;
   sport: 'cs2';
   source: { provider: 'hltv'; url: string };
@@ -451,7 +455,11 @@ export interface RawScoreboard {
   round: string;
   fact: string;
   score: string;
-  teams: Array<{ team: string; players: Array<{ player: string; cells: RawCell[] }> }>;
+  teams: Array<{
+    team: string;
+    side?: 'CT' | 'T' | null;
+    players: Array<{ player: string; cells: RawCell[] }>;
+  }>;
 }
 
 export interface RawLogEvent {

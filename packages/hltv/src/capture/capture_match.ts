@@ -114,8 +114,18 @@ async function extractScoreboard(page: HltvPageAdapter): Promise<RawScoreboard |
     const clean = (value) => (value || '').replace(/\\s+/g, ' ').trim();
     const teams = [...root.querySelectorAll('table.team')].map((table) => {
       const rows = [...table.querySelectorAll('tr')];
+      const semanticClasses = [
+        table,
+        table.querySelector('thead'),
+        rows[0],
+        ...(rows[0]?.querySelectorAll('td,th') ?? []),
+      ]
+        .flatMap((element) => [...(element?.classList ?? [])]);
       return {
         team: clean(rows[0]?.querySelector('.identityColumns')?.textContent),
+        side: semanticClasses.includes('ctTeamHeaderBg')
+          ? 'CT'
+          : semanticClasses.includes('tTeamHeaderBg') ? 'T' : null,
         players: rows.slice(1).map((row) => ({
           player: clean(row.querySelector('.identityColumns')?.textContent),
           cells: [...row.querySelectorAll('td,th')].map((cell) => ({

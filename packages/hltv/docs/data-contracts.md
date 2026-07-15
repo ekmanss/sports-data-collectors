@@ -41,13 +41,13 @@ The collector deliberately excludes odds, stars, map pools, Scorebot, raw DOM, a
 - If values do not stabilize within five seconds, the latest complete snapshot is returned with `LIVE_STATE_UNSTABLE`.
 - A page that cannot be recognized as the HLTV matches page fails with `INCOMPLETE_CAPTURE`.
 
-## Match Detail 3.1.0
+## Match Detail 3.2.0
 
 `getHltvMatch()` and `client.getMatch()` return the full match-page and Scorebot model:
 
 ```ts
 interface HltvMatch {
-  schemaVersion: '3.1.0';
+  schemaVersion: '3.2.0';
   capturedAt: string;
   sport: 'cs2';
   source: { provider: 'hltv'; url: string };
@@ -62,10 +62,22 @@ map with its HLTV `mapStatsId`, then separates `both`, `ct`, and `t` sides. Each
 traditional and Eco-adjusted kills, deaths, ADR, and KAST together with the view's Round Swing
 and Rating 3.0. When HLTV has not published Match stats yet, `views` is empty.
 
-Each completed Game log round exposes `winnerSide` and cumulative `sideScore`. `sideScore.ct` and
-`sideScore.t` count rounds won while playing the corresponding side on that map. They are derived
-from the round winners because the two numeric values rendered in HLTV's `Round over` text follow
-team ordering, not stable CT/T ordering.
+Each Scoreboard team exposes the current semantic `side` from HLTV's `ctTeamHeaderBg` or
+`tTeamHeaderBg` class. This is the team side at the captured Scoreboard state, never a permanent team
+identity and never evidence for earlier rounds.
+
+Each completed Game log round exposes `winnerTeamId`, cumulative `teamScore`, `winnerSide`, and
+cumulative `sideScore`. `winnerTeamId` is resolved from the winning side's event participants and
+the canonical lineups; `teamScore` is keyed by stable primary team IDs, so the same team continues
+accruing wins after halftime or overtime side changes. If any round cannot be mapped uniquely,
+`winnerTeamId` is `null` for that round and cumulative `teamScore` is `null` from that point onward.
+Every Game log participant also exposes its canonical nullable `teamId` separately from its
+per-event `side`, so consumers never need to repeat lineup joins or infer team identity from color.
+
+`sideScore.ct` and `sideScore.t` remain diagnostic side aggregates: they count rounds won while
+playing the corresponding side on that map and must not be interpreted as team scores. They are
+derived from the round winners because the two numeric values rendered in HLTV's `Round over` text
+follow team ordering, not stable CT/T ordering.
 
 ### Match consistency
 
@@ -81,6 +93,10 @@ team ordering, not stable CT/T ordering.
 - Overlapping Scorebot replay fragments are joined only when the older fragment supplies the missing prefix and agrees with the newer fragment at the splice boundary; the newer replay remains authoritative after that boundary.
 - Knife rounds, scoreless draws, and replay fragments that cannot be safely reconciled are excluded rather than counted as official map rounds.
 - Stored rounds start at one and increment without gaps.
+- A uniquely resolvable round winner references a canonical primary team, and its cumulative
+  `teamScore` increments that team regardless of CT/T side changes.
+- The latest reliable Game log `teamScore` agrees with the canonical map score.
+- When Scoreboard semantic sides are present, exactly one team is CT and the other is T.
 - Completed maps contain no unfinished round.
 - Scoreboards are included only when their score agrees with the canonical map score.
 - `current` is `null` after the match ends.

@@ -68,17 +68,36 @@ assert.equal(live.diagnostics.capture?.session.navigated, true);
 assert.equal(warmLive.diagnostics.capture?.session.reused, true);
 assert.equal(warmLive.diagnostics.capture?.session.navigated, false);
 
-assert.equal(detail.data.schemaVersion, '3.1.0');
+assert.equal(detail.data.schemaVersion, '3.2.0');
 assert.equal(detail.data.match.id, matchIdentityFromUrl(matchUrl)?.id);
 assert.equal(detail.data.teams.length, 2);
 assert.ok(detail.data.maps.length > 0);
+let resolvedRoundWinners = 0;
+let unresolvedRoundWinners = 0;
 for (const map of detail.data.maps) {
   let ctWins = 0;
   let tWins = 0;
+  const teamWins: Map<number, number> = new Map();
+  for (const team of detail.data.teams) teamWins.set(team.id, 0);
+  let teamScoreReliable = true;
   for (const round of map.gameLog.rounds) {
     if (round.result?.winnerSide === 'CT') ctWins += 1;
     if (round.result?.winnerSide === 'T') tWins += 1;
     if (round.result) assert.deepEqual(round.result.sideScore, { ct: ctWins, t: tWins });
+    if (!round.result) continue;
+    if (round.result.winnerTeamId === null) {
+      unresolvedRoundWinners += 1;
+      teamScoreReliable = false;
+    } else {
+      resolvedRoundWinners += 1;
+      teamWins.set(round.result.winnerTeamId, teamWins.get(round.result.winnerTeamId)! + 1);
+    }
+    assert.deepEqual(
+      round.result.teamScore,
+      teamScoreReliable
+        ? detail.data.teams.map((team) => ({ teamId: team.id, score: teamWins.get(team.id)! }))
+        : null,
+    );
   }
 }
 
@@ -139,6 +158,12 @@ process.stdout.write(`${JSON.stringify({
   warmTimings: warmCapture.timings,
   warmSession: warmCapture.session,
   positionsVisited,
+  resolvedRoundWinners,
+  unresolvedRoundWinners,
+  currentScoreboardSides: detail.data.current?.scoreboard?.teams.map((team) => ({
+    teamId: team.teamId,
+    side: team.side,
+  })) ?? [],
 })}\n`);
 
 async function createLiveClient() {

@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
+import { chromium } from 'playwright-core';
+import type { HltvBrowserAdapter, HltvPageAdapter } from '../src/browser_adapter.js';
 import { matchIdentityFromUrl } from '../src/config.js';
 import { HltvError } from '../src/errors.js';
-import { createHltvClient } from '../src/index.js';
+import { createHltvClient, createHltvClientWithBrowser } from '../src/index.js';
 import type { GetHltvLiveMatchesResult, GetHltvMatchResult } from '../src/types.js';
 
 const matchUrl = process.env.HLTV_MATCH_URL;
@@ -29,7 +31,7 @@ let live: GetHltvLiveMatchesResult | undefined;
 let detail: GetHltvMatchResult | undefined;
 let warmDetail: GetHltvMatchResult | undefined;
 for (let browserAttempt = 1; browserAttempt <= 3; browserAttempt += 1) {
-  const client = await createHltvClient(clientOptions);
+  const client = await createLiveClient();
   try {
     live = await client.getLiveMatches({ onProgress });
     detail = await client.getMatch(matchUrl, { onProgress });
@@ -108,3 +110,16 @@ process.stdout.write(`${JSON.stringify({
   warmSession: warmCapture.session,
   positionsVisited,
 })}\n`);
+
+async function createLiveClient() {
+  const endpoint = process.env.HLTV_CDP_ENDPOINT;
+  if (!endpoint) return await createHltvClient(clientOptions);
+  const browser = await chromium.connectOverCDP(endpoint);
+  const context = browser.contexts()[0];
+  if (!context) throw new Error('HLTV_CDP_ENDPOINT has no persistent browser context');
+  const adapter: HltvBrowserAdapter = {
+    newPage: async () => await context.newPage() as unknown as HltvPageAdapter,
+    close: async () => await browser.close(),
+  };
+  return createHltvClientWithBrowser(adapter, clientOptions);
+}

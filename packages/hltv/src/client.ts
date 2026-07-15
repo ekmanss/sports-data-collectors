@@ -4,6 +4,7 @@ import type { HltvBrowserAdapter } from './browser_adapter.js';
 import { LiveCaptureSession } from './capture/capture_live.js';
 import { matchIdentityFromUrl, normalizeClientOptions, splitCombinedOptions } from './config.js';
 import { HltvError } from './errors.js';
+import { getCompletedMatchStatsWithBrowser } from './get_hltv_completed_match_stats.js';
 import { getLiveMatchesWithSession } from './get_hltv_live_matches.js';
 import {
   createMatchCaptureSession,
@@ -21,6 +22,8 @@ import {
 import type {
   GetHltvLiveMatchesOptions,
   GetHltvLiveMatchesResult,
+  GetHltvCompletedMatchStatsOptions,
+  GetHltvCompletedMatchStatsResult,
   GetHltvMatchOptions,
   GetHltvMatchResult,
   HltvClient,
@@ -46,7 +49,7 @@ type OneShotResult = {
 async function runOneShot<T extends OneShotResult>(input: {
   clientOptions: HltvClientOptions;
   requestOptions: HltvRequestOptions;
-  operation: 'live-list' | 'match-detail';
+  operation: 'live-list' | 'match-detail' | 'completed-match-stats';
   defaultTimeoutMs: number;
   execute(client: HltvClient, request: HltvRequestOptions): Promise<T>;
 }): Promise<T> {
@@ -267,6 +270,31 @@ class HltvClientImpl implements HltvClient {
     }
   }
 
+  async getCompletedMatchStats(
+    matchUrl: string,
+    options?: HltvRequestOptions,
+  ): Promise<GetHltvCompletedMatchStatsResult> {
+    if (typeof matchUrl !== 'string' || !matchIdentityFromUrl(matchUrl)) {
+      throw new HltvError(
+        'matchUrl must be a canonical https://www.hltv.org/matches/<id>/<slug> URL',
+        {
+          code: 'INVALID_INPUT',
+          operation: 'completed-match-stats',
+          stage: 'validating-input',
+          retryable: false,
+        },
+      );
+    }
+    const context = createOperationContext('completed-match-stats', options, 60_000);
+    try {
+      await this.#evictMatchSessions();
+      return await this.#schedule(context, () =>
+        getCompletedMatchStatsWithBrowser(this.#browser, matchUrl, context));
+    } finally {
+      context.dispose();
+    }
+  }
+
   async close(): Promise<void> {
     if (this.#closePromise) return this.#closePromise;
     this.#closing = true;
@@ -455,5 +483,30 @@ export async function getHltvMatch(
     operation: 'match-detail',
     defaultTimeoutMs: 180_000,
     execute: (client, request) => client.getMatch(matchUrl, request),
+  });
+}
+
+export async function getHltvCompletedMatchStats(
+  matchUrl: string,
+  options: GetHltvCompletedMatchStatsOptions = {},
+): Promise<GetHltvCompletedMatchStatsResult> {
+  if (typeof matchUrl !== 'string' || !matchIdentityFromUrl(matchUrl)) {
+    throw new HltvError(
+      'matchUrl must be a canonical https://www.hltv.org/matches/<id>/<slug> URL',
+      {
+        code: 'INVALID_INPUT',
+        operation: 'completed-match-stats',
+        stage: 'validating-input',
+        retryable: false,
+      },
+    );
+  }
+  const split = splitCombinedOptions(options);
+  return await runOneShot({
+    clientOptions: split.client,
+    requestOptions: split.request as HltvRequestOptions,
+    operation: 'completed-match-stats',
+    defaultTimeoutMs: 60_000,
+    execute: (client, request) => client.getCompletedMatchStats(matchUrl, request),
   });
 }

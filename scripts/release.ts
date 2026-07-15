@@ -49,6 +49,9 @@ async function main(): Promise<void> {
   if (!process.env.HLTV_MATCH_URL) {
     throw new Error('HLTV_MATCH_URL is required for the real-network release test');
   }
+  if (!process.env.HLTV_COMPLETED_MATCH_URL) {
+    throw new Error('HLTV_COMPLETED_MATCH_URL is required for the real-network release test');
+  }
   const dirty = run('git', ['status', '--porcelain'], true);
   if (dirty) throw new Error('working tree must be clean before release');
 

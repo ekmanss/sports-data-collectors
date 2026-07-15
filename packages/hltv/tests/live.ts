@@ -4,10 +4,18 @@ import type { HltvBrowserAdapter, HltvPageAdapter } from '../src/browser_adapter
 import { matchIdentityFromUrl } from '../src/config.js';
 import { HltvError } from '../src/errors.js';
 import { createHltvClient, createHltvClientWithBrowser } from '../src/index.js';
-import type { GetHltvLiveMatchesResult, GetHltvMatchResult } from '../src/types.js';
+import type {
+  GetHltvCompletedMatchStatsResult,
+  GetHltvLiveMatchesResult,
+  GetHltvMatchResult,
+} from '../src/types.js';
 
 const matchUrl = process.env.HLTV_MATCH_URL;
 if (!matchUrl) throw new Error('set HLTV_MATCH_URL to run the real-network smoke test');
+const completedMatchUrl = process.env.HLTV_COMPLETED_MATCH_URL;
+if (!completedMatchUrl) {
+  throw new Error('set HLTV_COMPLETED_MATCH_URL to run the real-network smoke test');
+}
 
 const clientOptions = {
   ...(process.env.HLTV_TIMEZONE ? { timezone: process.env.HLTV_TIMEZONE } : {}),
@@ -31,6 +39,7 @@ let live: GetHltvLiveMatchesResult | undefined;
 let warmLive: GetHltvLiveMatchesResult | undefined;
 let detail: GetHltvMatchResult | undefined;
 let warmDetail: GetHltvMatchResult | undefined;
+let completedStats: GetHltvCompletedMatchStatsResult | undefined;
 for (let browserAttempt = 1; browserAttempt <= 3; browserAttempt += 1) {
   const client = await createLiveClient();
   try {
@@ -38,6 +47,7 @@ for (let browserAttempt = 1; browserAttempt <= 3; browserAttempt += 1) {
     warmLive = await client.getLiveMatches({ onProgress });
     detail = await client.getMatch(matchUrl, { onProgress });
     warmDetail = await client.getMatch(matchUrl, { onProgress });
+    completedStats = await client.getCompletedMatchStats(completedMatchUrl, { onProgress });
     break;
   } catch (error) {
     if (!(error instanceof HltvError)
@@ -49,7 +59,7 @@ for (let browserAttempt = 1; browserAttempt <= 3; browserAttempt += 1) {
   }
   await delay(browserAttempt * 10_000);
 }
-if (!live || !warmLive || !detail || !warmDetail) {
+if (!live || !warmLive || !detail || !warmDetail || !completedStats) {
   throw new Error('real-network smoke did not produce results');
 }
 assert.equal(live.data.schemaVersion, '1.0.0');
@@ -113,6 +123,18 @@ assert.equal(capture.session?.reused, false);
 assert.equal(warmCapture.session?.reused, true);
 assert.equal(warmCapture.timings?.navigationMs, 0);
 assert.equal(warmCapture.timings?.newPageMs, 0);
+
+assert.equal(completedStats.data.schemaVersion, '1.0.0');
+assert.equal(completedStats.data.match.id, matchIdentityFromUrl(completedMatchUrl)?.id);
+assert.equal(completedStats.data.availability, 'available');
+assert.ok(completedStats.data.matchStats.views.length > 0);
+assert.deepEqual(
+  [...new Set(completedStats.data.matchStats.views.map((view) => view.side))].sort(),
+  ['both', 'ct', 't'],
+);
+assert.equal(completedStats.diagnostics.capture.timings.scorebotReadyMs, 0);
+assert.equal(completedStats.diagnostics.capture.timings.scoreboardsMs, 0);
+assert.equal(completedStats.diagnostics.capture.timings.gameLogMs, 0);
 const scorebotUnavailable = detail.diagnostics.warnings.some(
   (warning) => warning.code === 'SCOREBOT_UNAVAILABLE',
 );
@@ -160,6 +182,13 @@ process.stdout.write(`${JSON.stringify({
   positionsVisited,
   resolvedRoundWinners,
   unresolvedRoundWinners,
+  completedMatchStats: {
+    matchId: completedStats.data.match.id,
+    availability: completedStats.data.availability,
+    views: completedStats.data.matchStats.views.length,
+    durationMs: completedStats.diagnostics.durationMs,
+    timings: completedStats.diagnostics.capture.timings,
+  },
   currentScoreboardSides: detail.data.current?.scoreboard?.teams.map((team) => ({
     teamId: team.teamId,
     side: team.side,

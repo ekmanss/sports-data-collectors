@@ -1,6 +1,7 @@
 export {
   createHltvClient,
   createHltvClientWithBrowser,
+  getHltvCompletedMatchStats,
   getHltvLiveMatches,
   getHltvMatch,
 } from './client.js';
@@ -13,12 +14,16 @@ export type {
 } from './browser_adapter.js';
 export type {
   CollectorVersions,
+  CompletedMatchStatsDiagnostics,
+  GetHltvCompletedMatchStatsOptions,
+  GetHltvCompletedMatchStatsResult,
   GetHltvLiveMatchesOptions,
   GetHltvLiveMatchesResult,
   GetHltvMatchOptions,
   GetHltvMatchResult,
   HltvClient,
   HltvClientOptions,
+  HltvCompletedMatchStats,
   HltvErrorCode,
   HltvLiveMatch,
   HltvLiveMatchesData,

@@ -141,3 +141,16 @@ cold-navigation queue; unchanged warm reads normally report zero navigation time
 diagnostic evidence and do not change the `HltvMatch` business schema.
 If Match Detail exhausts its capture attempts, the thrown `HltvError.details.attempts` preserves the
 bounded attempt timeline instead of discarding the earlier failure evidence.
+
+## Completed Match Stats 1.0.0
+
+`getHltvCompletedMatchStats()` and `client.getCompletedMatchStats()` accept only a canonical match
+URL whose page is marked over. They return match identity, teams, players, final map scores and the
+complete published `matchStats.views` matrix. `availability` is `available` or `not-published`; an
+empty matrix is therefore an explicit immutable result rather than an ambiguous collection error.
+
+The collector stops after the static match page stabilizes. It does not initialize, wait for, read,
+or validate Scorebot, so diagnostics keep `scorebotReadyMs`, `scoreboardsMs`, and `gameLogMs` at
+zero. Each call uses a short-lived page and is still governed by the reusable client's cold
+navigation queue and minimum request interval. Applications may safely persist successful results
+by HLTV match ID because the endpoint accepts only completed matches.

@@ -97,6 +97,95 @@ function cloneFixture(): HltvMatch {
   return structuredClone(completedFixture);
 }
 
+function completedStatsPage(): RawExtractedPage {
+  const player = (id: number, nickname: string) => ({
+    id,
+    nickname,
+    fullName: nickname,
+    country: null,
+    image: null,
+    profileUrl: null,
+    statsUrl: null,
+    rating: null,
+    kpr: null,
+    dpr: null,
+    kast: null,
+    adr: null,
+    stats: {},
+  });
+  const metricPlayer = (id: number, nickname: string, kills: string, deaths: string) => ({
+    id,
+    nickname,
+    kills,
+    deaths,
+    ecoAdjustedKills: String(Number(kills) + 1),
+    ecoAdjustedDeaths: String(Number(deaths) - 1),
+    roundSwing: '+2.50%',
+    adr: '80.5',
+    ecoAdjustedAdr: '82.1',
+    kast: '75.0%',
+    ecoAdjustedKast: '77.5%',
+    rating: '1.20',
+  });
+  const view = (
+    mapStatsId: number | null,
+    map: string | null,
+    side: 'both' | 'ct' | 't',
+  ) => ({
+    mapStatsId,
+    map,
+    side,
+    teams: [
+      { id: 1, name: 'Alpha', players: [metricPlayer(11, 'alpha-one', '13', '8')] },
+      { id: 2, name: 'Bravo', players: [metricPlayer(21, 'bravo-one', '8', '13')] },
+    ],
+  });
+  return {
+    title: 'Alpha vs Bravo',
+    url: 'https://www.hltv.org/matches/2395903/alpha-vs-bravo-event',
+    match: {
+      id: 2395903,
+      status: 'Match over',
+      scheduledUnixMs: 1_784_000_000_000,
+      event: { id: 1, name: 'Event', url: 'https://www.hltv.org/events/1/event' },
+    },
+    teams: [
+      { id: 1, name: 'Alpha', url: null, country: null, logo: null },
+      { id: 2, name: 'Bravo', url: null, country: null, logo: null },
+    ],
+    maps: {
+      format: 'Best of 1',
+      stage: 'Group stage',
+      veto: [],
+      maps: [{
+        name: 'Ancient',
+        optional: false,
+        halfScores: '(6:6; 7:2)',
+        teams: [
+          { name: 'Alpha', score: '13', picked: false },
+          { name: 'Bravo', score: '8', picked: false },
+        ],
+      }],
+    },
+    streams: [],
+    lineups: [
+      { id: 1, name: 'Alpha', worldRank: 1, players: [player(11, 'alpha-one')] },
+      { id: 2, name: 'Bravo', worldRank: 2, players: [player(21, 'bravo-one')] },
+    ],
+    matchStats: {
+      views: [
+        view(null, null, 'both'),
+        view(232_999, 'Ancient', 'ct'),
+        view(232_999, 'Ancient', 't'),
+      ],
+    },
+    mapStats: null,
+    recentMatches: [],
+    headToHead: null,
+    sections: { matchPage: true, maps: true, matchStats: true },
+  };
+}
+
 test('keeps team scores stable when the same team wins on both sides of a swap', () => {
   const rounds = assignRoundTeamResults([
     {
@@ -345,6 +434,84 @@ test('accepts a caller-owned browser adapter and closes only that adapter', asyn
   await client.close();
 
   assert.equal(closes, 1);
+});
+
+test('captures every completed Match stats view without waiting for Scorebot', async () => {
+  const pageData = completedStatsPage();
+  let pageCloses = 0;
+  let browserCloses = 0;
+  let evaluations = 0;
+  const page = {
+    addInitScript: async () => undefined,
+    close: async () => { pageCloses += 1; },
+    evaluate: async (expression: string | (() => unknown)) => {
+      if (expression === 'globalThis.__name = (target) => target') return undefined;
+      evaluations += 1;
+      return pageData;
+    },
+    goto: async () => ({ status: () => 200 }),
+    isClosed: () => pageCloses > 0,
+    locator: () => ({
+      filter: () => ({ count: async () => 0, click: async () => undefined }),
+    }),
+    url: () => pageData.url,
+    waitForTimeout: async () => undefined,
+  };
+  const client = createHltvClientWithBrowser({
+    newPage: async () => page,
+    close: async () => { browserCloses += 1; },
+  } as unknown as HltvBrowserAdapter, { minRequestIntervalMs: 0 });
+
+  const result = await client.getCompletedMatchStats(pageData.url);
+
+  assert.equal(result.data.schemaVersion, '1.0.0');
+  assert.equal(result.data.match.id, 2395903);
+  assert.equal(result.data.availability, 'available');
+  assert.deepEqual(
+    result.data.matchStats.views.map((view) => [view.map, view.side]),
+    [[null, 'both'], ['Ancient', 'ct'], ['Ancient', 't']],
+  );
+  assert.equal(result.data.matchStats.views[0]!.teams[0]!.players[0]!.rating, 1.2);
+  assert.equal(result.diagnostics.operation, 'completed-match-stats');
+  assert.equal(result.diagnostics.warnings.length, 0);
+  assert.ok(evaluations >= 2);
+  assert.equal(pageCloses, 1);
+
+  await client.close();
+  assert.equal(browserCloses, 1);
+});
+
+test('rejects a non-completed page from the completed Match stats API', async () => {
+  const pageData = completedStatsPage();
+  pageData.match.status = 'LIVE';
+  let pageCloses = 0;
+  const page = {
+    addInitScript: async () => undefined,
+    close: async () => { pageCloses += 1; },
+    evaluate: async (expression: string | (() => unknown)) =>
+      expression === 'globalThis.__name = (target) => target' ? undefined : pageData,
+    goto: async () => ({ status: () => 200 }),
+    isClosed: () => pageCloses > 0,
+    locator: () => ({
+      filter: () => ({ count: async () => 0, click: async () => undefined }),
+    }),
+    url: () => pageData.url,
+    waitForTimeout: async () => undefined,
+  };
+  const client = createHltvClientWithBrowser({
+    newPage: async () => page,
+    close: async () => undefined,
+  } as unknown as HltvBrowserAdapter, { minRequestIntervalMs: 0 });
+
+  await assert.rejects(
+    client.getCompletedMatchStats(pageData.url),
+    (error: unknown) =>
+      error instanceof HltvError
+      && error.code === 'INVALID_INPUT'
+      && error.operation === 'completed-match-stats',
+  );
+  assert.equal(pageCloses, 1);
+  await client.close();
 });
 
 test('reads the complete virtual Game log from rendered component state without scrolling', async () => {

@@ -49,6 +49,27 @@ if (first) {
 }
 ```
 
+## Fetch completed Match stats
+
+`getHltvCompletedMatchStats()` reads only the immutable stats section of an HLTV match marked
+`Match over`. It returns every published `All maps / per-map × Both / CT / T` view with traditional
+and Eco-adjusted values, without opening or waiting for Scorebot. This makes it suitable for a
+persistent application cache keyed by completed HLTV match ID.
+
+```ts
+import { getHltvCompletedMatchStats } from '@ekmanss/hltv';
+
+const result = await getHltvCompletedMatchStats(
+  'https://www.hltv.org/matches/<id>/<slug>',
+);
+
+console.log(result.data.availability, result.data.matchStats.views);
+```
+
+`availability` is `available` when HLTV published the matrix and `not-published` when the completed
+page has no Match stats. Both are successful, cacheable results. A live or upcoming match URL is
+rejected instead of being cached as completed data.
+
 ## Reuse a browser
 
 Frequent collection should reuse `HltvClient`:
@@ -206,7 +227,9 @@ See [docs/data-contracts.md](docs/data-contracts.md) for the Match Detail `3.2.0
 
 ```bash
 pnpm verify
-HLTV_MATCH_URL='https://www.hltv.org/matches/<id>/<slug>' pnpm test:live
+HLTV_MATCH_URL='https://www.hltv.org/matches/<live-id>/<slug>' \
+HLTV_COMPLETED_MATCH_URL='https://www.hltv.org/matches/<completed-id>/<slug>' \
+pnpm test:live
 ```
 
 The normal test suite retains the tracked match-detail regression fixture. The live-list smoke test always uses the real HLTV page and is not run in GitHub Actions.

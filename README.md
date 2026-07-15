@@ -18,7 +18,9 @@ pnpm verify
 Real HLTV validation is intentionally local-only:
 
 ```bash
-HLTV_MATCH_URL='https://www.hltv.org/matches/<id>/<slug>' pnpm test:live
+HLTV_MATCH_URL='https://www.hltv.org/matches/<live-id>/<slug>' \
+HLTV_COMPLETED_MATCH_URL='https://www.hltv.org/matches/<completed-id>/<slug>' \
+pnpm test:live
 ```
 
 GitHub Actions runs deterministic type, fixture, build, and package checks. It does not access HLTV.

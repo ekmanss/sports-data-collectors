@@ -46,17 +46,17 @@ function assertExtractedPage(value: unknown): asserts value is RawExtractedPage 
   }
 }
 
-function validateFinalUrl(finalUrl: string, options: MatchCaptureOptions): void {
+export function validateFinalMatchUrl(finalUrl: string, options: MatchCaptureOptions): void {
   const identity = matchIdentityFromUrl(finalUrl);
   if (!identity || identity.id !== options.id) {
     throw new HltvError('HLTV returned a different or invalid match URL', {
       code: 'INCOMPLETE_CAPTURE', stage: 'validating-source', retryable: false,
-      operation: 'match-detail', matchId: options.id, details: { finalUrl },
+      operation: options.context.operation, matchId: options.id, details: { finalUrl },
     });
   }
 }
 
-async function evaluatePage(page: HltvPageAdapter): Promise<RawExtractedPage> {
+export async function evaluateMatchPage(page: HltvPageAdapter): Promise<RawExtractedPage> {
   await page.evaluate('globalThis.__name = (target) => target');
   const extracted: unknown = await page.evaluate(`(${extractHltvMatchPage.toString()})()`);
   assertExtractedPage(extracted);
@@ -80,7 +80,7 @@ function matchPageSignature(page: RawExtractedPage): string {
   });
 }
 
-async function waitForStableMatchPage(
+export async function waitForStableMatchPage(
   page: HltvPageAdapter,
   options: MatchCaptureOptions,
 ): Promise<RawExtractedPage> {
@@ -91,7 +91,7 @@ async function waitForStableMatchPage(
   while (performance.now() - started < options.pageReadyTimeoutMs) {
     throwIfStopped(options.context, 'extracting-page', options.id);
     try {
-      latest = await evaluatePage(page);
+      latest = await evaluateMatchPage(page);
       if (latest.sections.matchPage && latest.match.id === options.id) {
         const signature = matchPageSignature(latest);
         if (signature === previousSignature) return latest;
@@ -104,7 +104,7 @@ async function waitForStableMatchPage(
   }
   if (latest?.sections.matchPage && latest.match.id === options.id) return latest;
   if (lastError) throw lastError;
-  return await evaluatePage(page);
+  return await evaluateMatchPage(page);
 }
 
 async function extractScoreboard(page: HltvPageAdapter): Promise<RawScoreboard | null> {
@@ -383,7 +383,7 @@ async function collectSnapshot(
   scorebotUsable: boolean,
 ): Promise<RawSnapshot> {
   const pageStarted = performance.now();
-  const pageData = await evaluatePage(page);
+  const pageData = await evaluateMatchPage(page);
   timings.snapshotPageMs += Math.round(performance.now() - pageStarted);
   if (!scorebotUsable) {
     return {
@@ -579,18 +579,27 @@ async function waitForStableScorebot(
   return latest;
 }
 
-function classifyHttp(status: number | null): void {
+export function classifyMatchPageHttp(
+  status: number | null,
+  options: Pick<MatchCaptureOptions, 'context' | 'id'>,
+): void {
   if (status === 404) {
-    throw new HltvError('HLTV match page was not found', { code: 'MATCH_NOT_FOUND', operation: 'match-detail', stage: 'navigating', retryable: false });
+    throw new HltvError('HLTV match page was not found', {
+      code: 'MATCH_NOT_FOUND', operation: options.context.operation, stage: 'navigating',
+      retryable: false, matchId: options.id,
+    });
   }
   if (status === 403) {
     throw new HltvError('HLTV denied access to the match page', {
-      code: 'ACCESS_BLOCKED', operation: 'match-detail', stage: 'navigating', retryable: true,
-      details: { httpStatus: status },
+      code: 'ACCESS_BLOCKED', operation: options.context.operation, stage: 'navigating',
+      retryable: true, matchId: options.id, details: { httpStatus: status },
     });
   }
   if (status === 429 || (status !== null && status >= 500)) {
-    throw new HltvError(`HLTV returned HTTP ${status}`, { code: 'NAVIGATION_FAILED', operation: 'match-detail', stage: 'navigating', retryable: true, details: { httpStatus: status } });
+    throw new HltvError(`HLTV returned HTTP ${status}`, {
+      code: 'NAVIGATION_FAILED', operation: options.context.operation, stage: 'navigating',
+      retryable: true, matchId: options.id, details: { httpStatus: status },
+    });
   }
 }
 
@@ -622,7 +631,7 @@ type InitializedMatchSession = {
   openedAtMs: number;
 };
 
-function emptyTimings(): MatchCaptureTimings {
+export function emptyMatchCaptureTimings(): MatchCaptureTimings {
   return {
     metadataMs: 0,
     newPageMs: 0,
@@ -703,7 +712,7 @@ export class MatchCaptureSession {
         });
       }
       const reused = this.#successfulCaptures > 0;
-      const timings = reused ? emptyTimings() : { ...initialized.timings };
+      const timings = reused ? emptyMatchCaptureTimings() : { ...initialized.timings };
       const options: MatchCaptureOptions = {
         ...this.#identity,
         context,
@@ -778,7 +787,7 @@ export class MatchCaptureSession {
       if (requiresScorebot) {
         timings.scorebotReadyMs = Math.round(performance.now() - scorebotReadyStarted);
       }
-      validateFinalUrl(snapshot.page.url, options);
+      validateFinalMatchUrl(snapshot.page.url, options);
       if (snapshot.page.match.id !== this.id) {
         throw new HltvError('the final page snapshot contains a different match ID', {
           code: 'INCOMPLETE_CAPTURE', operation: 'match-detail', stage: 'validating-source', retryable: false,
@@ -824,7 +833,7 @@ export class MatchCaptureSession {
 
   async #initialize(context: OperationContext, attempt: number): Promise<InitializedMatchSession> {
     if (this.#initialized) return this.#initialized;
-    const timings = emptyTimings();
+    const timings = emptyMatchCaptureTimings();
     const metadataStarted = performance.now();
     const versions = await collectorVersions();
     timings.metadataMs = Math.round(performance.now() - metadataStarted);
@@ -854,14 +863,14 @@ export class MatchCaptureSession {
       }
       timings.navigationMs = Math.round(performance.now() - navigationStarted);
       const httpStatus = response?.status() ?? null;
-      classifyHttp(httpStatus);
+      classifyMatchPageHttp(httpStatus, { context, id: this.id });
       const options: MatchCaptureOptions = {
         ...this.#identity,
         context,
         pageReadyTimeoutMs: this.#pageReadyTimeoutMs,
         scorebotReadyTimeoutMs: this.#scorebotReadyTimeoutMs,
       };
-      validateFinalUrl(page.url(), options);
+      validateFinalMatchUrl(page.url(), options);
       emitProgress(context, {
         stage: 'extracting-page',
         attempt,
@@ -870,7 +879,7 @@ export class MatchCaptureSession {
       const pageReadyStarted = performance.now();
       const initialPage = await waitForStableMatchPage(page, options);
       timings.pageReadyMs = Math.round(performance.now() - pageReadyStarted);
-      validateFinalUrl(initialPage.url, options);
+      validateFinalMatchUrl(initialPage.url, options);
       if (initialPage.match.id !== this.id) {
         throw new HltvError('the loaded page contains a different match ID', {
           code: 'INCOMPLETE_CAPTURE', operation: 'match-detail', stage: 'validating-source', retryable: false,

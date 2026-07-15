@@ -12,7 +12,11 @@ export type HltvErrorCode =
   | 'CLIENT_CLOSED'
   | 'INTERNAL_ERROR';
 
-export type HltvOperation = 'client' | 'live-list' | 'match-detail';
+export type HltvOperation =
+  | 'client'
+  | 'live-list'
+  | 'match-detail'
+  | 'completed-match-stats';
 
 export type CaptureStage =
   | 'validating-input'
@@ -61,6 +65,7 @@ export interface HltvRequestOptions {
 
 export type GetHltvMatchOptions = HltvClientOptions & HltvRequestOptions;
 export type GetHltvLiveMatchesOptions = HltvClientOptions & HltvRequestOptions;
+export type GetHltvCompletedMatchStatsOptions = HltvClientOptions & HltvRequestOptions;
 
 export interface HltvEvent {
   id: number | null;
@@ -234,6 +239,60 @@ export interface MatchStatView {
 
 export interface MatchStats {
   views: MatchStatView[];
+}
+
+export interface HltvCompletedMatchStats {
+  schemaVersion: '1.0.0';
+  capturedAt: string;
+  sport: 'cs2';
+  source: { provider: 'hltv'; url: string };
+  match: {
+    id: number;
+    slug: string;
+    status: string;
+    scheduledUnixMs: number | null;
+    event: HltvEvent;
+    format: string;
+    stage: string;
+  };
+  teams: HltvTeam[];
+  players: HltvPlayer[];
+  maps: Array<{
+    name: string;
+    score: ScoreEntry[];
+    halves: Array<{ team1: number; team2: number }>;
+  }>;
+  availability: 'available' | 'not-published';
+  matchStats: MatchStats;
+}
+
+export interface CompletedMatchStatsDiagnostics {
+  schemaVersion: '1.0.0';
+  operation: 'completed-match-stats';
+  startedAt: string;
+  completedAt: string;
+  durationMs: number;
+  collector: CollectorVersions;
+  input: { id: number; slug: string; url: string };
+  attempts: Array<{
+    attempt: number;
+    startedAt: string;
+    completedAt: string;
+    httpStatus: number | null;
+    error?: { code: string; message: string };
+  }>;
+  capture: {
+    httpStatus: number | null;
+    navigationSeconds: number;
+    totalSeconds: number;
+    timings: MatchCaptureTimings;
+  };
+  warnings: DiagnosticWarning[];
+}
+
+export interface GetHltvCompletedMatchStatsResult {
+  data: HltvCompletedMatchStats;
+  diagnostics: CompletedMatchStatsDiagnostics;
 }
 
 export interface RecentMatch {
@@ -435,6 +494,10 @@ export interface GetHltvLiveMatchesResult {
 export interface HltvClient extends AsyncDisposable {
   getLiveMatches(options?: HltvRequestOptions): Promise<GetHltvLiveMatchesResult>;
   getMatch(matchUrl: string, options?: HltvRequestOptions): Promise<GetHltvMatchResult>;
+  getCompletedMatchStats(
+    matchUrl: string,
+    options?: HltvRequestOptions,
+  ): Promise<GetHltvCompletedMatchStatsResult>;
   close(): Promise<void>;
 }
 

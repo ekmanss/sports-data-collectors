@@ -1,4 +1,4 @@
-import type { Browser, Page } from 'playwright-core';
+import type { HltvBrowserAdapter, HltvPageAdapter } from '../browser_adapter.js';
 import { HltvError, asHltvError } from '../errors.js';
 import { extractHltvLivePage } from '../extractors/live_page.js';
 import {
@@ -55,7 +55,7 @@ function validateUrl(value: string): void {
   }
 }
 
-async function extract(page: Page): Promise<RawLivePage> {
+async function extract(page: HltvPageAdapter): Promise<RawLivePage> {
   await page.evaluate('globalThis.__name = (target) => target');
   return await page.evaluate(`(${extractHltvLivePage.toString()})()`) as RawLivePage;
 }
@@ -73,7 +73,7 @@ function hasHydratedLiveState(value: RawLivePage): boolean {
 }
 
 async function stableSnapshot(
-  page: Page,
+  page: HltvPageAdapter,
   context: OperationContext,
   attempt: number,
 ): Promise<{ page: RawLivePage; stable: boolean }> {
@@ -104,12 +104,12 @@ async function stableSnapshot(
 }
 
 export async function captureLiveMatches(
-  browser: Browser,
+  browser: HltvBrowserAdapter,
   context: OperationContext,
   attempt: number,
 ): Promise<LiveCaptureAttempt> {
   const startedAt = new Date().toISOString();
-  let page: Page | null = null;
+  let page: HltvPageAdapter | null = null;
   const stopPage = (): void => { void page?.close().catch(() => undefined); };
   try {
     throwIfStopped(context, 'navigating');

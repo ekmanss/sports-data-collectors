@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import test from 'node:test';
-import type { Browser } from 'playwright-core';
+import type { HltvBrowserAdapter } from '../src/browser_adapter.js';
+import { createHltvClientWithBrowser } from '../src/client.js';
 import {
   extractFullGameLog,
   isScorebotSemanticallyReady,
@@ -116,6 +117,19 @@ test('accepts one semantically complete Scorebot state without requiring it to s
     scrollHeight: 0,
     visibleLogRows: 0,
   }), true);
+});
+
+test('accepts a caller-owned browser adapter and closes only that adapter', async () => {
+  let closes = 0;
+  const client = createHltvClientWithBrowser({
+    newPage: async () => { throw new Error('not used'); },
+    close: async () => { closes += 1; },
+  });
+
+  await client.close();
+  await client.close();
+
+  assert.equal(closes, 1);
 });
 
 test('reads the complete virtual Game log from rendered component state without scrolling', async () => {
@@ -301,7 +315,7 @@ test('keeps one match page open and reuses an unchanged semantic snapshot', asyn
       newPageCalls += 1;
       return page;
     },
-  } as unknown as Browser;
+  } as unknown as HltvBrowserAdapter;
   const session = new MatchCaptureSession(browser, {
     id: 2395901,
     slug: 'alpha-vs-bravo-event',

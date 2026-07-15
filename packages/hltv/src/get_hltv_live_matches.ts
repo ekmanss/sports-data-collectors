@@ -1,4 +1,4 @@
-import type { Browser } from 'playwright-core';
+import type { HltvBrowserAdapter } from './browser_adapter.js';
 import { captureLiveMatches } from './capture/capture_live.js';
 import { matchIdentityFromUrl } from './config.js';
 import { HltvError, asHltvError } from './errors.js';
@@ -150,7 +150,7 @@ function validateData(data: HltvLiveMatchesData): void {
 }
 
 export async function getLiveMatchesWithBrowser(
-  browser: Browser,
+  browser: HltvBrowserAdapter,
   context: OperationContext,
 ): Promise<GetHltvLiveMatchesResult> {
   const attempts: HltvLiveMatchesDiagnostics['attempts'] = [];

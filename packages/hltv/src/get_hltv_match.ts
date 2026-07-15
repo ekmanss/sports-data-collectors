@@ -1,4 +1,4 @@
-import type { Browser } from 'playwright-core';
+import type { HltvBrowserAdapter } from './browser_adapter.js';
 import {
   captureMatch,
   MatchCaptureSession,
@@ -56,7 +56,7 @@ async function buildAndValidate(
 }
 
 export function createMatchCaptureSession(
-  browser: Browser,
+  browser: HltvBrowserAdapter,
   matchUrl: string,
 ): MatchCaptureSession {
   const identity = matchIdentityFromUrl(matchUrl);
@@ -129,7 +129,7 @@ async function retryDelay(
 }
 
 export async function getMatchWithBrowser(
-  browser: Browser,
+  browser: HltvBrowserAdapter,
   matchUrl: string,
   context: OperationContext,
 ): Promise<GetHltvMatchResult> {

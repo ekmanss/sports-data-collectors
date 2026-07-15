@@ -78,6 +78,25 @@ try {
 The client also implements `AsyncDisposable`. `close()` rejects queued cold-navigation work, allows
 active per-match reads to finish, closes every persistent match page, and then closes the browser.
 
+Consumers that already own an authenticated browser context can inject a narrow adapter instead of
+launching CloakBrowser:
+
+```ts
+import { createHltvClientWithBrowser, type HltvBrowserAdapter } from '@ekmanss/hltv';
+
+const browser: HltvBrowserAdapter = createYourBrowserAdapter();
+const client = createHltvClientWithBrowser(browser, {
+  maxConcurrency: 1,
+  minRequestIntervalMs: 5_000,
+  timezone: 'America/Los_Angeles',
+});
+```
+
+The adapter owns only the pages or tabs it creates. `client.close()` calls `browser.close()`, so an
+adapter attached to a user-owned browser must detach and close its managed HLTV pages without
+terminating the surrounding browser or touching unrelated tabs. The exported adapter surface is
+intentionally limited to the page operations used by this collector.
+
 The reusable client separates cold navigation from live state collection. The first `getMatch()` for
 a match opens one page and lets that page establish HLTV's native Scorebot connection. Later calls
 reuse the same page and never enter the global cold-navigation queue. A semantically complete

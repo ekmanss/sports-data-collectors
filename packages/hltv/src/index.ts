@@ -1,5 +1,16 @@
-export { createHltvClient, getHltvLiveMatches, getHltvMatch } from './client.js';
+export {
+  createHltvClient,
+  createHltvClientWithBrowser,
+  getHltvLiveMatches,
+  getHltvMatch,
+} from './client.js';
 export { HltvError } from './errors.js';
+export type {
+  HltvBrowserAdapter,
+  HltvLocatorAdapter,
+  HltvPageAdapter,
+  HltvResponseAdapter,
+} from './browser_adapter.js';
 export type {
   CollectorVersions,
   GetHltvLiveMatchesOptions,

@@ -1,4 +1,4 @@
-import type { Browser, Page } from 'playwright-core';
+import type { HltvBrowserAdapter, HltvPageAdapter } from '../browser_adapter.js';
 import { matchIdentityFromUrl, type MatchIdentity } from '../config.js';
 import { HltvError, asHltvError } from '../errors.js';
 import { extractHltvMatchPage } from '../extractors/match_page.js';
@@ -55,7 +55,7 @@ function validateFinalUrl(finalUrl: string, options: MatchCaptureOptions): void 
   }
 }
 
-async function evaluatePage(page: Page): Promise<RawExtractedPage> {
+async function evaluatePage(page: HltvPageAdapter): Promise<RawExtractedPage> {
   await page.evaluate('globalThis.__name = (target) => target');
   const extracted: unknown = await page.evaluate(`(${extractHltvMatchPage.toString()})()`);
   assertExtractedPage(extracted);
@@ -80,7 +80,7 @@ function matchPageSignature(page: RawExtractedPage): string {
 }
 
 async function waitForStableMatchPage(
-  page: Page,
+  page: HltvPageAdapter,
   options: MatchCaptureOptions,
 ): Promise<RawExtractedPage> {
   const started = performance.now();
@@ -106,7 +106,7 @@ async function waitForStableMatchPage(
   return await evaluatePage(page);
 }
 
-async function extractScoreboard(page: Page): Promise<RawScoreboard | null> {
+async function extractScoreboard(page: HltvPageAdapter): Promise<RawScoreboard | null> {
   const value: unknown = await page.evaluate(`(() => {
     const root = document.querySelector('#scoreboardElement .scoreboard');
     if (!root) return null;
@@ -138,7 +138,10 @@ async function extractScoreboard(page: Page): Promise<RawScoreboard | null> {
   return value as RawScoreboard | null;
 }
 
-async function switchScoreboard(page: Page, label: 'Normal' | 'Advanced'): Promise<boolean> {
+async function switchScoreboard(
+  page: HltvPageAdapter,
+  label: 'Normal' | 'Advanced',
+): Promise<boolean> {
   const toggle = page.locator('#scoreboardElement .pro-toggle').filter({ hasText: label });
   if (await toggle.count() !== 1) return false;
   await toggle.click();
@@ -146,7 +149,7 @@ async function switchScoreboard(page: Page, label: 'Normal' | 'Advanced'): Promi
   return true;
 }
 
-export async function extractFullGameLog(page: Page): Promise<{
+export async function extractFullGameLog(page: HltvPageAdapter): Promise<{
   scrollHeight: number;
   chronological: RawLogEvent[];
   positionsVisited: number;
@@ -345,7 +348,7 @@ function formalGameLog(events: RawLogEvent[]): RawLogEvent[] {
 }
 
 async function collectSnapshot(
-  page: Page,
+  page: HltvPageAdapter,
   httpStatus: number | null,
   timings: MatchCaptureTimings,
   scorebotUsable: boolean,
@@ -450,7 +453,7 @@ function isExtractedScorebotUsable(
   });
 }
 
-async function scorebotState(page: Page): Promise<ScorebotState> {
+async function scorebotState(page: HltvPageAdapter): Promise<ScorebotState> {
   const probe = await page.evaluate(() => {
     const root = document.querySelector('#scoreboardElement .scoreboard');
     const list = document.querySelector<HTMLElement>('#scoreboardElement .gamelog .list.desktop');
@@ -505,7 +508,7 @@ async function scorebotState(page: Page): Promise<ScorebotState> {
 }
 
 async function waitForStableScorebot(
-  page: Page,
+  page: HltvPageAdapter,
   options: MatchCaptureOptions,
 ): Promise<ScorebotState> {
   const started = performance.now();
@@ -550,7 +553,7 @@ function classifyHttp(status: number | null): void {
 }
 
 export async function captureMatch(
-  browser: Browser,
+  browser: HltvBrowserAdapter,
   options: MatchCaptureOptions,
   attempt: number,
 ): Promise<CaptureAttempt> {
@@ -569,7 +572,7 @@ export async function captureMatch(
 }
 
 type InitializedMatchSession = {
-  page: Page;
+  page: HltvPageAdapter;
   initialPage: RawExtractedPage;
   versions: Awaited<ReturnType<typeof collectorVersions>>;
   httpStatus: number | null;
@@ -593,7 +596,7 @@ function emptyTimings(): MatchCaptureTimings {
 }
 
 export class MatchCaptureSession {
-  readonly #browser: Browser;
+  readonly #browser: HltvBrowserAdapter;
   readonly #identity: MatchIdentity;
   readonly #pageReadyTimeoutMs: number;
   readonly #scorebotReadyTimeoutMs: number;
@@ -606,7 +609,7 @@ export class MatchCaptureSession {
   #lastScorebotSignature: string | undefined;
 
   constructor(
-    browser: Browser,
+    browser: HltvBrowserAdapter,
     options: Pick<MatchCaptureOptions, 'id' | 'slug' | 'url' | 'pageReadyTimeoutMs' | 'scorebotReadyTimeoutMs'>,
   ) {
     this.#browser = browser;
@@ -761,7 +764,7 @@ export class MatchCaptureSession {
     const metadataStarted = performance.now();
     const versions = await collectorVersions();
     timings.metadataMs = Math.round(performance.now() - metadataStarted);
-    let page: Page | undefined;
+    let page: HltvPageAdapter | undefined;
     const stopPage = (): void => { void page?.close().catch(() => undefined); };
     try {
       throwIfStopped(context, 'navigating', this.id);

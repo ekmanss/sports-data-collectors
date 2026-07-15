@@ -1,5 +1,6 @@
 import { launch } from 'cloakbrowser';
 import type { Browser } from 'playwright-core';
+import type { HltvBrowserAdapter } from './browser_adapter.js';
 import { matchIdentityFromUrl, normalizeClientOptions, splitCombinedOptions } from './config.js';
 import { HltvError } from './errors.js';
 import { getLiveMatchesWithBrowser } from './get_hltv_live_matches.js';
@@ -135,7 +136,7 @@ type MatchSessionEntry = {
 };
 
 class HltvClientImpl implements HltvClient {
-  readonly #browser: Browser;
+  readonly #browser: HltvBrowserAdapter;
   readonly #maxConcurrency: number;
   readonly #minRequestIntervalMs: number;
   readonly #queue: QueueTask[] = [];
@@ -147,7 +148,7 @@ class HltvClientImpl implements HltvClient {
   #closePromise: Promise<void> | undefined;
   #resolveIdle: (() => void) | undefined;
 
-  constructor(browser: Browser, options: ReturnType<typeof normalizeClientOptions>) {
+  constructor(browser: HltvBrowserAdapter, options: ReturnType<typeof normalizeClientOptions>) {
     this.#browser = browser;
     this.#maxConcurrency = options.maxConcurrency;
     this.#minRequestIntervalMs = options.minRequestIntervalMs;
@@ -335,7 +336,19 @@ export async function createHltvClient(options: HltvClientOptions = {}): Promise
       code: 'BROWSER_LAUNCH_FAILED', operation: 'client', stage: 'launching-browser', retryable: true, cause,
     });
   }
-  return new HltvClientImpl(browser, normalized);
+  return new HltvClientImpl(browser as unknown as HltvBrowserAdapter, normalized);
+}
+
+export function createHltvClientWithBrowser(
+  browser: HltvBrowserAdapter,
+  options: HltvClientOptions = {},
+): HltvClient {
+  if (!browser || typeof browser.newPage !== 'function' || typeof browser.close !== 'function') {
+    throw new HltvError('browser adapter must implement newPage() and close()', {
+      code: 'INVALID_INPUT', operation: 'client', stage: 'validating-input', retryable: false,
+    });
+  }
+  return new HltvClientImpl(browser, normalizeClientOptions(options));
 }
 
 export async function getHltvLiveMatches(

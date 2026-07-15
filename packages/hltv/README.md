@@ -115,6 +115,11 @@ when that internal representation is unavailable. Inspect
 `diagnostics.capture.scorebot.positionsVisited` when profiling a capture; `navigationSeconds` is the
 pure `page.goto()` duration.
 
+When the browser joins a live series after an earlier map has finished, HLTV can expose that map's
+canonical final score without exposing its historical virtual Game log. The result keeps the usable
+current Scorebot and marks only the affected completed map with `INCOMPLETE_GAME_LOG`; current-map
+score/Game-log disagreement still fails closed.
+
 ## Options
 
 Client options:

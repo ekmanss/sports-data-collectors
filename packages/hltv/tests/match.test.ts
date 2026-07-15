@@ -590,6 +590,41 @@ test('rejects score and Game log disagreement', () => {
   );
 });
 
+test('accepts an explicitly diagnosed historical Game log gap', () => {
+  const match = cloneFixture();
+  const historicalMap = match.maps[0]!;
+  historicalMap.gameLog.rounds = [];
+  const diagnostics = diagnosticsFor(match);
+  diagnostics.warnings.push({
+    code: 'INCOMPLETE_GAME_LOG',
+    map: historicalMap.name,
+    expectedCompletedRounds: diagnostics.mapChecks[historicalMap.name]!.scoreSum,
+    capturedCompletedRounds: 0,
+    reason: 'The Scorebot session started after this map finished.',
+  });
+
+  assert.doesNotThrow(() =>
+    validateMatch(match, diagnostics, rawSections, match.match.id));
+});
+
+test('rejects a historical Game log warning whose evidence does not match the map check', () => {
+  const match = cloneFixture();
+  const historicalMap = match.maps[0]!;
+  historicalMap.gameLog.rounds = [];
+  const diagnostics = diagnosticsFor(match);
+  diagnostics.warnings.push({
+    code: 'INCOMPLETE_GAME_LOG',
+    map: historicalMap.name,
+    expectedCompletedRounds: diagnostics.mapChecks[historicalMap.name]!.scoreSum + 1,
+    capturedCompletedRounds: 0,
+  });
+
+  assert.throws(
+    () => validateMatch(match, diagnostics, rawSections, match.match.id),
+    (error: unknown) => error instanceof HltvError && error.code === 'INCOMPLETE_CAPTURE',
+  );
+});
+
 test('rejects Match stats that reference an unknown player', () => {
   const match = cloneFixture();
   match.matchStats = {

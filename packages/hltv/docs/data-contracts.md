@@ -69,7 +69,10 @@ and Rating 3.0. When HLTV has not published Match stats yet, `views` is empty.
 - Every lineup player ID references a canonical player.
 - Every Match stats team and player ID references a canonical team or player; substitutes found
   only in Match stats are added to `players` without being invented as lineup members.
-- Completed and current map scores equal the number of completed Game log rounds.
+- Current map scores equal the number of completed Game log rounds. Completed maps do too when
+  their historical Scorebot sequence is available; a collector that joins after a map finished
+  keeps the canonical map-card score, leaves the unavailable rounds empty, and emits a matching
+  `INCOMPLETE_GAME_LOG` warning instead of discarding the usable current-map snapshot.
 - Overlapping Scorebot replay fragments are joined only when the older fragment supplies the missing prefix and agrees with the newer fragment at the splice boundary; the newer replay remains authoritative after that boundary.
 - Knife rounds, scoreless draws, and replay fragments that cannot be safely reconciled are excluded rather than counted as official map rounds.
 - Stored rounds start at one and increment without gaps.
@@ -77,11 +80,18 @@ and Rating 3.0. When HLTV has not published Match stats yet, `views` is empty.
 - Scoreboards are included only when their score agrees with the canonical map score.
 - `current` is `null` after the match ends.
 
-Violations fail with `INCOMPLETE_CAPTURE`; they are not converted into a superficially successful partial match detail.
+Undocumented violations fail with `INCOMPLETE_CAPTURE`; a partial historical Game log is accepted
+only when its `INCOMPLETE_GAME_LOG` warning exactly matches that completed map's score and captured
+round count. A current-map mismatch still fails closed.
 
 ## Diagnostics
 
 Match diagnostics use schema `3.0.0`; live diagnostics use schema `1.0.0`. Both include operation identity, start/end/duration, collector versions, capture attempts, and warnings. Match diagnostics additionally include reconciliation and per-map checks. The first cold match page gets a bounded twelve-second Scorebot readiness window. During a later live inter-map window, HLTV can temporarily omit Scorebot while still exposing canonical map-card scores; the established session waits for at most six seconds and returns a bounded partial snapshot with `SCOREBOT_UNAVAILABLE`, `current: null`, and any incomplete Game log checks preserved as inconsistent. Consumers must abstain from decisions that require current-round evidence. A non-null Scorebot DOM skeleton is also treated as unavailable unless its score, round/map, teams, player rows, and required Game log are semantically usable. Live diagnostics include card counts, skipped cards, and duplicate merges.
+
+HLTV's rendered Scorebot may begin at the current map when a browser joins an already-running
+series; the page does not expose a control for recovering the prior map's virtual Game log. In that
+case `INCOMPLETE_GAME_LOG` identifies only the affected completed map, while current-map scores,
+rounds, and Scorebot remain strictly reconciled.
 
 `match-detail` diagnostics expose pure navigation time separately from capture work. The additive
 `capture.timings` object reports milliseconds spent in metadata lookup, page creation, navigation,

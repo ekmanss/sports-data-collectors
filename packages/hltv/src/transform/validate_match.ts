@@ -62,7 +62,19 @@ export function validateMatch(
   for (const map of match.maps) {
     const completedRounds = map.gameLog.rounds.filter((round) => round.result !== null).length;
     const scoreSum = map.score.reduce((sum, score) => sum + score.score, 0);
-    if (map.status !== 'upcoming' && scoreSum !== completedRounds && !scorebotUnavailable) {
+    const documentedHistoricalGap = map.status === 'completed' && diagnostics.warnings.some(
+      (warning) =>
+        warning.code === 'INCOMPLETE_GAME_LOG'
+        && warning.map === map.name
+        && warning.expectedCompletedRounds === scoreSum
+        && warning.capturedCompletedRounds === completedRounds,
+    );
+    if (
+      map.status !== 'upcoming'
+      && scoreSum !== completedRounds
+      && !scorebotUnavailable
+      && !documentedHistoricalGap
+    ) {
       fail(`map ${map.name} has ${scoreSum} score rounds but ${completedRounds} completed Game log rounds`, {
         map: map.name,
         scoreSum,
@@ -81,7 +93,16 @@ export function validateMatch(
     fail('Scorebot-unavailable captures cannot expose a current map');
   }
   if (
-    Object.values(diagnostics.mapChecks).some((check) => !check.consistent)
+    Object.entries(diagnostics.mapChecks).some(([map, check]) =>
+      !check.consistent
+      && check.status !== 'upcoming'
+      && !diagnostics.warnings.some(
+        (warning) =>
+          warning.code === 'INCOMPLETE_GAME_LOG'
+          && warning.map === map
+          && warning.expectedCompletedRounds === check.scoreSum
+          && warning.capturedCompletedRounds === check.completedRounds,
+      ))
     && !scorebotUnavailable
   ) {
     fail('map scores and Game log rounds are inconsistent');

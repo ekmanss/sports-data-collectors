@@ -84,7 +84,17 @@ if (scorebotUnavailable) {
   assert.equal(capture.scorebot?.scoreboardPresent, false);
   assert.equal(detail.data.current, null);
 } else {
-  assert.ok(Object.values(detail.diagnostics.mapChecks).every((check) => check.consistent));
+  for (const [map, check] of Object.entries(detail.diagnostics.mapChecks)) {
+    if (check.consistent) continue;
+    assert.equal(check.status, 'completed');
+    assert.ok(detail.diagnostics.warnings.some(
+      (warning) =>
+        warning.code === 'INCOMPLETE_GAME_LOG'
+        && warning.map === map
+        && warning.expectedCompletedRounds === check.scoreSum
+        && warning.capturedCompletedRounds === check.completedRounds,
+    ));
+  }
 }
 assert.ok(capture.timings);
 for (const [stage, durationMs] of Object.entries(capture.timings)) {

@@ -81,10 +81,29 @@ export function validateMatch(
         completedRounds,
       });
     }
+    let ctWins = 0;
+    let tWins = 0;
     map.gameLog.rounds.forEach((round, index) => {
       if (round.number !== index + 1) fail(`map ${map.name} has non-sequential round numbers`);
       if (map.status === 'completed' && round.result === null) {
         fail(`completed map ${map.name} contains an unfinished round`);
+      }
+      if (round.result?.winnerSide === 'CT') ctWins += 1;
+      if (round.result?.winnerSide === 'T') tWins += 1;
+      if (
+        round.result !== null
+        && (
+          round.result.sideScore?.ct !== ctWins
+          || round.result.sideScore.t !== tWins
+        )
+      ) {
+        fail(`map ${map.name} round ${round.number} has inconsistent side score`, {
+          map: map.name,
+          round: round.number,
+          winnerSide: round.result.winnerSide,
+          expected: { ct: ctWins, t: tWins },
+          actual: round.result.sideScore,
+        });
       }
     });
   }

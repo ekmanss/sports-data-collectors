@@ -7,7 +7,12 @@ import type {
 
 type RawRound = {
   events: RawLogEvent[];
-  result: null | { winnerSide: 'CT' | 'T' | null; ctScore: number | null; tScore: number | null; reason: string | null };
+  result: null | {
+    winnerSide: 'CT' | 'T' | null;
+    firstTeamScore: number | null;
+    secondTeamScore: number | null;
+    reason: string | null;
+  };
 };
 
 type RawSegment = { rounds: RawRound[]; completedRounds: number };
@@ -139,8 +144,8 @@ function parseRoundResult(text: string): RawRound['result'] {
   const match = text.match(/^Round over - Winner: (CT|T) \((\d+) - (\d+)\) - (.*)$/);
   return match ? {
     winnerSide: match[1] as 'CT' | 'T',
-    ctScore: Number(match[2]),
-    tScore: Number(match[3]),
+    firstTeamScore: Number(match[2]),
+    secondTeamScore: Number(match[3]),
     reason: match[4] || null,
   } : null;
 }
@@ -171,8 +176,12 @@ function groupRounds(events: RawLogEvent[]): RawRound[] {
 }
 
 function resultTotal(round: RawRound): number | null {
-  if (!round.result || round.result.ctScore === null || round.result.tScore === null) return null;
-  return round.result.ctScore + round.result.tScore;
+  if (
+    !round.result
+    || round.result.firstTeamScore === null
+    || round.result.secondTeamScore === null
+  ) return null;
+  return round.result.firstTeamScore + round.result.secondTeamScore;
 }
 
 function segmentRounds(rounds: RawRound[]): RawSegment[] {
@@ -201,8 +210,13 @@ type ReconstructedRounds = {
 };
 
 function resultIdentity(round: RawRound): string | null {
-  if (!round.result || round.result.ctScore === null || round.result.tScore === null) return null;
-  const scores = [round.result.ctScore, round.result.tScore].sort((left, right) => left - right);
+  if (
+    !round.result
+    || round.result.firstTeamScore === null
+    || round.result.secondTeamScore === null
+  ) return null;
+  const scores = [round.result.firstTeamScore, round.result.secondTeamScore]
+    .sort((left, right) => left - right);
   return `${scores[0]}:${scores[1]}`;
 }
 
@@ -468,15 +482,21 @@ function normalizeLogEvent(event: RawLogEvent, players: { id: number; nickname: 
 }
 
 function normalizeRounds(rounds: RawRound[], players: { id: number; nickname: string }[]): GameRound[] {
-  return rounds.map((round, index) => ({
-    number: index + 1,
-    events: round.events.map((event) => normalizeLogEvent(event, players)),
-    result: round.result ? {
-      winnerSide: round.result.winnerSide,
-      sideScore: round.result.ctScore === null ? null : { ct: round.result.ctScore, t: round.result.tScore },
-      reason: round.result.reason,
-    } : null,
-  }));
+  let ctWins = 0;
+  let tWins = 0;
+  return rounds.map((round, index) => {
+    if (round.result?.winnerSide === 'CT') ctWins += 1;
+    if (round.result?.winnerSide === 'T') tWins += 1;
+    return {
+      number: index + 1,
+      events: round.events.map((event) => normalizeLogEvent(event, players)),
+      result: round.result ? {
+        winnerSide: round.result.winnerSide,
+        sideScore: round.result.winnerSide === null ? null : { ct: ctWins, t: tWins },
+        reason: round.result.reason,
+      } : null,
+    };
+  });
 }
 
 function parseHalfScores(value: string): { team1: number; team2: number }[] {

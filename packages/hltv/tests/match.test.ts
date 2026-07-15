@@ -25,9 +25,20 @@ const fixturePath = resolve(
   import.meta.dirname,
   'fixtures/completed-match.json',
 );
-// Keep the legacy 3.0.0 fixture useful while testing the 3.1.0 additive contract.
+// Keep the legacy 3.0.0 fixture useful while testing the 3.1.0 additive contract and corrected
+// side-score semantics.
+const legacyCompletedFixture = JSON.parse(await readFile(fixturePath, 'utf8')) as HltvMatch;
+for (const map of legacyCompletedFixture.maps) {
+  let ctWins = 0;
+  let tWins = 0;
+  for (const round of map.gameLog.rounds) {
+    if (round.result?.winnerSide === 'CT') ctWins += 1;
+    if (round.result?.winnerSide === 'T') tWins += 1;
+    if (round.result) round.result.sideScore = { ct: ctWins, t: tWins };
+  }
+}
 const completedFixture = {
-  ...JSON.parse(await readFile(fixturePath, 'utf8')) as HltvMatch,
+  ...legacyCompletedFixture,
   schemaVersion: '3.1.0',
   matchStats: { views: [] },
 } satisfies HltvMatch;
@@ -920,6 +931,13 @@ test('reconciles overlapping Scorebot replay fragments across maps', () => {
       event(`Round over - Winner: ${corrected ? 'T' : 'CT'} (${corrected ? total - 1 : total} - ${corrected ? 1 : 0}) - Enemy eliminated`),
     ];
   });
+  const terroristRounds = (start: number, end: number): RawLogEvent[] => Array.from(
+    { length: end - start + 1 },
+    (_, index) => start + index,
+  ).flatMap((total) => [
+    event('Round started'),
+    event(`Round over - Winner: T (${total} - 0) - Enemy eliminated`),
+  ]);
   const knifeRound = (): RawLogEvent[] => [
     event('Round started'),
     event('Round over - Winner: CT (1 - 0) - Enemy eliminated'),
@@ -985,7 +1003,7 @@ test('reconciles overlapping Scorebot replay fragments across maps', () => {
     ...drawRound(),
     ...scoredRounds(24, 47, true),
     ...knifeRound(),
-    ...scoredRounds(1, 18),
+    ...terroristRounds(1, 18),
     ...knifeRound(),
     ...scoredRounds(1, 7),
   ];
@@ -1022,5 +1040,10 @@ test('reconciles overlapping Scorebot replay fragments across maps', () => {
     [['Dust2', 47], ['Mirage', 18], ['Nuke', 7]],
   );
   assert.deepEqual(result.data.maps[0]!.gameLog.rounds[24]!.result?.sideScore, { ct: 24, t: 1 });
+  assert.deepEqual(result.data.maps[1]!.gameLog.rounds[0]!.result, {
+    winnerSide: 'T',
+    sideScore: { ct: 0, t: 1 },
+    reason: 'Enemy eliminated',
+  });
   validateMatch(result.data, result.diagnostics, page, 2395805);
 });

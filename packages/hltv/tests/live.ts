@@ -72,6 +72,15 @@ assert.equal(detail.data.schemaVersion, '3.1.0');
 assert.equal(detail.data.match.id, matchIdentityFromUrl(matchUrl)?.id);
 assert.equal(detail.data.teams.length, 2);
 assert.ok(detail.data.maps.length > 0);
+for (const map of detail.data.maps) {
+  let ctWins = 0;
+  let tWins = 0;
+  for (const round of map.gameLog.rounds) {
+    if (round.result?.winnerSide === 'CT') ctWins += 1;
+    if (round.result?.winnerSide === 'T') tWins += 1;
+    if (round.result) assert.deepEqual(round.result.sideScore, { ct: ctWins, t: tWins });
+  }
+}
 
 const capture = detail.diagnostics.capture as {
   navigationSeconds?: number;

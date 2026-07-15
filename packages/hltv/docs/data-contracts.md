@@ -62,6 +62,11 @@ map with its HLTV `mapStatsId`, then separates `both`, `ct`, and `t` sides. Each
 traditional and Eco-adjusted kills, deaths, ADR, and KAST together with the view's Round Swing
 and Rating 3.0. When HLTV has not published Match stats yet, `views` is empty.
 
+Each completed Game log round exposes `winnerSide` and cumulative `sideScore`. `sideScore.ct` and
+`sideScore.t` count rounds won while playing the corresponding side on that map. They are derived
+from the round winners because the two numeric values rendered in HLTV's `Round over` text follow
+team ordering, not stable CT/T ordering.
+
 ### Match consistency
 
 - `match.id`, `match.slug`, and `source.url` must describe the same canonical HLTV match.

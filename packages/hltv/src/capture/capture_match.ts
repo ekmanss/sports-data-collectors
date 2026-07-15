@@ -27,6 +27,7 @@ export interface MatchCaptureOptions extends MatchIdentity {
 
 const STABILITY_POLL_MS = 250;
 const SCOREBOT_POLL_MS = 100;
+const SCOREBOT_SNAPSHOT_POLL_MS = 250;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -142,11 +143,29 @@ async function switchScoreboard(
   page: HltvPageAdapter,
   label: 'Normal' | 'Advanced',
 ): Promise<boolean> {
-  const toggle = page.locator('#scoreboardElement .pro-toggle').filter({ hasText: label });
-  if (await toggle.count() !== 1) return false;
-  await toggle.click();
-  await page.waitForTimeout(250);
-  return true;
+  const requestedMode = JSON.stringify(label);
+  const found = await page.evaluate(`(() => {
+    const requestedMode = ${requestedMode};
+    const clean = (value) => (value || '').replace(/\\s+/g, ' ').trim();
+    const toggle = [...document.querySelectorAll('#scoreboardElement .pro-toggle')]
+      .find((element) => clean(element.textContent) === requestedMode);
+    if (!toggle) return false;
+    if (!toggle.classList.contains('active')) toggle.click();
+    return true;
+  })()`);
+  if (!found) return false;
+  const deadline = performance.now() + 1_500;
+  while (performance.now() < deadline) {
+    const active = await page.evaluate(`(() => {
+      const requestedMode = ${requestedMode};
+      const clean = (value) => (value || '').replace(/\\s+/g, ' ').trim();
+      return clean(document.querySelector('#scoreboardElement .pro-toggle.active')?.textContent)
+        === requestedMode;
+    })()`);
+    if (active) return true;
+    await page.waitForTimeout(50);
+  }
+  return false;
 }
 
 export async function extractFullGameLog(page: HltvPageAdapter): Promise<{
@@ -355,7 +374,7 @@ async function collectSnapshot(
 ): Promise<RawSnapshot> {
   const pageStarted = performance.now();
   const pageData = await evaluatePage(page);
-  timings.snapshotPageMs = Math.round(performance.now() - pageStarted);
+  timings.snapshotPageMs += Math.round(performance.now() - pageStarted);
   if (!scorebotUsable) {
     return {
       capturedAt: new Date().toISOString(), httpStatus, page: pageData,
@@ -369,18 +388,17 @@ async function collectSnapshot(
       note: 'Scorebot was not semantically usable for this match state.',
     };
   }
-  const scoreboardsStarted = performance.now();
+  const normalScoreboardStarted = performance.now();
   const normal = await extractScoreboard(page);
-  let advanced: RawScoreboard | null = null;
-  if (await switchScoreboard(page, 'Advanced')) {
-    advanced = await extractScoreboard(page);
-    await switchScoreboard(page, 'Normal');
-  }
-  timings.scoreboardsMs = Math.round(performance.now() - scoreboardsStarted);
+  timings.scoreboardsMs += Math.round(performance.now() - normalScoreboardStarted);
   const gameLogStarted = performance.now();
   const rawLog = await extractFullGameLog(page);
-  timings.gameLogMs = Math.round(performance.now() - gameLogStarted);
-  if (!isExtractedScorebotUsable(normal, rawLog)) {
+  timings.gameLogMs += Math.round(performance.now() - gameLogStarted);
+  const chronological = formalGameLog(rawLog.chronological);
+  if (!isExtractedScorebotUsable(normal, {
+    scrollHeight: rawLog.scrollHeight,
+    chronological,
+  })) {
     return {
       capturedAt: new Date().toISOString(), httpStatus, page: pageData,
       scoreboardNormal: null, scoreboardAdvanced: null,
@@ -393,7 +411,13 @@ async function collectSnapshot(
       note: 'Scorebot became incomplete while the snapshot was being extracted.',
     };
   }
-  const chronological = formalGameLog(rawLog.chronological);
+  const advancedScoreboardStarted = performance.now();
+  let advanced: RawScoreboard | null = null;
+  if (await switchScoreboard(page, 'Advanced')) {
+    advanced = await extractScoreboard(page);
+    await switchScoreboard(page, 'Normal');
+  }
+  timings.scoreboardsMs += Math.round(performance.now() - advancedScoreboardStarted);
   return {
     capturedAt: new Date().toISOString(), httpStatus, page: pageData,
     scoreboardNormal: normal, scoreboardAdvanced: advanced,
@@ -437,12 +461,12 @@ export function isScorebotSemanticallyReady(probe: ScorebotReadinessProbe): bool
   return !needsGameLog || (probe.scrollHeight > 0 && probe.visibleLogRows > 0);
 }
 
-function isExtractedScorebotUsable(
+export function isExtractedScorebotUsable(
   scoreboard: RawScoreboard | null,
   log: { scrollHeight: number; chronological: RawLogEvent[] },
 ): boolean {
   if (!scoreboard) return false;
-  return isScorebotSemanticallyReady({
+  const semanticallyReady = isScorebotSemanticallyReady({
     present: true,
     score: scoreboard.score,
     round: scoreboard.round,
@@ -451,6 +475,14 @@ function isExtractedScorebotUsable(
     scrollHeight: log.scrollHeight,
     visibleLogRows: log.chronological.length,
   });
+  const scoreTotal = scoreboard.score.split(/\D+/).reduce(
+    (sum, value) => sum + (Number(value) || 0),
+    0,
+  );
+  const completedRounds = log.chronological.filter(
+    (event) => event.text.startsWith('Round over'),
+  ).length;
+  return semanticallyReady && completedRounds >= scoreTotal;
 }
 
 async function scorebotState(page: HltvPageAdapter): Promise<ScorebotState> {
@@ -679,11 +711,10 @@ export class MatchCaptureSession {
       });
       const status = initialized.initialPage.match.status.toLowerCase();
       const requiresScorebot = status.includes('live') || status.includes('over');
+      const scorebotReadyStarted = performance.now();
       let state = await scorebotState(initialized.page);
       if (requiresScorebot && !state.ready) {
-        const scorebotReadyStarted = performance.now();
         state = await waitForStableScorebot(initialized.page, options);
-        timings.scorebotReadyMs = Math.round(performance.now() - scorebotReadyStarted);
       }
 
       if (state.ready && this.#lastCapture && state.signature === this.#lastScorebotSignature) {
@@ -708,12 +739,35 @@ export class MatchCaptureSession {
         return capture;
       }
 
-      const snapshot = await collectSnapshot(
+      let snapshot = await collectSnapshot(
         initialized.page,
         initialized.httpStatus,
         timings,
         state.ready,
       );
+      while (
+        requiresScorebot
+        && !snapshot.scoreboardNormal
+        && performance.now() - scorebotReadyStarted < options.scorebotReadyTimeoutMs
+      ) {
+        await abortableDelay(
+          SCOREBOT_SNAPSHOT_POLL_MS,
+          options.context,
+          'extracting-scorebot',
+          options.id,
+        );
+        state = await scorebotState(initialized.page);
+        if (!state.ready) continue;
+        snapshot = await collectSnapshot(
+          initialized.page,
+          initialized.httpStatus,
+          timings,
+          true,
+        );
+      }
+      if (requiresScorebot) {
+        timings.scorebotReadyMs = Math.round(performance.now() - scorebotReadyStarted);
+      }
       validateFinalUrl(snapshot.page.url, options);
       if (snapshot.page.match.id !== this.id) {
         throw new HltvError('the final page snapshot contains a different match ID', {

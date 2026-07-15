@@ -6,6 +6,7 @@ import type { HltvBrowserAdapter } from '../src/browser_adapter.js';
 import { createHltvClientWithBrowser } from '../src/client.js';
 import {
   extractFullGameLog,
+  isExtractedScorebotUsable,
   isScorebotSemanticallyReady,
   MatchCaptureSession,
 } from '../src/capture/capture_match.js';
@@ -119,6 +120,40 @@ test('accepts one semantically complete Scorebot state without requiring it to s
   }), true);
 });
 
+test('does not accept an extracted Game log that cannot account for the visible score', () => {
+  const players = Array.from({ length: 5 }, (_, index) => ({
+    player: `player-${index}`,
+    cells: [],
+  }));
+  const scoreboard: RawScoreboard = {
+    mode: 'Normal',
+    round: '9 - Inferno',
+    fact: '',
+    score: '8:0',
+    teams: [
+      { team: 'Alpha', players },
+      { team: 'Bravo', players },
+    ],
+  };
+  const round = (number: number): RawLogEvent => ({
+    top: number,
+    type: [],
+    text: `Round over - Winner: CT (${number} - 0) - Enemy eliminated`,
+    players: [],
+    weapon: null,
+    headshot: false,
+  });
+
+  assert.equal(isExtractedScorebotUsable(scoreboard, {
+    scrollHeight: 400,
+    chronological: [],
+  }), false);
+  assert.equal(isExtractedScorebotUsable(scoreboard, {
+    scrollHeight: 400,
+    chronological: Array.from({ length: 8 }, (_, index) => round(index + 1)),
+  }), true);
+});
+
 test('accepts a caller-owned browser adapter and closes only that adapter', async () => {
   let closes = 0;
   const client = createHltvClientWithBrowser({
@@ -206,7 +241,7 @@ test('reads the complete virtual Game log from rendered component state without 
   }
 });
 
-test('keeps one match page open and reuses an unchanged semantic snapshot', async () => {
+test('waits for a complete Game log, then keeps one match page open and reuses it', async () => {
   const pageData: RawExtractedPage = {
     title: 'Alpha vs Bravo',
     url: 'https://www.hltv.org/matches/2395901/alpha-vs-bravo-event',
@@ -263,8 +298,16 @@ test('keeps one match page open and reuses an unchanged semantic snapshot', asyn
     ] satisfies RawLogEvent[],
     positionsVisited: 2,
   };
+  const partialLog = {
+    scrollHeight: 400,
+    chronological: [
+      { top: 2, type: [], text: 'Round started', players: [], weapon: null, headshot: false },
+    ] satisfies RawLogEvent[],
+    positionsVisited: 1,
+  };
   let newPageCalls = 0;
   let closeCalls = 0;
+  let logReads = 0;
   const page = {
     addInitScript: async () => undefined,
     goto: async () => ({ status: () => 200 }),
@@ -289,9 +332,11 @@ test('keeps one match page open and reuses an unchanged semantic snapshot', asyn
             signature: 'steady-scorebot-state',
           };
         }
-        return log;
+        logReads += 1;
+        return logReads === 1 ? partialLog : log;
       }
       if (expression === 'globalThis.__name = (target) => target') return undefined;
+      if (expression.includes('const requestedMode =')) return true;
       if (expression.includes('dynamicText')) {
         return {
           present: true,
@@ -335,6 +380,7 @@ test('keeps one match page open and reuses an unchanged semantic snapshot', asyn
     assert.equal(second.session?.reused, true);
     assert.equal(second.session?.snapshotCacheHit, true);
     assert.equal(second.timings?.navigationMs, 0);
+    assert.equal(logReads, 2);
     assert.notEqual(first.snapshot, second.snapshot);
     assert.equal(second.snapshot.capturedAt, second.completedAt);
   } finally {

@@ -82,11 +82,20 @@ and Rating 3.0. When HLTV has not published Match stats yet, `views` is empty.
 
 Undocumented violations fail with `INCOMPLETE_CAPTURE`; a partial historical Game log is accepted
 only when its `INCOMPLETE_GAME_LOG` warning exactly matches that completed map's score and captured
-round count. A current-map mismatch still fails closed.
+round count. A current-map mismatch still fails closed. A Scorebot whose visible score has advanced
+before its formal Game log replay catches up is not considered semantically ready: collection keeps
+polling inside the bounded window, then falls back to `SCOREBOT_UNAVAILABLE` rather than exposing the
+inconsistent current map.
 
 ## Diagnostics
 
 Match diagnostics use schema `3.0.0`; live diagnostics use schema `1.0.0`. Both include operation identity, start/end/duration, collector versions, capture attempts, and warnings. Match diagnostics additionally include reconciliation and per-map checks. The first cold match page gets a bounded twelve-second Scorebot readiness window. During a later live inter-map window, HLTV can temporarily omit Scorebot while still exposing canonical map-card scores; the established session waits for at most six seconds and returns a bounded partial snapshot with `SCOREBOT_UNAVAILABLE`, `current: null`, and any incomplete Game log checks preserved as inconsistent. Consumers must abstain from decisions that require current-round evidence. A non-null Scorebot DOM skeleton is also treated as unavailable unless its score, round/map, teams, player rows, and required Game log are semantically usable. Live diagnostics include card counts, skipped cards, and duplicate merges.
+
+The browser toolbar's transition from stop to reload is not a Match Detail readiness contract. Full
+document `load` may wait on unrelated images, advertising, or frames, while the native Scorebot
+connection can still be replaying Game log history afterward. The collector therefore begins its
+semantic page/Scorebot checks after `DOMContentLoaded` and never uses `networkidle` as live-data
+evidence.
 
 HLTV's rendered Scorebot may begin at the current map when a browser joins an already-running
 series; the page does not expose a control for recovering the prior map's virtual Game log. In that

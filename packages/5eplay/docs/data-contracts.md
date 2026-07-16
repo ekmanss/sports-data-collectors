@@ -69,10 +69,24 @@ HTTP baseline. Log events are merged by `updateVersion` and remain chronological
 The credential endpoint's `client_id`, `username`, and `password` are transport-only. They are not
 part of either contract.
 
+## Live Matches 1.0.0
+
+`getFiveEPlayLiveMatches()` returns a lightweight `{ data, diagnostics }` result intended for
+frequent polling. `data.hasLiveMatches` is exactly `data.matches.length > 0`. Every match contains
+its canonical ID/URL, BO format, schedule/stage, tournament identity, two teams and series scores,
+available map summaries, and `currentMap`.
+
+The schedule endpoint groups both live and upcoming rows. A row is included only when its series
+state is live or it contains a live map. A series remains live between maps even though
+`currentMap` is then `null`. Normal polling uses the source's first 20 ordered rows and one HTTP
+request; another page is requested only when all 20 rows are live. No detail, analysis, event-log,
+community-rating, Markdown, or MQTT credential request is made.
+
 ## Diagnostics
 
-Diagnostics include operation timing, canonical input, warnings, and one sanitized entry per HTTP
-request with only request kind, HTTP status, duration, byte size, and optional map/tab identity.
+Diagnostics include operation timing, canonical input where applicable, warnings, and one sanitized
+entry per HTTP request with only request kind, HTTP status, duration, byte size, and optional
+map/tab/page identity.
 URLs with credentials, request/response bodies, MQTT credentials, cookies, and chat state are never
 included.
 

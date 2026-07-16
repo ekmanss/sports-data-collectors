@@ -1,6 +1,7 @@
 export { getFiveEPlayMatch } from './client.js';
 export { FiveEPlayError } from './errors.js';
 export { matchIdentityFromInput } from './input.js';
+export { getFiveEPlayLiveMatches } from './live_matches.js';
 export { renderFiveEPlayMatchMarkdown } from './markdown.js';
 export { createFiveEPlayMatchSession } from './session.js';
 export {
@@ -26,6 +27,11 @@ export type {
   FiveEPlayHalfScore,
   FiveEPlayJson,
   FiveEPlayJsonObject,
+  FiveEPlayLiveMatch,
+  FiveEPlayLiveMatchMap,
+  FiveEPlayLiveMatchesData,
+  FiveEPlayLiveMatchesDiagnostics,
+  FiveEPlayLiveMatchTeam,
   FiveEPlayKillEvent,
   FiveEPlayLogEvent,
   FiveEPlayLogPlayer,
@@ -59,4 +65,6 @@ export type {
   FiveEPlayWebSocketLike,
   GetFiveEPlayMatchOptions,
   GetFiveEPlayMatchResult,
+  GetFiveEPlayLiveMatchesOptions,
+  GetFiveEPlayLiveMatchesResult,
 } from './types.js';

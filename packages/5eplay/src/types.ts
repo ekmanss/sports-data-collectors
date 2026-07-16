@@ -21,7 +21,7 @@ export type FiveEPlayErrorCode =
   | 'SESSION_CLOSED'
   | 'INTERNAL_ERROR';
 
-export type FiveEPlayOperation = 'match-detail' | 'match-realtime';
+export type FiveEPlayOperation = 'match-detail' | 'match-realtime' | 'live-matches';
 
 export type FiveEPlayStage =
   | 'validating-input'
@@ -29,6 +29,7 @@ export type FiveEPlayStage =
   | 'fetching-analysis'
   | 'fetching-logs'
   | 'fetching-community'
+  | 'fetching-live-matches'
   | 'building-output'
   | 'connecting-realtime'
   | 'streaming-realtime'
@@ -57,6 +58,13 @@ export interface FiveEPlayClientOptions {
 
 export type GetFiveEPlayMatchOptions = FiveEPlayClientOptions & FiveEPlayRequestOptions;
 export type CreateFiveEPlayMatchSessionOptions = FiveEPlayClientOptions & FiveEPlayRequestOptions;
+
+export interface GetFiveEPlayLiveMatchesOptions {
+  fetch?: typeof globalThis.fetch;
+  timeoutMs?: number;
+  signal?: AbortSignal;
+  onProgress?: (event: FiveEPlayProgressEvent) => void;
+}
 
 export interface FiveEPlayMatchIdentity {
   id: string;
@@ -410,12 +418,13 @@ export interface FiveEPlayMatch {
 }
 
 export interface FiveEPlayRequestDiagnostic {
-  kind: 'match' | 'analysis' | 'log' | 'community-tabs' | 'community-list';
+  kind: 'match' | 'analysis' | 'log' | 'community-tabs' | 'community-list' | 'live-list';
   status: number;
   durationMs: number;
   bytes: number | null;
   mapNumber?: number;
   tab?: string;
+  page?: number;
 }
 
 export interface FiveEPlayDiagnosticWarning {
@@ -439,6 +448,66 @@ export interface FiveEPlayMatchDiagnostics {
 export interface GetFiveEPlayMatchResult {
   data: FiveEPlayMatch;
   diagnostics: FiveEPlayMatchDiagnostics;
+}
+
+export interface FiveEPlayLiveMatchTeam {
+  id: string;
+  name: string;
+  country: string | null;
+  rank: number | null;
+  valveRank: number | null;
+  seriesScore: number | null;
+}
+
+export interface FiveEPlayLiveMatchMap {
+  id: string;
+  number: number;
+  name: string;
+  status: FiveEPlayMapStatus;
+  winnerTeamId: string | null;
+  teams: Array<{ teamId: string; score: number | null }>;
+}
+
+export interface FiveEPlayLiveMatch {
+  id: string;
+  numericId: number;
+  url: string;
+  status: 'live';
+  bestOf: number | null;
+  scheduledAtUnixSeconds: number | null;
+  stage: string | null;
+  stageDescription: string | null;
+  tournament: {
+    id: string | null;
+    name: string;
+    grade: string | null;
+    gradeLabel: string | null;
+  };
+  teams: FiveEPlayLiveMatchTeam[];
+  maps: FiveEPlayLiveMatchMap[];
+  currentMap: FiveEPlayLiveMatchMap | null;
+}
+
+export interface FiveEPlayLiveMatchesData {
+  schemaVersion: '1.0.0';
+  capturedAt: string;
+  source: { provider: '5eplay'; url: 'https://event.5eplay.com/csgo/matches' };
+  hasLiveMatches: boolean;
+  matches: FiveEPlayLiveMatch[];
+}
+
+export interface FiveEPlayLiveMatchesDiagnostics {
+  schemaVersion: '1.0.0';
+  operation: 'live-matches';
+  startedAt: string;
+  completedAt: string;
+  durationMs: number;
+  requests: FiveEPlayRequestDiagnostic[];
+}
+
+export interface GetFiveEPlayLiveMatchesResult {
+  data: FiveEPlayLiveMatchesData;
+  diagnostics: FiveEPlayLiveMatchesDiagnostics;
 }
 
 export type FiveEPlayRealtimeUpdate =

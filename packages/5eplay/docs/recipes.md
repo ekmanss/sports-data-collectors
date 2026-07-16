@@ -2,6 +2,32 @@
 
 Run these commands from the repository root after `pnpm build`.
 
+## Poll for newly started matches
+
+```ts
+import { setTimeout as delay } from 'node:timers/promises';
+import { getFiveEPlayLiveMatches } from '@ekmanss/5eplay';
+
+const known = new Set<string>();
+
+while (true) {
+  const { data } = await getFiveEPlayLiveMatches({ timeoutMs: 5_000 });
+  for (const match of data.matches) {
+    if (!known.has(match.id)) {
+      console.log('started', match.id, match.url);
+      known.add(match.id);
+    }
+  }
+  for (const id of [...known]) {
+    if (!data.matches.some((match) => match.id === id)) known.delete(id);
+  }
+  await delay(5_000);
+}
+```
+
+Calls are serialized, so a slow request never overlaps the next poll. A normal call uses one list
+request and performs no match-detail, log, analysis, community, Markdown, browser, or MQTT work.
+
 ## Generate the human-readable Markdown report
 
 Pass an exact Markdown filename:

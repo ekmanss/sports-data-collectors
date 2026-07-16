@@ -40,6 +40,41 @@ Chat messages, login state, cookies, and account-specific actions are deliberate
 `{ data, diagnostics }`. Independent HTTP sections are fetched concurrently; a normal capture does
 not open the realtime credential endpoint.
 
+## Currently live matches
+
+Use the list API for frequent checks that only need to know whether a CS2 match has started:
+
+```ts
+import { getFiveEPlayLiveMatches } from '@ekmanss/5eplay';
+
+const result = await getFiveEPlayLiveMatches();
+
+if (result.data.hasLiveMatches) {
+  for (const match of result.data.matches) {
+    console.log(match.id, match.url, match.teams, match.currentMap);
+  }
+}
+```
+
+This method normally makes one small public list request and never fetches match details, analysis,
+logs, community ratings, Markdown, or realtime credentials. The source list also contains upcoming
+matches, so the collector strictly keeps series with live state (including the interval between two
+maps, when `currentMap` is `null`). If the first 20 source rows are all live, it continues paging
+until every live match is collected.
+
+For serialized five-second polling without overlapping requests:
+
+```ts
+import { setTimeout as delay } from 'node:timers/promises';
+import { getFiveEPlayLiveMatches } from '@ekmanss/5eplay';
+
+while (true) {
+  const { data } = await getFiveEPlayLiveMatches({ timeoutMs: 5_000 });
+  console.log(data.hasLiveMatches, data.matches.map((match) => match.url));
+  await delay(5_000);
+}
+```
+
 ## Generate a formatted Markdown report
 
 From this repository, pass a match URL/ID and either an exact `.md` filename or a directory:

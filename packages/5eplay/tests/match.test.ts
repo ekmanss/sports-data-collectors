@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import test from 'node:test';
 import { getFiveEPlayMatch } from '../src/client.js';
 import { matchIdentityFromInput } from '../src/input.js';
+import { getFiveEPlayLiveMatches } from '../src/live_matches.js';
 import {
   decodeMqttPackets,
   encodeConnectPacket,
@@ -302,6 +303,54 @@ test('captures a full match without launching a browser', async () => {
   assert.equal(result.diagnostics.requests.filter((entry) => entry.kind === 'log').length, 2);
   assert.equal(result.diagnostics.requests.filter((entry) => entry.kind === 'community-list').length, 3);
   assert.ok(requests.every((url) => !url.includes('/api/restrict/matchscore')));
+});
+
+test('fetches only genuinely live matches with one lightweight list request', async () => {
+  const requests: string[] = [];
+  const stages: string[] = [];
+  const listMatch = (id: string, matchStatus: string, boutStatus?: string) => ({
+    mc_info: {
+      id, format: '3', plan_ts: '1784210400', tt_stage: 'Playoffs',
+      tt_stage_desc: 'Upper final',
+      t1_info: { id: `${id}_t1`, disp_name: 'Alpha', rank: '2', v_rank: { rank: '3' } },
+      t2_info: { id: `${id}_t2`, disp_name: 'Bravo', rank: '4', v_rank: { rank: '5' } },
+    },
+    state: {
+      status: matchStatus, t1_score: '1', t2_score: '0',
+      bout_states: boutStatus ? [{
+        bout_num: '1', map_name: 'Cache', status: boutStatus,
+        t1_score: '9', t2_score: '7', result: '',
+      }] : [],
+    },
+    tt_info: { id: 'csgo_tt_1', disp_name: 'Example Cup', grade: '3', grade_label: 'A级赛事' },
+  });
+  const fetchImpl: typeof fetch = async (input) => {
+    const url = String(input);
+    requests.push(url);
+    return response({ matches: [
+      listMatch('csgo_mc_1001', '1', '1'),
+      listMatch('csgo_mc_1002', '1', '2'),
+      listMatch('csgo_mc_1003', '0'),
+    ] });
+  };
+  const result = await getFiveEPlayLiveMatches({
+    fetch: fetchImpl,
+    timeoutMs: 2_000,
+    onProgress: (event) => stages.push(event.stage),
+  });
+  assert.equal(result.data.hasLiveMatches, true);
+  assert.deepEqual(result.data.matches.map((match) => match.id), ['csgo_mc_1001', 'csgo_mc_1002']);
+  assert.equal(result.data.matches[0]!.currentMap?.name, 'Cache');
+  assert.equal(result.data.matches[1]!.currentMap, null);
+  assert.deepEqual(result.data.matches[0]!.teams.map((team) => team.seriesScore), [1, 0]);
+  assert.equal(result.diagnostics.requests.length, 1);
+  assert.equal(result.diagnostics.requests[0]?.kind, 'live-list');
+  assert.equal(result.diagnostics.requests[0]?.page, 1);
+  assert.deepEqual(stages, ['fetching-live-matches', 'completed']);
+  assert.equal(requests.length, 1);
+  const url = new URL(requests[0]!);
+  assert.equal(url.pathname, '/api/tournament/session_list');
+  assert.equal(url.searchParams.get('limit'), '20');
 });
 
 test('writes a complete formatted Markdown report to a file or directory', async () => {

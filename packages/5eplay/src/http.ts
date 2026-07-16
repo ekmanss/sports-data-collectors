@@ -7,7 +7,7 @@ import type {
 
 export interface RequestContext {
   operation: FiveEPlayOperation;
-  matchId: string;
+  matchId?: string;
   signal: AbortSignal;
   fetch: typeof globalThis.fetch;
   diagnostics: FiveEPlayRequestDiagnostic[];
@@ -20,6 +20,7 @@ export interface FetchJsonOptions {
   body?: unknown;
   mapNumber?: number;
   tab?: string;
+  page?: number;
 }
 
 export async function fetchJson(
@@ -55,6 +56,7 @@ export async function fetchJson(
     bytes: new TextEncoder().encode(body).byteLength,
     ...(options.mapNumber === undefined ? {} : { mapNumber: options.mapNumber }),
     ...(options.tab === undefined ? {} : { tab: options.tab }),
+    ...(options.page === undefined ? {} : { page: options.page }),
   });
   if (response.status === 404) {
     throw new FiveEPlayError('5EPlay match was not found', {
@@ -82,7 +84,7 @@ export async function fetchJson(
 export function responseData(value: unknown, context: {
   operation: FiveEPlayOperation;
   stage: FiveEPlayStage;
-  matchId: string;
+  matchId?: string;
 }): unknown {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) {
     throw new FiveEPlayError('5EPlay response envelope is invalid', {

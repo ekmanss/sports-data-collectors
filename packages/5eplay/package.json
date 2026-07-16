@@ -1,0 +1,54 @@
+{
+  "name": "@ekmanss/5eplay",
+  "version": "0.0.0",
+  "description": "Typed 5EPlay CS2 match-detail snapshots and MQTT live updates without a browser.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "5eplay-match-md": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "docs",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "check": "tsc --noEmit",
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.build.json",
+    "match:md": "tsx src/cli.ts",
+    "test": "tsx --test tests/match.test.ts",
+    "test:live": "tsx tests/live.ts",
+    "verify": "pnpm check && pnpm test && pnpm build",
+    "prepack": "pnpm verify"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.3",
+    "tsx": "4.23.0",
+    "typescript": "5.9.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ekmanss/sports-data-collectors.git",
+    "directory": "packages/5eplay"
+  },
+  "homepage": "https://github.com/ekmanss/sports-data-collectors/tree/main/packages/5eplay#readme",
+  "bugs": {
+    "url": "https://github.com/ekmanss/sports-data-collectors/issues"
+  },
+  "author": "ekmanss",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
+}

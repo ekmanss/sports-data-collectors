@@ -5,10 +5,12 @@
   "type": "module",
   "packageManager": "pnpm@11.11.0",
   "scripts": {
-    "check": "tsc --noEmit -p tsconfig.json && pnpm --filter @ekmanss/hltv check",
-    "test": "pnpm --filter @ekmanss/hltv test",
+    "check": "tsc --noEmit -p tsconfig.json && pnpm --filter @ekmanss/hltv check && pnpm --filter @ekmanss/5eplay check",
+    "test": "pnpm --filter @ekmanss/hltv test && pnpm --filter @ekmanss/5eplay test",
     "test:live": "pnpm --filter @ekmanss/hltv test:live",
-    "build": "pnpm --filter @ekmanss/hltv build",
+    "test:live:5eplay": "pnpm --filter @ekmanss/5eplay test:live",
+    "5eplay:md": "tsx packages/5eplay/src/cli.ts",
+    "build": "pnpm --filter @ekmanss/hltv build && pnpm --filter @ekmanss/5eplay build",
     "verify": "pnpm check && pnpm test && pnpm build",
     "release": "tsx scripts/release.ts"
   },

@@ -18,6 +18,18 @@ importers:
         specifier: 5.9.3
         version: 5.9.3
 
+  packages/5eplay:
+    devDependencies:
+      '@types/node':
+        specifier: 24.13.3
+        version: 24.13.3
+      tsx:
+        specifier: 4.23.0
+        version: 4.23.0
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
   packages/hltv:
     dependencies:
       cloakbrowser:

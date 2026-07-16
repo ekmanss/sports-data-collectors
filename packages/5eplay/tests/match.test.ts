@@ -160,13 +160,13 @@ const analysisData = {
       }],
     },
     t1_rec_matches: { matches: [{ matches: [{
-      id: 'recent-1', ts: '1784204100',
+      id: 'csgo_mc_2395701', ts: '1784204100',
       home_info: { id: team1.id, disp_name: team1.disp_name },
       opponent_info: { id: 'csgo_tm_3', disp_name: 'Charlie' },
       home_score: '2', opponent_score: '1', result: 't1', status: 'past',
     }] }] },
     t2_rec_matches: { matches: [{ matches: [{
-      id: 'recent-2', ts: '1784200500',
+      id: 'csgo_mc_2395702', ts: '1784200500',
       home_info: { id: 'csgo_tm_4', disp_name: 'Delta' },
       opponent_info: { id: team2.id, disp_name: team2.disp_name },
       home_score: '13', opponent_score: '10', result: 't1', status: 'past',
@@ -278,7 +278,47 @@ test('builds every visible match section and synthesizes a temporarily omitted d
   assert.equal(match.current?.bombPlanted, true);
   assert.equal(match.analysis?.teams[0]?.players[0]?.rating, 1.2);
   assert.equal(match.analysis?.recentMatches[0]?.matches.length, 1);
+  assert.deepEqual(match.analysis?.recentMatches[0], {
+    teamId: team1.id,
+    sourceCount: 1,
+    invalidReferenceCount: 0,
+    matches: [{
+      id: 'csgo_mc_2395701',
+      numericId: 2395701,
+      url: 'https://event.5eplay.com/csgo/matches/csgo_mc_2395701',
+      status: 'completed',
+      playedAtUnixSeconds: 1784204100,
+      teams: [
+        { id: team1.id, name: team1.disp_name, score: 2 },
+        { id: 'csgo_tm_3', name: 'Charlie', score: 1 },
+      ],
+      winnerTeamId: team1.id,
+    }],
+  });
   assert.equal(match.communityRatings?.tabs[0]?.cards[0]?.score.average, 4.5);
+});
+
+test('reports incomplete recent-match references without leaking provider JSON', () => {
+  const incompleteAnalysis = structuredClone(analysisData);
+  incompleteAnalysis.result.t1_rec_matches.matches[0]!.matches.push({
+    id: 'not-a-canonical-match-id', ts: '1784200000',
+    home_info: { id: team1.id, disp_name: team1.disp_name },
+    opponent_info: { id: 'csgo_tm_5', disp_name: 'Echo' },
+    home_score: '2', opponent_score: '0', result: 't1', status: 'past',
+  });
+  const match = buildFiveEPlayMatch({
+    identity, capturedAt: '2026-07-16T00:00:00.000Z', detailData,
+    analysisData: incompleteAnalysis, logs, community,
+  });
+  assert.deepEqual(match.analysis?.recentMatches[0] && {
+    sourceCount: match.analysis.recentMatches[0].sourceCount,
+    invalidReferenceCount: match.analysis.recentMatches[0].invalidReferenceCount,
+    ids: match.analysis.recentMatches[0].matches.map((recent) => recent.id),
+  }, {
+    sourceCount: 2,
+    invalidReferenceCount: 1,
+    ids: ['csgo_mc_2395701'],
+  });
 });
 
 test('parses detailed combat log flags and participants', () => {
@@ -388,8 +428,8 @@ test('writes a complete formatted Markdown report to a file or directory', async
       '| 比赛时间 | Alpha | Bravo |',
       '| 2026-07-16 12:15 UTC | 2 | 1 |',
       '### 近期比赛',
-      '| 2026-07-16 12:15 UTC | Charlie | 2 : 1 | 胜 |',
-      '| 2026-07-16 11:15 UTC | Delta | 10 : 13 | 负 |',
+      '| 2026-07-16 12:15 UTC | [csgo_mc_2395701](https://event.5eplay.com/csgo/matches/csgo_mc_2395701) | Charlie | 2 : 1 | 胜 |',
+      '| 2026-07-16 11:15 UTC | [csgo_mc_2395702](https://event.5eplay.com/csgo/matches/csgo_mc_2395702) | Delta | 10 : 13 | 负 |',
       '### 选手能力',
       '| 战队 | 选手 | Rating | 火力 | 突破 | 首杀 | 道具 | 狙击 | 残局 | 补枪 |',
       '| Alpha | Alice | 1.20 | 80 | — | 70 | — | — | — | — |',

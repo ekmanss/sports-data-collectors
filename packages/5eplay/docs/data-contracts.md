@@ -44,6 +44,12 @@ weapon, special-kill flag, and coordinate fields. Unknown future event types rem
 records, recent matches, and head-to-head matches. Provider-specific power records remain JSON
 objects so new metrics are preserved without a schema bump.
 
+Each `analysis.recentMatches[]` group exposes typed, completed match references rather than raw
+provider JSON. Every reference contains its canonical `csgo_mc_*` ID/URL, numeric ID, completion
+status and timestamp, both teams and scores, and the winning team ID. `sourceCount` records how
+many source rows were present; `invalidReferenceCount` makes malformed or incomplete source rows
+explicit so consumers can fail closed instead of treating them as genuinely missing history.
+
 `communityRatings` contains every public tab and returned card, including player, coach, and
 big-event cards. Account-specific `my_*` voting state, write actions, and chat messages are not
 returned.

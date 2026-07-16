@@ -337,6 +337,29 @@ export interface FiveEPlayAnalysisMap {
   }>;
 }
 
+export interface FiveEPlayRecentMatchTeam {
+  id: string;
+  name: string;
+  score: number;
+}
+
+export interface FiveEPlayRecentMatchReference {
+  id: string;
+  numericId: number;
+  url: string;
+  status: 'completed';
+  playedAtUnixSeconds: number;
+  teams: [FiveEPlayRecentMatchTeam, FiveEPlayRecentMatchTeam];
+  winnerTeamId: string | null;
+}
+
+export interface FiveEPlayTeamRecentMatches {
+  teamId: string;
+  sourceCount: number;
+  invalidReferenceCount: number;
+  matches: FiveEPlayRecentMatchReference[];
+}
+
 export interface FiveEPlayPrematchAnalysis {
   hidden: boolean;
   teams: Array<{
@@ -350,7 +373,7 @@ export interface FiveEPlayPrematchAnalysis {
   }>;
   maps: FiveEPlayAnalysisMap[];
   playerPower: Array<{ teamId: string; players: FiveEPlayJsonObject[] }>;
-  recentMatches: Array<{ teamId: string; matches: FiveEPlayJsonObject[] }>;
+  recentMatches: FiveEPlayTeamRecentMatches[];
   headToHead: {
     teamWinRates: Array<{ teamId: string; winRate: number | null }>;
     matches: FiveEPlayJsonObject[];

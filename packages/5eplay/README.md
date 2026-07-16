@@ -99,7 +99,7 @@ The human-readable report is deliberately more compact than the typed snapshot:
 - the overview keeps only match status/identity/version/format, capture time, and source URL;
 - completed and live maps show scores, clear half/round results, player tables, duels, highlights,
   milestones, and readable logs; upcoming maps use one short placeholder;
-- head-to-head and recent matches show only time, teams/opponent, score, and result;
+- head-to-head and recent matches show only time, canonical match link, teams/opponent, score, and result;
 - player power is reduced to Rating plus firepower, entry, opening, utility, sniping, clutch, and
   trading scores;
 - transport versions, coordinates, raw round codes, provider JSON, odds, logos, and community

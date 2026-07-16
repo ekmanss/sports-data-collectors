@@ -1,4 +1,5 @@
 import { mergeLogEvents, transformLogRecord } from './log.js';
+import { matchIdentityFromInput } from './input.js';
 import type {
   FiveEPlayAnalysisMap,
   FiveEPlayAnalysisPlayer,
@@ -12,6 +13,7 @@ import type {
   FiveEPlayMatchStatus,
   FiveEPlayPlayerStats,
   FiveEPlayPrematchAnalysis,
+  FiveEPlayRecentMatchReference,
   FiveEPlayTeam,
   FiveEPlayTeamMapState,
   FiveEPlayVetoEntry,
@@ -388,6 +390,61 @@ function analysisMap(
   };
 }
 
+function recentMatchRows(value: unknown): Record<string, unknown>[] {
+  return records(record(value).matches).flatMap((group) => {
+    const nested = records(group.matches);
+    return nested.length ? nested : text(group.id) ? [group] : [];
+  });
+}
+
+function completedRecentMatch(value: unknown): FiveEPlayRecentMatchReference | null {
+  const source = record(value);
+  const identity = matchIdentityFromInput(text(source.id) ?? '');
+  const status = text(source.status)?.toLowerCase();
+  const playedAtUnixSeconds = integer(source.ts);
+  const first = record(source.home_info);
+  const second = record(source.opponent_info);
+  const firstId = text(first.id);
+  const secondId = text(second.id);
+  const firstName = text(first.disp_name);
+  const secondName = text(second.disp_name);
+  const firstScore = integer(source.home_score);
+  const secondScore = integer(source.opponent_score);
+  const completed = status === 'past' || status === 'completed' || status === '2';
+  if (!identity || !completed || playedAtUnixSeconds === null || playedAtUnixSeconds <= 0
+    || !firstId || !secondId || !firstName || !secondName
+    || firstScore === null || secondScore === null || firstScore < 0 || secondScore < 0) {
+    return null;
+  }
+  return {
+    ...identity,
+    status: 'completed',
+    playedAtUnixSeconds,
+    teams: [
+      { id: firstId, name: firstName, score: firstScore },
+      { id: secondId, name: secondName, score: secondScore },
+    ],
+    winnerTeamId: firstScore === secondScore ? null : firstScore > secondScore ? firstId : secondId,
+  };
+}
+
+function recentMatches(value: unknown): {
+  sourceCount: number;
+  invalidReferenceCount: number;
+  matches: FiveEPlayRecentMatchReference[];
+} {
+  const rows = recentMatchRows(value);
+  const normalized = rows.map(completedRecentMatch);
+  const byId = new Map(normalized.flatMap((match) => match ? [[match.id, match] as const] : []));
+  return {
+    sourceCount: rows.length,
+    invalidReferenceCount: normalized.filter((match) => match === null).length,
+    matches: [...byId.values()].sort(
+      (left, right) => right.playedAtUnixSeconds - left.playedAtUnixSeconds,
+    ),
+  };
+}
+
 function prematchAnalysis(value: unknown, teams: FiveEPlayTeam[]): FiveEPlayPrematchAnalysis | null {
   if (value === null) return null;
   const data = record(value);
@@ -418,7 +475,7 @@ function prematchAnalysis(value: unknown, teams: FiveEPlayTeam[]): FiveEPlayPrem
     })),
     recentMatches: teams.map((team, index) => ({
       teamId: team.id,
-      matches: jsonObjects(record(result[index === 0 ? 't1_rec_matches' : 't2_rec_matches']).matches),
+      ...recentMatches(result[index === 0 ? 't1_rec_matches' : 't2_rec_matches']),
     })),
     headToHead: {
       teamWinRates: teams.map((team, index) => ({

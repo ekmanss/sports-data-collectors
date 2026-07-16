@@ -384,19 +384,16 @@ function recentMatchesSection(match: FiveEPlayMatch): string[] {
   if (!analysis) return [];
   const lines = ['### 近期比赛', ''];
   for (const item of analysis.recentMatches) {
-    const rows = item.matches.flatMap((group) => records(record(group).matches)).map((game) => {
-      const home = record(game.home_info);
-      const opponent = record(game.opponent_info);
-      const teamIsHome = text(home.id) === item.teamId || text(opponent.id) !== item.teamId;
-      const teamScore = integer(game[teamIsHome ? 'home_score' : 'opponent_score']);
-      const opponentScore = integer(game[teamIsHome ? 'opponent_score' : 'home_score']);
-      const opponentName = text((teamIsHome ? opponent : home).disp_name);
-      const outcome = teamScore === null || opponentScore === null ? '—'
-        : teamScore > opponentScore ? '胜' : teamScore < opponentScore ? '负' : '平';
+    const rows = item.matches.map((game) => {
+      const team = game.teams.find((candidate) => candidate.id === item.teamId);
+      const opponent = game.teams.find((candidate) => candidate.id !== item.teamId);
+      const outcome = game.winnerTeamId === null ? '平'
+        : game.winnerTeamId === item.teamId ? '胜' : '负';
       return [
-        compactTimestamp(integer(game.ts)),
-        opponentName,
-        `${number(teamScore)} : ${number(opponentScore)}`,
+        compactTimestamp(game.playedAtUnixSeconds),
+        `[${game.id}](${game.url})`,
+        opponent?.name,
+        `${number(team?.score ?? null)} : ${number(opponent?.score ?? null)}`,
         outcome,
       ];
     });
@@ -404,8 +401,11 @@ function recentMatchesSection(match: FiveEPlayMatch): string[] {
       `#### ${plain(teamName(match, item.teamId))}`,
       '',
       rows.length
-        ? table(['比赛时间', '对手', '比分（本队 : 对手）', '结果'], rows)
+        ? table(['比赛时间', '比赛', '对手', '比分（本队 : 对手）', '结果'], rows)
         : '_暂无近期比赛数据_',
+      item.invalidReferenceCount > 0
+        ? `> 注意：源数据中另有 ${item.invalidReferenceCount} 条近期比赛引用不完整，未纳入报告。`
+        : '',
       '',
     );
   }

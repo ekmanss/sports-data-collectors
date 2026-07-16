@@ -45,9 +45,12 @@ HLTV or 5EPlay.
 
 ## Release
 
-`pnpm release` runs all local verification, including the real-network test, computes the next `YYYYMMDD.REVISION.0` version, and creates a local release commit and tag. It never pushes.
+`pnpm release` prepares `@ekmanss/hltv`: it runs all local verification, including the real-network test, computes the next `YYYYMMDD.REVISION.0` version, and creates a local release commit and tag. It never pushes.
 
-The first `@ekmanss/hltv` release must be published manually so the npm package exists. Later releases use npm trusted publishing through `.github/workflows/publish.yml`.
+The first release of each package must be published manually because npm requires the package to
+exist before a trusted publisher can be configured. Later tagged releases of both packages use npm
+Trusted Publishing with GitHub Actions OIDC through `.github/workflows/publish.yml`; no long-lived
+publish token is stored in GitHub.
 
 ## License
 

@@ -12,7 +12,7 @@
     }
   },
   "bin": {
-    "5eplay-match-md": "./dist/cli.js"
+    "5eplay-match-md": "dist/cli.js"
   },
   "files": [
     "dist",

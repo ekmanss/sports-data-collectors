@@ -54,10 +54,13 @@ jobs:
           PACKAGE_NAME: ${{ steps.package.outputs.name }}
           PACKAGE_VERSION: ${{ steps.package.outputs.version }}
         run: |
-          if npm view "${PACKAGE_NAME}@${PACKAGE_VERSION}" version >/dev/null 2>&1; then
+          if npm view "${PACKAGE_NAME}@${PACKAGE_VERSION}" version >/dev/null 2>registry-error.log; then
             echo "published=true" >> "${GITHUB_OUTPUT}"
-          else
+          elif grep -q 'E404' registry-error.log; then
             echo "published=false" >> "${GITHUB_OUTPUT}"
+          else
+            cat registry-error.log >&2
+            exit 1
           fi
       - name: Publish package
         if: steps.registry.outputs.published != 'true'

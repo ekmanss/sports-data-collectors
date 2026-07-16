@@ -45,12 +45,18 @@ HLTV or 5EPlay.
 
 ## Release
 
-`pnpm release` prepares `@ekmanss/hltv`: it runs all local verification, including the real-network test, computes the next `YYYYMMDD.REVISION.0` version, and creates a local release commit and tag. It never pushes.
+Package releases use npm Trusted Publishing through GitHub Actions OIDC. Run the package-specific
+command from a clean, up-to-date `main`; it verifies locally, creates and pushes the release tag,
+waits for the workflow, and confirms the published npm version:
 
-The first release of each package must be published manually because npm requires the package to
-exist before a trusted publisher can be configured. Later tagged releases of both packages use npm
-Trusted Publishing with GitHub Actions OIDC through `.github/workflows/publish.yml`; no long-lived
-publish token is stored in GitHub.
+```bash
+pnpm release:hltv
+pnpm release:5eplay
+```
+
+Do not use local `npm login` / `npm publish` or a GitHub `NPM_TOKEN` for an existing package. See
+the complete release standard and the one-time new-package bootstrap exception in
+[`docs/releasing.md`](docs/releasing.md).
 
 ## License
 

@@ -1,6 +1,6 @@
 {
   "name": "@ekmanss/5eplay",
-  "version": "20260718.0.0",
+  "version": "20260718.1.0",
   "description": "Typed 5EPlay CS2 live-match discovery, match-detail snapshots, and MQTT updates without a browser.",
   "type": "module",
   "main": "./dist/index.js",

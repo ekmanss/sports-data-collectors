@@ -70,7 +70,10 @@ A `FiveEPlayMatchSession` is an async iterable of:
 
 Every update includes a complete immutable snapshot. MQTT messages can be partial: map states are
 merged by `bout_num`, while match/tournament/global sections are shallow-merged over the verified
-HTTP baseline. Log events are merged by `updateVersion` and remain chronological.
+HTTP baseline. Log events are merged by `updateVersion` and remain chronological. Replayed MQTT
+messages with an already-seen `updateVersion` do not emit another update. Distinct versions remain
+lossless even when their provider payloads are identical; consumer-specific semantic filtering is
+outside this transport contract.
 
 If an MQTT state regresses a started map's team score or status, the session withholds that state
 and performs one authoritative HTTP resync. A rollback confirmed by HTTP becomes the new baseline;

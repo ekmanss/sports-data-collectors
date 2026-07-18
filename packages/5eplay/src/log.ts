@@ -150,14 +150,19 @@ export function compareUpdateVersions(left: string, right: string): number {
   return left.localeCompare(right);
 }
 
+export function logEventIdentity(event: FiveEPlayLogEvent): string {
+  return event.updateVersion
+    ? `version:${event.updateVersion}`
+    : `event:${JSON.stringify(event)}`;
+}
+
 export function mergeLogEvents(
   existing: FiveEPlayLogEvent[],
   additions: FiveEPlayLogEvent[],
 ): FiveEPlayLogEvent[] {
   const byVersion = new Map<string, FiveEPlayLogEvent>();
   for (const event of [...existing, ...additions]) {
-    const key = event.updateVersion || JSON.stringify(event);
-    byVersion.set(key, event);
+    byVersion.set(logEventIdentity(event), event);
   }
   return [...byVersion.values()].sort((leftEvent, rightEvent) =>
     compareUpdateVersions(leftEvent.updateVersion, rightEvent.updateVersion));

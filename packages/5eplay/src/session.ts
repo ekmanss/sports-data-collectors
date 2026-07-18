@@ -1,7 +1,7 @@
 import { AsyncQueue } from './async_queue.js';
 import { captureFiveEPlayMatch, type CapturedFiveEPlayMatch } from './capture.js';
 import { asFiveEPlayError, FiveEPlayError } from './errors.js';
-import { transformLogRecord } from './log.js';
+import { compareUpdateVersions, logEventIdentity, transformLogRecord } from './log.js';
 import { MqttTopicConnection } from './mqtt.js';
 import { buildFiveEPlayMatch, mergeDetailData } from './transform.js';
 import type {
@@ -47,6 +47,7 @@ class FiveEPlayMatchSessionImpl implements FiveEPlayMatchSession {
   readonly #fetch: typeof globalThis.fetch;
   readonly #timeoutMs: number;
   readonly #onProgress: CreateFiveEPlayMatchSessionOptions['onProgress'];
+  readonly #seenLogEvents = new Map<number, Set<string>>();
   #current: FiveEPlayMatch;
   #closed = false;
   #recoveringFromRegression = false;
@@ -67,6 +68,12 @@ class FiveEPlayMatchSessionImpl implements FiveEPlayMatchSession {
     this.#onProgress = options.onProgress;
     this.#externalSignal = options.signal;
     this.#current = capture.result.data;
+    for (const [mapNumber, log] of capture.logs) {
+      this.#seenLogEvents.set(
+        mapNumber,
+        new Set(log.rows.map((row) => logEventIdentity(transformLogRecord(row)))),
+      );
+    }
     this.#onExternalAbort = () => { void this.close(); };
     options.signal?.addEventListener('abort', this.#onExternalAbort, { once: true });
     this.#queue.push({
@@ -192,8 +199,31 @@ class FiveEPlayMatchSessionImpl implements FiveEPlayMatchSession {
       toVersion: null,
       rows: [],
     };
+    const seen = this.#seenLogEvents.get(event.mapNumber) ?? new Set<string>();
+    const identity = logEventIdentity(event);
+    const nextToVersion = text(data.to_ver);
+    if (seen.has(identity)) {
+      if (
+        nextToVersion !== null &&
+        (existing.toVersion === null || compareUpdateVersions(existing.toVersion, nextToVersion) < 0)
+      ) {
+        existing.toVersion = nextToVersion;
+        this.#capture.logs.set(event.mapNumber, existing);
+        this.#current = buildFiveEPlayMatch({
+          identity: this.#capture.identity,
+          capturedAt: new Date().toISOString(),
+          detailData: this.#capture.detailData,
+          analysisData: this.#capture.analysisData,
+          logs: this.#capture.logs,
+          community: this.#capture.community,
+        });
+      }
+      return;
+    }
+    seen.add(identity);
+    this.#seenLogEvents.set(event.mapNumber, seen);
     existing.rows.push(info);
-    existing.toVersion = text(data.to_ver) ?? existing.toVersion;
+    existing.toVersion = nextToVersion ?? existing.toVersion;
     this.#capture.logs.set(event.mapNumber, existing);
     const capturedAt = new Date().toISOString();
     this.#current = buildFiveEPlayMatch({

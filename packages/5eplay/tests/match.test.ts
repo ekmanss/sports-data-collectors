@@ -600,6 +600,58 @@ test('maintains a typed snapshot from MQTT state and log updates', async () => {
   assert.equal(requests.filter((url) => url.includes('/api/restrict/matchscore')).length, 2);
 });
 
+test('suppresses replayed MQTT log versions without hiding later events', async () => {
+  const requests: string[] = [];
+  const sockets: FakeWebSocket[] = [];
+  const session = await createFiveEPlayMatchSession(identity.id, {
+    fetch: mockFetch(requests),
+    webSocketFactory: () => {
+      const socket = new FakeWebSocket();
+      sockets.push(socket);
+      return socket;
+    },
+    timeoutMs: 2_000,
+  });
+  try {
+    const iterator = session[Symbol.asyncIterator]();
+    assert.equal((await iterator.next()).value?.type, 'snapshot');
+    const logSocket = sockets.find((socket) => socket.topic?.includes('/event/log/'))!;
+    const publishLog = (updateVersion: string, round: string) => logSocket.publish({
+      event_name: 'csgo-event-log',
+      data: {
+        from_ver: '2',
+        to_ver: updateVersion,
+        info: {
+          update_version: updateVersion,
+          match_id: identity.id,
+          bout_id: `${identity.id}_2`,
+          bout_num: '2',
+          map_name: 'Inferno',
+          log_info: JSON.stringify({
+            type: '1',
+            round_start: { round_num: round, map: 'Inferno', bout_num: '2' },
+          }),
+        },
+      },
+    });
+
+    publishLog('3', '12');
+    const first = await iterator.next();
+    assert.equal(first.value?.type === 'log' ? first.value.event.updateVersion : null, '3');
+
+    publishLog('3', '12');
+    publishLog('4', '13');
+    const next = await iterator.next();
+    assert.equal(next.value?.type === 'log' ? next.value.event.updateVersion : null, '4');
+    assert.deepEqual(
+      session.snapshot().current?.eventLog.events.map((event) => event.updateVersion),
+      ['3', '4'],
+    );
+  } finally {
+    await session.close();
+  }
+});
+
 test('resyncs HTTP state and suppresses transient MQTT score replay after a regression', async () => {
   const requests: string[] = [];
   const sockets: FakeWebSocket[] = [];

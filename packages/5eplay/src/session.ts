@@ -1,17 +1,39 @@
 import { AsyncQueue } from './async_queue.js';
 import { captureFiveEPlayMatch, type CapturedFiveEPlayMatch } from './capture.js';
-import { FiveEPlayError } from './errors.js';
+import { asFiveEPlayError, FiveEPlayError } from './errors.js';
 import { transformLogRecord } from './log.js';
 import { MqttTopicConnection } from './mqtt.js';
 import { buildFiveEPlayMatch, mergeDetailData } from './transform.js';
 import type {
   CreateFiveEPlayMatchSessionOptions,
+  FiveEPlayMap,
   FiveEPlayMatch,
   FiveEPlayMatchSession,
   FiveEPlayProgressEvent,
   FiveEPlayRealtimeUpdate,
 } from './types.js';
 import { record, text } from './value.js';
+
+function matchingTeam(map: FiveEPlayMap, teamId: string | null, index: number) {
+  return teamId === null
+    ? map.teams[index]
+    : map.teams.find((team) => team.teamId === teamId);
+}
+
+function realtimeProgressRegressed(previous: FiveEPlayMatch, next: FiveEPlayMatch): boolean {
+  for (const previousMap of previous.maps) {
+    const nextMap = next.maps.find((map) => map.number === previousMap.number);
+    if (!nextMap) return true;
+    if (previousMap.status === 'completed' && nextMap.status !== 'completed') return true;
+    if (previousMap.status === 'live' && !['live', 'completed'].includes(nextMap.status)) return true;
+    for (const [index, previousTeam] of previousMap.teams.entries()) {
+      if (previousTeam.score === null) continue;
+      const nextScore = matchingTeam(nextMap, previousTeam.teamId, index)?.score;
+      if (nextScore === null || nextScore === undefined || nextScore < previousTeam.score) return true;
+    }
+  }
+  return false;
+}
 
 class FiveEPlayMatchSessionImpl implements FiveEPlayMatchSession {
   readonly id: string;
@@ -22,18 +44,31 @@ class FiveEPlayMatchSessionImpl implements FiveEPlayMatchSession {
   readonly #connections: MqttTopicConnection[] = [];
   readonly #externalSignal: AbortSignal | undefined;
   readonly #onExternalAbort: () => void;
+  readonly #fetch: typeof globalThis.fetch;
+  readonly #timeoutMs: number;
+  readonly #onProgress: CreateFiveEPlayMatchSessionOptions['onProgress'];
   #current: FiveEPlayMatch;
   #closed = false;
+  #recoveringFromRegression = false;
+  #resyncing: Promise<void> | null = null;
 
-  constructor(capture: CapturedFiveEPlayMatch, controller: AbortController, externalSignal?: AbortSignal) {
+  constructor(
+    capture: CapturedFiveEPlayMatch,
+    controller: AbortController,
+    fetchImpl: typeof globalThis.fetch,
+    options: CreateFiveEPlayMatchSessionOptions,
+  ) {
     this.id = capture.identity.id;
     this.initial = capture.result;
     this.#capture = capture;
     this.#controller = controller;
-    this.#externalSignal = externalSignal;
+    this.#fetch = fetchImpl;
+    this.#timeoutMs = options.timeoutMs ?? 15_000;
+    this.#onProgress = options.onProgress;
+    this.#externalSignal = options.signal;
     this.#current = capture.result.data;
     this.#onExternalAbort = () => { void this.close(); };
-    externalSignal?.addEventListener('abort', this.#onExternalAbort, { once: true });
+    options.signal?.addEventListener('abort', this.#onExternalAbort, { once: true });
     this.#queue.push({
       type: 'snapshot',
       capturedAt: this.#current.capturedAt,
@@ -60,21 +95,86 @@ class FiveEPlayMatchSessionImpl implements FiveEPlayMatchSession {
     const root = record(payload);
     if (text(root.event_name) !== 'csgo-detail') return;
     const data = record(root.data);
-    this.#capture.detailData = mergeDetailData(this.#capture.detailData, data);
+    const detailData = mergeDetailData(this.#capture.detailData, data);
     const capturedAt = new Date().toISOString();
-    this.#current = buildFiveEPlayMatch({
+    const next = buildFiveEPlayMatch({
       identity: this.#capture.identity,
       capturedAt,
-      detailData: this.#capture.detailData,
+      detailData,
       analysisData: this.#capture.analysisData,
       logs: this.#capture.logs,
       community: this.#capture.community,
     });
+    if (realtimeProgressRegressed(this.#current, next)) {
+      if (!this.#recoveringFromRegression) this.#startResync();
+      return;
+    }
+    this.#recoveringFromRegression = false;
+    this.#capture.detailData = detailData;
+    this.#current = next;
     this.#queue.push({
       type: 'state',
       capturedAt,
       stateVersion: this.#current.stateVersion,
       snapshot: structuredClone(this.#current),
+    });
+  }
+
+  #startResync(): void {
+    if (this.#closed || this.#resyncing !== null) return;
+    this.#recoveringFromRegression = true;
+    this.#onProgress?.({
+      operation: 'match-realtime',
+      stage: 'streaming-realtime',
+      message: 'Realtime map progress regressed; resyncing the authoritative HTTP snapshot',
+      timestamp: new Date().toISOString(),
+    });
+    const trusted = this.#current;
+    this.#resyncing = this.#resyncFromHttp(trusted)
+      .catch((error) => this.#fail(error))
+      .finally(() => { this.#resyncing = null; });
+  }
+
+  async #resyncFromHttp(trusted: FiveEPlayMatch): Promise<void> {
+    const refreshed = await captureFiveEPlayMatch(
+      this.id,
+      { fetch: this.#fetch },
+      {
+        timeoutMs: this.#timeoutMs,
+        signal: this.#controller.signal,
+        includeAnalysis: false,
+        includeCommunityRatings: false,
+        includeLogs: false,
+      },
+    );
+    if (this.#closed) return;
+    const capturedAt = refreshed.result.data.capturedAt;
+    const next = buildFiveEPlayMatch({
+      identity: this.#capture.identity,
+      capturedAt,
+      detailData: refreshed.detailData,
+      analysisData: this.#capture.analysisData,
+      logs: this.#capture.logs,
+      community: this.#capture.community,
+    });
+    if (!this.#recoveringFromRegression && realtimeProgressRegressed(this.#current, next)) return;
+    const rollbackConfirmed = realtimeProgressRegressed(trusted, next);
+    this.#capture.detailData = refreshed.detailData;
+    this.#current = next;
+    this.#recoveringFromRegression = !rollbackConfirmed;
+    this.#queue.push({
+      type: 'state',
+      capturedAt,
+      stateVersion: next.stateVersion,
+      snapshot: structuredClone(next),
+    });
+    this.#onProgress?.({
+      operation: 'match-realtime',
+      stage: 'streaming-realtime',
+      message: rollbackConfirmed
+        ? 'Authoritative HTTP snapshot confirmed the map rollback'
+        : 'Authoritative HTTP snapshot rejected the transient map rollback',
+      timestamp: new Date().toISOString(),
     });
   }
 
@@ -113,15 +213,26 @@ class FiveEPlayMatchSessionImpl implements FiveEPlayMatchSession {
   }
 
   async close(): Promise<void> {
+    this.#finish(new FiveEPlayError('5EPlay realtime session was closed', {
+      code: 'SESSION_CLOSED', operation: 'match-realtime',
+      stage: 'streaming-realtime', retryable: false, matchId: this.id,
+    }), false);
+  }
+
+  #fail(error: unknown): void {
+    this.#finish(asFiveEPlayError(error, {
+      code: 'REALTIME_CONNECTION_FAILED', operation: 'match-realtime',
+      stage: 'streaming-realtime', retryable: true, matchId: this.id,
+    }), true);
+  }
+
+  #finish(reason: FiveEPlayError, rejectQueue: boolean): void {
     if (this.#closed) return;
     this.#closed = true;
     this.#externalSignal?.removeEventListener('abort', this.#onExternalAbort);
-    this.#controller.abort(new FiveEPlayError('5EPlay realtime session was closed', {
-      code: 'SESSION_CLOSED', operation: 'match-realtime',
-      stage: 'streaming-realtime', retryable: false, matchId: this.id,
-    }));
+    this.#controller.abort(reason);
     for (const connection of this.#connections) connection.close();
-    this.#queue.close();
+    this.#queue.close(rejectQueue ? reason : undefined);
   }
 
   async [Symbol.asyncDispose](): Promise<void> {
@@ -153,8 +264,8 @@ export async function createFiveEPlayMatchSession(
   const capture = await captureFiveEPlayMatch(input, options, options);
   const controller = new AbortController();
   if (options.signal?.aborted) controller.abort(options.signal.reason);
-  const session = new FiveEPlayMatchSessionImpl(capture, controller, options.signal);
   const fetchImpl = options.fetch ?? globalThis.fetch;
+  const session = new FiveEPlayMatchSessionImpl(capture, controller, fetchImpl, options);
   const stateTopic = `csgo/product/detail/${capture.identity.id}`;
   const logTopic = `csgo/product/event/log/${capture.identity.id}`;
   const state = new MqttTopicConnection({

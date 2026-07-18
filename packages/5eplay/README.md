@@ -143,7 +143,8 @@ The first yielded item is the complete HTTP snapshot. Later `state` updates cont
 scoreboard snapshot and `log` updates contain one typed event. `session.snapshot()` returns the
 latest merged state at any time. The session uses one authorized MQTT connection for match state
 and one for event logs, sends keepalives, deduplicates log versions, and reconnects with a bounded
-backoff after an unexpected disconnect.
+backoff after an unexpected disconnect. Provider restart/replay frames that regress a started
+map are withheld until an HTTP resync confirms the rollback or MQTT catches up.
 
 Always close a session, either with `await using`, `await session.close()`, or a `finally` block.
 

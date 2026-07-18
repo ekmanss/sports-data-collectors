@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { getFiveEPlayMatch } from '../src/client.js';
+import { FiveEPlayError } from '../src/errors.js';
 import { matchIdentityFromInput } from '../src/input.js';
 import { getFiveEPlayLiveMatches } from '../src/live_matches.js';
 import {
@@ -18,6 +19,7 @@ import {
   type LogCapture,
 } from '../src/transform.js';
 import type {
+  FiveEPlayTeamMapState,
   FiveEPlayWebSocketLike,
 } from '../src/types.js';
 import {
@@ -226,11 +228,14 @@ function response(data: unknown): Response {
   });
 }
 
-function mockFetch(requests: string[]): typeof fetch {
+function mockFetch(
+  requests: string[],
+  currentDetailData: () => unknown = () => detailData,
+): typeof fetch {
   return async (input, init) => {
     const url = String(input);
     requests.push(url);
-    if (url.endsWith('/data')) return response(detailData);
+    if (url.endsWith('/data')) return response(currentDetailData());
     if (url.endsWith('/analysis_v1')) return response(analysisData);
     if (url.includes('/event/log')) {
       const map = url.includes('_1') ? 1 : 2;
@@ -593,4 +598,192 @@ test('maintains a typed snapshot from MQTT state and log updates', async () => {
     await session.close();
   }
   assert.equal(requests.filter((url) => url.includes('/api/restrict/matchscore')).length, 2);
+});
+
+test('resyncs HTTP state and suppresses transient MQTT score replay after a regression', async () => {
+  const requests: string[] = [];
+  const sockets: FakeWebSocket[] = [];
+  const authoritative = structuredClone(detailData);
+  const session = await createFiveEPlayMatchSession(identity.id, {
+    fetch: mockFetch(requests, () => authoritative),
+    webSocketFactory: () => {
+      const socket = new FakeWebSocket();
+      sockets.push(socket);
+      return socket;
+    },
+    timeoutMs: 2_000,
+  });
+  try {
+    const iterator = session[Symbol.asyncIterator]();
+    assert.equal((await iterator.next()).value?.type, 'snapshot');
+    const stateSocket = sockets.find((socket) => socket.topic?.includes('/detail/'))!;
+    const map = authoritative.match.bouts_state[1]!;
+    stateSocket.publish({
+      event_name: 'csgo-detail',
+      data: {
+        state_ver: '101',
+        match: {
+          bouts_state: [{
+            ...map,
+            t1_stats: { ...map.t1_stats, all_score: '0', quick_score: '0' },
+            t2_stats: { ...map.t2_stats, all_score: '0', quick_score: '0' },
+          }],
+        },
+      },
+    });
+
+    const resynced = await iterator.next();
+    assert.equal(resynced.value?.type, 'state');
+    assert.deepEqual(
+      resynced.value?.snapshot.current?.teams.map(
+        (team: FiveEPlayTeamMapState) => team.score,
+      ),
+      [7, 4],
+    );
+    assert.equal(requests.filter((url) => url.endsWith('/data')).length, 2);
+
+    stateSocket.publish({
+      event_name: 'csgo-detail',
+      data: {
+        state_ver: '101',
+        match: {
+          bouts_state: [{
+            ...map,
+            t1_stats: { ...map.t1_stats, all_score: '5', quick_score: '5' },
+            t2_stats: { ...map.t2_stats, all_score: '3', quick_score: '3' },
+          }],
+        },
+      },
+    });
+    assert.deepEqual(session.snapshot().current?.teams.map((team) => team.score), [7, 4]);
+    assert.equal(requests.filter((url) => url.endsWith('/data')).length, 2);
+
+    stateSocket.publish({
+      event_name: 'csgo-detail',
+      data: {
+        state_ver: '101',
+        match: {
+          bouts_state: [{
+            ...map,
+            t1_stats: { ...map.t1_stats, all_score: '8', quick_score: '8' },
+          }],
+        },
+      },
+    });
+    const recovered = await iterator.next();
+    assert.deepEqual(
+      recovered.value?.snapshot.current?.teams.map(
+        (team: FiveEPlayTeamMapState) => team.score,
+      ),
+      [8, 4],
+    );
+  } finally {
+    await session.close();
+  }
+});
+
+test('accepts a regressive score when the authoritative HTTP snapshot confirms it', async () => {
+  const requests: string[] = [];
+  const sockets: FakeWebSocket[] = [];
+  const authoritative = structuredClone(detailData);
+  const session = await createFiveEPlayMatchSession(identity.id, {
+    fetch: mockFetch(requests, () => authoritative),
+    webSocketFactory: () => {
+      const socket = new FakeWebSocket();
+      sockets.push(socket);
+      return socket;
+    },
+    timeoutMs: 2_000,
+  });
+  try {
+    const iterator = session[Symbol.asyncIterator]();
+    assert.equal((await iterator.next()).value?.type, 'snapshot');
+    const stateSocket = sockets.find((socket) => socket.topic?.includes('/detail/'))!;
+    const map = authoritative.match.bouts_state[1]!;
+    map.t1_stats.all_score = '0';
+    map.t1_stats.quick_score = '0';
+    map.t2_stats.all_score = '0';
+    map.t2_stats.quick_score = '0';
+    stateSocket.publish({
+      event_name: 'csgo-detail',
+      data: { state_ver: '101', match: { bouts_state: [map] } },
+    });
+
+    const resynced = await iterator.next();
+    assert.deepEqual(
+      resynced.value?.snapshot.current?.teams.map(
+        (team: FiveEPlayTeamMapState) => team.score,
+      ),
+      [0, 0],
+    );
+
+    map.t1_stats.all_score = '1';
+    map.t1_stats.quick_score = '1';
+    stateSocket.publish({
+      event_name: 'csgo-detail',
+      data: { state_ver: '101', match: { bouts_state: [map] } },
+    });
+    const continued = await iterator.next();
+    assert.deepEqual(
+      continued.value?.snapshot.current?.teams.map(
+        (team: FiveEPlayTeamMapState) => team.score,
+      ),
+      [1, 0],
+    );
+  } finally {
+    await session.close();
+  }
+});
+
+test('fails the realtime session retryably when authoritative resync fails', async () => {
+  const requests: string[] = [];
+  const sockets: FakeWebSocket[] = [];
+  const baseFetch = mockFetch(requests);
+  let detailRequestCount = 0;
+  const fetchImpl: typeof fetch = async (input, init) => {
+    if (String(input).endsWith('/data')) {
+      detailRequestCount += 1;
+      if (detailRequestCount === 2) {
+        return new Response('temporarily unavailable', { status: 503 });
+      }
+    }
+    return await baseFetch(input, init);
+  };
+  const session = await createFiveEPlayMatchSession(identity.id, {
+    fetch: fetchImpl,
+    webSocketFactory: () => {
+      const socket = new FakeWebSocket();
+      sockets.push(socket);
+      return socket;
+    },
+    timeoutMs: 2_000,
+  });
+  try {
+    const iterator = session[Symbol.asyncIterator]();
+    assert.equal((await iterator.next()).value?.type, 'snapshot');
+    const stateSocket = sockets.find((socket) => socket.topic?.includes('/detail/'))!;
+    const map = detailData.match.bouts_state[1]!;
+    stateSocket.publish({
+      event_name: 'csgo-detail',
+      data: {
+        state_ver: '101',
+        match: {
+          bouts_state: [{
+            ...map,
+            t1_stats: { ...map.t1_stats, all_score: '0', quick_score: '0' },
+            t2_stats: { ...map.t2_stats, all_score: '0', quick_score: '0' },
+          }],
+        },
+      },
+    });
+
+    await assert.rejects(iterator.next(), (error: unknown) => {
+      assert.ok(error instanceof FiveEPlayError);
+      assert.equal(error.retryable, true);
+      assert.equal(error.matchId, identity.id);
+      return true;
+    });
+  } finally {
+    await session.close();
+  }
 });

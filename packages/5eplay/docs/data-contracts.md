@@ -72,6 +72,12 @@ Every update includes a complete immutable snapshot. MQTT messages can be partia
 merged by `bout_num`, while match/tournament/global sections are shallow-merged over the verified
 HTTP baseline. Log events are merged by `updateVersion` and remain chronological.
 
+If an MQTT state regresses a started map's team score or status, the session withholds that state
+and performs one authoritative HTTP resync. A rollback confirmed by HTTP becomes the new baseline;
+otherwise the session keeps the trusted score and suppresses replay frames until MQTT catches up.
+An unsuccessful resync terminates the async iterable with a retryable error instead of publishing
+an unverified regressive snapshot.
+
 The credential endpoint's `client_id`, `username`, and `password` are transport-only. They are not
 part of either contract.
 

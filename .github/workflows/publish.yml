@@ -3,7 +3,6 @@ name: Publish
 on:
   push:
     tags:
-      - '@ekmanss/hltv@*'
       - '@ekmanss/5eplay@*'
 
 permissions:
@@ -28,20 +27,8 @@ jobs:
         id: package
         shell: bash
         run: |
-          case "${GITHUB_REF_NAME}" in
-            @ekmanss/hltv@*)
-              name='@ekmanss/hltv'
-              directory='packages/hltv'
-              ;;
-            @ekmanss/5eplay@*)
-              name='@ekmanss/5eplay'
-              directory='packages/5eplay'
-              ;;
-            *)
-              echo "Unsupported release tag: ${GITHUB_REF_NAME}" >&2
-              exit 1
-              ;;
-          esac
+          name='@ekmanss/5eplay'
+          directory='packages/5eplay'
           version="$(node -p "require('./${directory}/package.json').version")"
           test "${GITHUB_REF_NAME}" = "${name}@${version}"
           echo "name=${name}" >> "${GITHUB_OUTPUT}"

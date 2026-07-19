@@ -1,29 +1,25 @@
-# Publishing packages
+# Publishing @ekmanss/5eplay
 
 ## Standard path: GitHub Actions OIDC
 
-Existing packages are published only by `.github/workflows/publish.yml` using npm Trusted
+The package is published only by `.github/workflows/publish.yml` using npm Trusted
 Publishing and GitHub Actions OIDC. Do not run `npm login` or `npm publish` locally, do not create an
 `NPM_TOKEN` GitHub secret, and do not pass a local npm credential into CI.
 
-Run the package-specific release command from a clean, up-to-date `main` branch:
+Run the release command from a clean, up-to-date `main` branch:
 
 ```bash
-HLTV_MATCH_URL='https://www.hltv.org/matches/<live-id>/<slug>' \
-HLTV_COMPLETED_MATCH_URL='https://www.hltv.org/matches/<completed-id>/<slug>' \
-pnpm release:hltv
-
 FIVEEPLAY_MATCH_URL='https://event.5eplay.com/csgo/matches/<match-id>' \
-pnpm release:5eplay
+pnpm release
 ```
 
-Each command:
+The command:
 
 1. Requires a clean `main` exactly matching `origin/main` and an authenticated GitHub CLI.
-2. Confirms that the package already exists on npm; a missing package stops with bootstrap guidance.
+2. Confirms that `@ekmanss/5eplay` already exists on npm; a missing package stops with bootstrap guidance.
 3. Runs deterministic verification and the package's real-network smoke tests.
 4. Computes the next UTC `YYYYMMDD.REVISION.0` version and verifies the package tarball.
-5. Creates the release commit and immutable `@ekmanss/<package>@<version>` tag.
+5. Creates the release commit and immutable `@ekmanss/5eplay@<version>` tag.
 6. Pushes `main` and the tag, waits for the GitHub Actions publish job, and verifies npm visibility.
 
 The local command never authenticates to npm and never publishes directly. The workflow has only
@@ -32,34 +28,34 @@ workflow-specific publish credential and generates provenance for public package
 
 ## Required npm configuration
 
-Every existing package must have exactly this Trusted Publisher relationship before a release:
+The package must have exactly this Trusted Publisher relationship before a release:
 
 - Provider: GitHub Actions
 - Repository: `ekmanss/sports-data-collectors`
 - Workflow file: `publish.yml`
 - Allowed action: `npm publish`
 
-The package manifest's `repository.url` must continue to identify this GitHub repository. The
+Its manifest's `repository.url` must continue to identify this GitHub repository. The
 workflow must run on a GitHub-hosted runner with npm 11.5.1 or newer and `id-token: write`.
 
-## One-time bootstrap for a brand-new npm package
+## One-time bootstrap
 
-npm requires a package to exist before Trusted Publishing can be configured. This is the only case
-where a local first publish is allowed:
+npm requires a package to exist before Trusted Publishing can be configured. If the package ever
+needs to be bootstrapped in a new registry, this is the only case where a local first publish is
+allowed:
 
-1. Add the package to the workspace and to the tag routing in `publish.yml`.
-2. Verify and manually publish its first public version with 2FA.
-3. Immediately create the trust relationship:
+1. Verify and manually publish its first public version with 2FA.
+2. Immediately create the trust relationship:
 
    ```bash
-   npx --yes npm@11.18.0 trust github '@ekmanss/<package>' \
+   npx --yes npm@11.18.0 trust github '@ekmanss/5eplay' \
      --file publish.yml \
      --repo ekmanss/sports-data-collectors \
      --allow-publish \
      --yes
    ```
 
-4. Run `npm logout` after bootstrap. All subsequent releases must use the standard OIDC path.
+3. Run `npm logout` after bootstrap. All subsequent releases must use the standard OIDC path.
 
 ## Failure handling
 

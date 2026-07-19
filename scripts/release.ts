@@ -6,28 +6,10 @@ import { fileURLToPath } from 'node:url';
 const ROOT = resolve(import.meta.dirname, '..');
 const REPOSITORY = 'ekmanss/sports-data-collectors';
 const WORKFLOW = 'publish.yml';
-
-interface ReleaseTarget {
-  name: '@ekmanss/hltv' | '@ekmanss/5eplay';
-  directory: 'packages/hltv' | 'packages/5eplay';
-  requiredEnvironment: string[];
-  liveTestScripts: string[];
-}
-
-const TARGETS: Record<string, ReleaseTarget> = {
-  hltv: {
-    name: '@ekmanss/hltv',
-    directory: 'packages/hltv',
-    requiredEnvironment: ['HLTV_MATCH_URL', 'HLTV_COMPLETED_MATCH_URL'],
-    liveTestScripts: ['test:live'],
-  },
-  '5eplay': {
-    name: '@ekmanss/5eplay',
-    directory: 'packages/5eplay',
-    requiredEnvironment: ['FIVEEPLAY_MATCH_URL'],
-    liveTestScripts: ['test:live:5eplay', 'test:live:5eplay:list'],
-  },
-};
+const PACKAGE_NAME = '@ekmanss/5eplay';
+const PACKAGE_DIRECTORY = 'packages/5eplay';
+const REQUIRED_ENVIRONMENT = ['FIVEEPLAY_MATCH_URL'];
+const LIVE_TEST_SCRIPTS = ['test:live', 'test:live:list'];
 
 function run(command: string, args: string[], capture = false): string {
   const result = spawnSync(command, args, {
@@ -43,17 +25,8 @@ function run(command: string, args: string[], capture = false): string {
   return String(result.stdout ?? '').trim();
 }
 
-export function resolveTarget(input: string): ReleaseTarget {
-  const normalized = input.trim().replace(/^@ekmanss\//, '');
-  const target = TARGETS[normalized];
-  if (!target) {
-    throw new Error(`unsupported package ${JSON.stringify(input)}; expected hltv or 5eplay`);
-  }
-  return target;
-}
-
-function registryVersions(target: ReleaseTarget): string[] {
-  const result = spawnSync('npm', ['view', target.name, 'versions', '--json'], {
+function registryVersions(): string[] {
+  const result = spawnSync('npm', ['view', PACKAGE_NAME, 'versions', '--json'], {
     cwd: ROOT,
     encoding: 'utf8',
     stdio: 'pipe',
@@ -62,7 +35,7 @@ function registryVersions(target: ReleaseTarget): string[] {
     const detail = `${result.stdout ?? ''}${result.stderr ?? ''}`;
     if (detail.includes('E404')) {
       throw new Error(
-        `${target.name} does not exist on npm. Bootstrap it once using docs/releasing.md, `
+        `${PACKAGE_NAME} does not exist on npm. Bootstrap it once using docs/releasing.md, `
         + 'configure Trusted Publishing, then use this OIDC release command.',
       );
     }
@@ -102,9 +75,9 @@ async function workflowRunId(tag: string, headSha: string): Promise<number> {
   throw new Error(`GitHub Actions run for ${tag} did not appear within 60 seconds`);
 }
 
-async function waitForRegistry(target: ReleaseTarget, version: string): Promise<void> {
+async function waitForRegistry(version: string): Promise<void> {
   for (let attempt = 0; attempt < 30; attempt += 1) {
-    const result = spawnSync('npm', ['view', `${target.name}@${version}`, 'version', '--json'], {
+    const result = spawnSync('npm', ['view', `${PACKAGE_NAME}@${version}`, 'version', '--json'], {
       cwd: ROOT,
       encoding: 'utf8',
       stdio: 'pipe',
@@ -113,15 +86,13 @@ async function waitForRegistry(target: ReleaseTarget, version: string): Promise<
     if (result.status === 0 && JSON.parse(String(result.stdout).trim()) === version) return;
     await delay(2_000);
   }
-  throw new Error(`${target.name}@${version} was not visible on npm within 60 seconds`);
+  throw new Error(`${PACKAGE_NAME}@${version} was not visible on npm within 60 seconds`);
 }
 
 function usage(): string {
   return [
     'Usage:',
-    '  pnpm release:hltv',
-    '  pnpm release:5eplay',
-    '  pnpm release -- <hltv|5eplay>',
+    '  pnpm release',
     '',
     'The command verifies locally, commits the version, pushes main and the release tag,',
     'then waits for GitHub Actions to publish with npm Trusted Publishing (OIDC).',
@@ -133,16 +104,14 @@ async function main(): Promise<void> {
   const rawArguments = process.argv.slice(2);
   const arguments_ = rawArguments[0] === '--' ? rawArguments.slice(1) : rawArguments;
   const input = arguments_[0];
-  if (!input || input === '--help' || input === '-h') {
+  if (input === '--help' || input === '-h') {
     process.stdout.write(`${usage()}\n`);
-    if (!input) process.exitCode = 2;
     return;
   }
-  if (arguments_.length !== 1) {
-    throw new Error(`expected exactly one package argument\n${usage()}`);
+  if (arguments_.length !== 0) {
+    throw new Error(`expected no arguments\n${usage()}`);
   }
-  const target = resolveTarget(input);
-  const missingEnvironment = target.requiredEnvironment.filter((name) => !process.env[name]);
+  const missingEnvironment = REQUIRED_ENVIRONMENT.filter((name) => !process.env[name]);
   if (missingEnvironment.length) {
     throw new Error(`required real-network release variables are missing: ${missingEnvironment.join(', ')}`);
   }
@@ -162,32 +131,32 @@ async function main(): Promise<void> {
   run('gh', ['auth', 'status']);
   run('gh', ['workflow', 'view', WORKFLOW, '--repo', REPOSITORY]);
 
-  const versions = registryVersions(target);
+  const versions = registryVersions();
   run('pnpm', ['verify']);
-  for (const script of target.liveTestScripts) run('pnpm', [script]);
+  for (const script of LIVE_TEST_SCRIPTS) run('pnpm', [script]);
 
-  const tags = run('git', ['tag', '--list', `${target.name}@*`], true)
+  const tags = run('git', ['tag', '--list', `${PACKAGE_NAME}@*`], true)
     .split('\n')
     .filter(Boolean)
-    .map((tag) => tag.slice(`${target.name}@`.length));
+    .map((tag) => tag.slice(`${PACKAGE_NAME}@`.length));
   const version = nextVersion([...versions, ...tags]);
-  const tag = `${target.name}@${version}`;
-  const packageJsonPath = resolve(ROOT, target.directory, 'package.json');
+  const tag = `${PACKAGE_NAME}@${version}`;
+  const packageJsonPath = resolve(ROOT, PACKAGE_DIRECTORY, 'package.json');
   const original = await readFile(packageJsonPath, 'utf8');
   const manifest = JSON.parse(original) as Record<string, unknown>;
   manifest.version = version;
   await writeFile(packageJsonPath, `${JSON.stringify(manifest, null, 2)}\n`);
 
   try {
-    run('pnpm', ['--filter', target.name, 'build']);
-    run('pnpm', ['--filter', target.name, 'exec', 'npm', 'pack', '--dry-run', '--ignore-scripts']);
+    run('pnpm', ['--filter', PACKAGE_NAME, 'build']);
+    run('pnpm', ['--filter', PACKAGE_NAME, 'exec', 'npm', 'pack', '--dry-run', '--ignore-scripts']);
   } catch (error) {
     await writeFile(packageJsonPath, original);
     throw error;
   }
 
-  run('git', ['add', `${target.directory}/package.json`]);
-  run('git', ['commit', '-m', `release(${target.name}): ${version}`]);
+  run('git', ['add', `${PACKAGE_DIRECTORY}/package.json`]);
+  run('git', ['commit', '-m', `release(${PACKAGE_NAME}): ${version}`]);
   run('git', ['tag', tag]);
   const releaseSha = run('git', ['rev-parse', 'HEAD'], true);
   run('git', ['push', 'origin', 'main']);
@@ -195,14 +164,14 @@ async function main(): Promise<void> {
 
   const runId = await workflowRunId(tag, releaseSha);
   run('gh', ['run', 'watch', String(runId), '--repo', REPOSITORY, '--exit-status']);
-  await waitForRegistry(target, version);
+  await waitForRegistry(version);
 
   process.stdout.write([
     '',
-    `Published ${target.name}@${version} through GitHub Actions OIDC.`,
+    `Published ${PACKAGE_NAME}@${version} through GitHub Actions OIDC.`,
     `Tag: ${tag}`,
     `Workflow: https://github.com/${REPOSITORY}/actions/runs/${runId}`,
-    `npm: https://www.npmjs.com/package/${target.name}/v/${version}`,
+    `npm: https://www.npmjs.com/package/${PACKAGE_NAME}/v/${version}`,
     '',
   ].join('\n'));
 }

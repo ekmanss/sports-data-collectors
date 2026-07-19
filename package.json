@@ -1,21 +1,18 @@
 {
-  "name": "sports-data-collectors",
+  "name": "5eplay-data-collector",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.11.0",
   "scripts": {
-    "check": "tsc --noEmit -p tsconfig.json && pnpm --filter @ekmanss/hltv check && pnpm --filter @ekmanss/5eplay check",
-    "test": "tsx --test scripts/release.test.ts && pnpm --filter @ekmanss/hltv test && pnpm --filter @ekmanss/5eplay test",
-    "test:live": "pnpm --filter @ekmanss/hltv test:live",
-    "test:live:5eplay": "pnpm --filter @ekmanss/5eplay test:live",
-    "test:live:5eplay:list": "pnpm --filter @ekmanss/5eplay test:live:list",
+    "check": "tsc --noEmit -p tsconfig.json && pnpm --filter @ekmanss/5eplay check",
+    "test": "tsx --test scripts/release.test.ts && pnpm --filter @ekmanss/5eplay test",
+    "test:live": "pnpm --filter @ekmanss/5eplay test:live",
+    "test:live:list": "pnpm --filter @ekmanss/5eplay test:live:list",
     "5eplay:md": "tsx packages/5eplay/src/cli.ts",
-    "build": "pnpm --filter @ekmanss/hltv build && pnpm --filter @ekmanss/5eplay build",
+    "build": "pnpm --filter @ekmanss/5eplay build",
     "verify": "pnpm check && pnpm test && pnpm build",
-    "release": "tsx scripts/release.ts",
-    "release:hltv": "tsx scripts/release.ts hltv",
-    "release:5eplay": "tsx scripts/release.ts 5eplay"
+    "release": "tsx scripts/release.ts"
   },
   "devDependencies": {
     "@types/node": "24.13.3",

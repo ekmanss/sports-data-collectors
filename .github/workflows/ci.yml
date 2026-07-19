@@ -19,5 +19,4 @@ jobs:
       - run: corepack enable
       - run: pnpm install --frozen-lockfile
       - run: pnpm verify
-      - run: pnpm --filter @ekmanss/hltv exec npm pack --dry-run --ignore-scripts
       - run: pnpm --filter @ekmanss/5eplay exec npm pack --dry-run --ignore-scripts

@@ -1,7 +1,8 @@
 # 5EPlay data collector
 
 Workspace for the public [`@ekmanss/5eplay`](packages/5eplay) TypeScript package. It provides
-live-match discovery, complete 5EPlay CS2 match snapshots, MQTT live updates, and Markdown reports.
+complete current schedules, live-match discovery, complete 5EPlay CS2 match snapshots, MQTT live
+updates, and Markdown reports.
 
 See the [package README](packages/5eplay/README.md) for the API, data coverage, and usage examples.
 
@@ -18,6 +19,7 @@ Real-network validation is intentionally local-only:
 FIVEEPLAY_MATCH_URL='https://event.5eplay.com/csgo/matches/<match-id>' \
 pnpm test:live
 pnpm test:live:list
+pnpm test:live:schedule
 ```
 
 Generate a complete formatted Markdown report from a 5EPlay match:

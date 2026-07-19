@@ -9,6 +9,7 @@
     "test": "tsx --test scripts/release.test.ts && pnpm --filter @ekmanss/5eplay test",
     "test:live": "pnpm --filter @ekmanss/5eplay test:live",
     "test:live:list": "pnpm --filter @ekmanss/5eplay test:live:list",
+    "test:live:schedule": "pnpm --filter @ekmanss/5eplay test:live:schedule",
     "5eplay:md": "tsx packages/5eplay/src/cli.ts",
     "build": "pnpm --filter @ekmanss/5eplay build",
     "verify": "pnpm check && pnpm test && pnpm build",

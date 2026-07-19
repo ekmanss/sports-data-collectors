@@ -84,6 +84,19 @@ an unverified regressive snapshot.
 The credential endpoint's `client_id`, `username`, and `password` are transport-only. They are not
 part of either contract.
 
+## Schedule 1.0.0
+
+`getFiveEPlaySchedule()` returns every row in the provider's current CS2 schedule, including live
+and upcoming series. It preserves source ordering and returns the same lightweight match identity,
+schedule, tournament, team, series-score, map-summary, and current-map fields as the live-list API.
+Provider series state `1` (or any live map) becomes `live`; series state `0` or `-1` becomes
+`upcoming`; unrecognized states remain `unknown` so the collector does not silently lose a row.
+
+The source has no total count or pagination cursor. The collector requests ordered 20-row pages
+sequentially, deduplicates canonical match IDs, and stops at the first short page. A full page that
+contains no new IDs is rejected as an invalid retryable response, and a 100-page safety limit
+prevents unbounded pagination. The default 15-second timeout covers the entire scan.
+
 ## Live Matches 1.0.0
 
 `getFiveEPlayLiveMatches()` returns a lightweight `{ data, diagnostics }` result intended for

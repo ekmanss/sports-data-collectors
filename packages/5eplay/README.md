@@ -1,8 +1,8 @@
 # @ekmanss/5eplay
 
-Typed 5EPlay CS2 match details and live updates for Node.js 22+. The collector uses 5EPlay's
-JSON endpoints and MQTT-over-WebSocket feed directly; it does not launch a browser, execute page
-JavaScript, scrape rendered DOM, or require a logged-in account.
+Typed 5EPlay CS2 schedules, match details, and live updates for Node.js 22+. The collector uses
+5EPlay's JSON endpoints and MQTT-over-WebSocket feed directly; it does not launch a browser,
+execute page JavaScript, scrape rendered DOM, or require a logged-in account.
 
 ## Install
 
@@ -39,6 +39,29 @@ Chat messages, login state, cookies, and account-specific actions are deliberate
 `getFiveEPlayMatch()` accepts either the canonical URL or a `csgo_mc_<id>` identifier. It returns
 `{ data, diagnostics }`. Independent HTTP sections are fetched concurrently; a normal capture does
 not open the realtime credential endpoint.
+
+## Complete current schedule
+
+Use the schedule API when you need every currently listed CS2 match, including both live and
+upcoming series:
+
+```ts
+import { getFiveEPlaySchedule } from '@ekmanss/5eplay';
+
+const { data, diagnostics } = await getFiveEPlaySchedule();
+
+for (const match of data.matches) {
+  console.log(match.status, match.id, match.scheduledAtUnixSeconds, match.teams);
+}
+
+console.log(`Fetched ${data.matches.length} matches in ${diagnostics.requests.length} pages`);
+```
+
+The collector follows the same public JSON pagination used by the website, preserves provider
+ordering, removes duplicate match IDs across page boundaries, and stops when the source returns a
+short page. It uses an overall 15-second timeout by default and never opens match-detail, analysis,
+log, community-rating, Markdown, browser, or realtime endpoints. Schedule rows use `live`,
+`upcoming`, or `unknown` status; unknown provider states are retained rather than silently dropped.
 
 ## Currently live matches
 

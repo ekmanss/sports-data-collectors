@@ -21,7 +21,7 @@ export type FiveEPlayErrorCode =
   | 'SESSION_CLOSED'
   | 'INTERNAL_ERROR';
 
-export type FiveEPlayOperation = 'match-detail' | 'match-realtime' | 'live-matches';
+export type FiveEPlayOperation = 'match-detail' | 'match-realtime' | 'live-matches' | 'schedule';
 
 export type FiveEPlayStage =
   | 'validating-input'
@@ -30,6 +30,7 @@ export type FiveEPlayStage =
   | 'fetching-logs'
   | 'fetching-community'
   | 'fetching-live-matches'
+  | 'fetching-schedule'
   | 'building-output'
   | 'connecting-realtime'
   | 'streaming-realtime'
@@ -65,6 +66,8 @@ export interface GetFiveEPlayLiveMatchesOptions {
   signal?: AbortSignal;
   onProgress?: (event: FiveEPlayProgressEvent) => void;
 }
+
+export interface GetFiveEPlayScheduleOptions extends GetFiveEPlayLiveMatchesOptions {}
 
 export interface FiveEPlayMatchIdentity {
   id: string;
@@ -441,7 +444,8 @@ export interface FiveEPlayMatch {
 }
 
 export interface FiveEPlayRequestDiagnostic {
-  kind: 'match' | 'analysis' | 'log' | 'community-tabs' | 'community-list' | 'live-list';
+  kind: 'match' | 'analysis' | 'log' | 'community-tabs' | 'community-list' | 'live-list'
+    | 'schedule-list';
   status: number;
   durationMs: number;
   bytes: number | null;
@@ -531,6 +535,50 @@ export interface FiveEPlayLiveMatchesDiagnostics {
 export interface GetFiveEPlayLiveMatchesResult {
   data: FiveEPlayLiveMatchesData;
   diagnostics: FiveEPlayLiveMatchesDiagnostics;
+}
+
+export type FiveEPlayScheduleMatchTeam = FiveEPlayLiveMatchTeam;
+export type FiveEPlayScheduleMatchMap = FiveEPlayLiveMatchMap;
+
+export interface FiveEPlayScheduleMatch {
+  id: string;
+  numericId: number;
+  url: string;
+  status: 'upcoming' | 'live' | 'unknown';
+  bestOf: number | null;
+  scheduledAtUnixSeconds: number | null;
+  stage: string | null;
+  stageDescription: string | null;
+  tournament: {
+    id: string | null;
+    name: string;
+    grade: string | null;
+    gradeLabel: string | null;
+  };
+  teams: FiveEPlayScheduleMatchTeam[];
+  maps: FiveEPlayScheduleMatchMap[];
+  currentMap: FiveEPlayScheduleMatchMap | null;
+}
+
+export interface FiveEPlayScheduleData {
+  schemaVersion: '1.0.0';
+  capturedAt: string;
+  source: { provider: '5eplay'; url: 'https://event.5eplay.com/csgo/matches' };
+  matches: FiveEPlayScheduleMatch[];
+}
+
+export interface FiveEPlayScheduleDiagnostics {
+  schemaVersion: '1.0.0';
+  operation: 'schedule';
+  startedAt: string;
+  completedAt: string;
+  durationMs: number;
+  requests: FiveEPlayRequestDiagnostic[];
+}
+
+export interface GetFiveEPlayScheduleResult {
+  data: FiveEPlayScheduleData;
+  diagnostics: FiveEPlayScheduleDiagnostics;
 }
 
 export type FiveEPlayRealtimeUpdate =

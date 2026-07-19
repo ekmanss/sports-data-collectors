@@ -1,7 +1,7 @@
 {
   "name": "@ekmanss/5eplay",
   "version": "20260718.1.0",
-  "description": "Typed 5EPlay CS2 live-match discovery, match-detail snapshots, and MQTT updates without a browser.",
+  "description": "Typed 5EPlay CS2 schedules, live-match discovery, match-detail snapshots, and MQTT updates without a browser.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -30,6 +30,7 @@
     "test": "tsx --test tests/match.test.ts",
     "test:live": "tsx tests/live.ts",
     "test:live:list": "tsx tests/live_list.ts",
+    "test:live:schedule": "tsx tests/schedule.ts",
     "verify": "pnpm check && pnpm test && pnpm build",
     "prepack": "pnpm verify"
   },

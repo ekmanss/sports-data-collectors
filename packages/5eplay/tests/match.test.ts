@@ -6,7 +6,7 @@ import test from 'node:test';
 import { getFiveEPlayMatch } from '../src/client.js';
 import { FiveEPlayError } from '../src/errors.js';
 import { matchIdentityFromInput } from '../src/input.js';
-import { getFiveEPlayLiveMatches } from '../src/live_matches.js';
+import { getFiveEPlayLiveMatches, getFiveEPlaySchedule } from '../src/live_matches.js';
 import {
   decodeMqttPackets,
   encodeConnectPacket,
@@ -396,6 +396,63 @@ test('fetches only genuinely live matches with one lightweight list request', as
   const url = new URL(requests[0]!);
   assert.equal(url.pathname, '/api/tournament/session_list');
   assert.equal(url.searchParams.get('limit'), '20');
+});
+
+test('fetches the complete current schedule across live and upcoming pages', async () => {
+  const requests: string[] = [];
+  const stages: string[] = [];
+  const listMatch = (id: string, matchStatus: string, boutStatus?: string) => ({
+    mc_info: {
+      id, format: '3', plan_ts: String(1784210400 + Number(id.slice('csgo_mc_'.length))),
+      tt_stage: 'Playoffs', tt_stage_desc: 'Upper final',
+      t1_info: { id: `${id}_t1`, disp_name: 'Alpha', rank: '2', v_rank: { rank: '3' } },
+      t2_info: { id: `${id}_t2`, disp_name: 'Bravo', rank: '4', v_rank: { rank: '5' } },
+    },
+    state: {
+      status: matchStatus, t1_score: '1', t2_score: '0',
+      bout_states: boutStatus ? [{
+        bout_num: '1', map_name: 'Cache', status: boutStatus,
+        t1_score: '9', t2_score: '7', result: '',
+      }] : [],
+    },
+    tt_info: { id: 'csgo_tt_1', disp_name: 'Example Cup', grade: '3', grade_label: 'A级赛事' },
+  });
+  const firstPage = [
+    listMatch('csgo_mc_2000', '1', '1'),
+    ...Array.from({ length: 19 }, (_, index) => listMatch(`csgo_mc_${2001 + index}`, '0')),
+  ];
+  const secondPage = [
+    firstPage.at(-1),
+    listMatch('csgo_mc_2020', '-1'),
+    listMatch('csgo_mc_2021', 'unexpected'),
+  ];
+  const fetchImpl: typeof fetch = async (input) => {
+    const url = new URL(String(input));
+    requests.push(url.href);
+    return response({ matches: url.searchParams.get('page') === '1' ? firstPage : secondPage });
+  };
+
+  const result = await getFiveEPlaySchedule({
+    fetch: fetchImpl,
+    timeoutMs: 2_000,
+    onProgress: (event) => stages.push(`${event.operation}:${event.stage}`),
+  });
+
+  assert.equal(result.data.matches.length, 22);
+  assert.deepEqual(result.data.matches.slice(0, 2).map((match) => match.status), [
+    'live', 'upcoming',
+  ]);
+  assert.equal(result.data.matches.find((match) => match.id === 'csgo_mc_2020')?.status, 'upcoming');
+  assert.equal(result.data.matches.find((match) => match.id === 'csgo_mc_2021')?.status, 'unknown');
+  assert.equal(result.data.matches[0]?.currentMap?.name, 'Cache');
+  assert.equal(result.diagnostics.operation, 'schedule');
+  assert.deepEqual(result.diagnostics.requests.map((entry) => [entry.kind, entry.page]), [
+    ['schedule-list', 1], ['schedule-list', 2],
+  ]);
+  assert.deepEqual(stages, ['schedule:fetching-schedule', 'schedule:completed']);
+  assert.deepEqual(requests.map((request) => new URL(request).searchParams.get('page')), ['1', '2']);
+  assert.ok(requests.every((request) => new URL(request).searchParams.get('limit') === '20'));
+  assert.ok(requests.every((request) => new URL(request).searchParams.get('game_status') === '1'));
 });
 
 test('writes a complete formatted Markdown report to a file or directory', async () => {

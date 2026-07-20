@@ -1,0 +1,1441 @@
+{
+  "cursor": 1750,
+  "events": [
+    {
+      "sequence": 1568,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketCreated",
+      "params": {
+        "initiator": {
+          "stack": {
+            "callFrames": [
+              {
+                "columnNumber": 12847,
+                "functionName": "U._doConnect",
+                "lineNumber": 0,
+                "scriptId": "103",
+                "url": "https://event.5eplay.com/static/js/829.bundle.bc11046c1f8a3c177db1.js"
+              },
+              {
+                "columnNumber": 9741,
+                "functionName": "U.connect",
+                "lineNumber": 0,
+                "scriptId": "103",
+                "url": "https://event.5eplay.com/static/js/829.bundle.bc11046c1f8a3c177db1.js"
+              },
+              {
+                "columnNumber": 29206,
+                "functionName": "Client.connect",
+                "lineNumber": 0,
+                "scriptId": "103",
+                "url": "https://event.5eplay.com/static/js/829.bundle.bc11046c1f8a3c177db1.js"
+              },
+              {
+                "columnNumber": 8372,
+                "functionName": "successFun",
+                "lineNumber": 0,
+                "scriptId": "104",
+                "url": "https://event.5eplay.com/static/js/545.bundle.06250461f27db34424f6.js"
+              },
+              {
+                "columnNumber": 12554,
+                "functionName": "",
+                "lineNumber": 0,
+                "scriptId": "104",
+                "url": "https://event.5eplay.com/static/js/545.bundle.06250461f27db34424f6.js"
+              }
+            ]
+          },
+          "type": "script"
+        },
+        "requestId": "63489.657",
+        "url": "wss://post-cn-7mz2e5hc90i.mqtt.aliyuncs.com/:443/mqtt"
+      }
+    },
+    {
+      "sequence": 1572,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketCreated",
+      "params": {
+        "initiator": {
+          "stack": {
+            "callFrames": [
+              {
+                "columnNumber": 12847,
+                "functionName": "U._doConnect",
+                "lineNumber": 0,
+                "scriptId": "103",
+                "url": "https://event.5eplay.com/static/js/829.bundle.bc11046c1f8a3c177db1.js"
+              },
+              {
+                "columnNumber": 9741,
+                "functionName": "U.connect",
+                "lineNumber": 0,
+                "scriptId": "103",
+                "url": "https://event.5eplay.com/static/js/829.bundle.bc11046c1f8a3c177db1.js"
+              },
+              {
+                "columnNumber": 29206,
+                "functionName": "Client.connect",
+                "lineNumber": 0,
+                "scriptId": "103",
+                "url": "https://event.5eplay.com/static/js/829.bundle.bc11046c1f8a3c177db1.js"
+              },
+              {
+                "columnNumber": 8372,
+                "functionName": "successFun",
+                "lineNumber": 0,
+                "scriptId": "104",
+                "url": "https://event.5eplay.com/static/js/545.bundle.06250461f27db34424f6.js"
+              },
+              {
+                "columnNumber": 12554,
+                "functionName": "",
+                "lineNumber": 0,
+                "scriptId": "104",
+                "url": "https://event.5eplay.com/static/js/545.bundle.06250461f27db34424f6.js"
+              }
+            ]
+          },
+          "type": "script"
+        },
+        "requestId": "63489.658",
+        "url": "wss://post-cn-7mz2e5hc90i.mqtt.aliyuncs.com/:443/mqtt"
+      }
+    },
+    {
+      "sequence": 1580,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.658",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "IAIAAA=="
+        },
+        "timestamp": 46986.782982
+      }
+    },
+    {
+      "sequence": 1582,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.657",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "IAIAAA=="
+        },
+        "timestamp": 46986.793904
+      }
+    },
+    {
+      "sequence": 1584,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.658",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "kAMAAQA="
+        },
+        "timestamp": 46986.834223
+      }
+    },
+    {
+      "sequence": 1585,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.658",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "MC8AFyRTWVMvdG9rZW5JbnZhbGlkTm90aWNleyJjb2RlIjo0LCJ0eXBlIjoiUlcifQ=="
+        },
+        "timestamp": 46986.876485
+      }
+    },
+    {
+      "sequence": 1586,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketClosed",
+      "params": {
+        "requestId": "63489.658",
+        "timestamp": 46987.075516
+      }
+    },
+    {
+      "sequence": 1594,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketCreated",
+      "params": {
+        "initiator": {
+          "stack": {
+            "callFrames": [
+              {
+                "columnNumber": 12847,
+                "functionName": "U._doConnect",
+                "lineNumber": 0,
+                "scriptId": "103",
+                "url": "https://event.5eplay.com/static/js/829.bundle.bc11046c1f8a3c177db1.js"
+              },
+              {
+                "columnNumber": 9741,
+                "functionName": "U.connect",
+                "lineNumber": 0,
+                "scriptId": "103",
+                "url": "https://event.5eplay.com/static/js/829.bundle.bc11046c1f8a3c177db1.js"
+              },
+              {
+                "columnNumber": 29206,
+                "functionName": "Client.connect",
+                "lineNumber": 0,
+                "scriptId": "103",
+                "url": "https://event.5eplay.com/static/js/829.bundle.bc11046c1f8a3c177db1.js"
+              },
+              {
+                "columnNumber": 8372,
+                "functionName": "successFun",
+                "lineNumber": 0,
+                "scriptId": "104",
+                "url": "https://event.5eplay.com/static/js/545.bundle.06250461f27db34424f6.js"
+              },
+              {
+                "columnNumber": 12554,
+                "functionName": "",
+                "lineNumber": 0,
+                "scriptId": "104",
+                "url": "https://event.5eplay.com/static/js/545.bundle.06250461f27db34424f6.js"
+              }
+            ]
+          },
+          "type": "script"
+        },
+        "requestId": "63489.660",
+        "url": "wss://post-cn-7mz2e5hc90i.mqtt.aliyuncs.com/:443/mqtt"
+      }
+    },
+    {
+      "sequence": 1599,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.660",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "IAIAAA=="
+        },
+        "timestamp": 46989.04114
+      }
+    },
+    {
+      "sequence": 1601,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.660",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "kAMAAQA="
+        },
+        "timestamp": 46989.169821
+      }
+    },
+    {
+      "sequence": 1608,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.657",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 47046.839166
+      }
+    },
+    {
+      "sequence": 1610,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.660",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 47049.078089
+      }
+    },
+    {
+      "sequence": 1612,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.657",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 47106.879168
+      }
+    },
+    {
+      "sequence": 1614,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.660",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 47109.116371
+      }
+    },
+    {
+      "sequence": 1616,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.657",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 47166.934893
+      }
+    },
+    {
+      "sequence": 1618,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.660",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 47169.15422
+      }
+    },
+    {
+      "sequence": 1620,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.657",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 47226.977899
+      }
+    },
+    {
+      "sequence": 1622,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.660",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 47229.192451
+      }
+    },
+    {
+      "sequence": 1624,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.657",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 47287.01955
+      }
+    },
+    {
+      "sequence": 1626,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.660",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 47289.231666
+      }
+    },
+    {
+      "sequence": 1628,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.657",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 47347.062232
+      }
+    },
+    {
+      "sequence": 1630,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.660",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 47349.354795
+      }
+    },
+    {
+      "sequence": 1632,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.657",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 47407.104638
+      }
+    },
+    {
+      "sequence": 1634,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.660",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 47409.393651
+      }
+    },
+    {
+      "sequence": 1636,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.657",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 47467.146183
+      }
+    },
+    {
+      "sequence": 1638,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.660",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 47469.447385
+      }
+    },
+    {
+      "sequence": 1640,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.657",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 47527.194642
+      }
+    },
+    {
+      "sequence": 1642,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.660",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 47529.487644
+      }
+    },
+    {
+      "sequence": 1644,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.657",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 47587.236049
+      }
+    },
+    {
+      "sequence": 1646,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.660",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 47589.528345
+      }
+    },
+    {
+      "sequence": 1648,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.657",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 47647.278571
+      }
+    },
+    {
+      "sequence": 1650,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.660",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 47649.568009
+      }
+    },
+    {
+      "sequence": 1652,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.657",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 47707.31741
+      }
+    },
+    {
+      "sequence": 1654,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.660",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 47709.606906
+      }
+    },
+    {
+      "sequence": 1656,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.657",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 47767.359544
+      }
+    },
+    {
+      "sequence": 1658,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.660",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 47769.645931
+      }
+    },
+    {
+      "sequence": 1660,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.657",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 47827.401523
+      }
+    },
+    {
+      "sequence": 1662,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.660",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 47829.684822
+      }
+    },
+    {
+      "sequence": 1664,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.657",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 47887.443356
+      }
+    },
+    {
+      "sequence": 1666,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.660",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 47889.72474
+      }
+    },
+    {
+      "sequence": 1668,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.657",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 47947.565824
+      }
+    },
+    {
+      "sequence": 1670,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.660",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 47949.768581
+      }
+    },
+    {
+      "sequence": 1672,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.657",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 48007.607095
+      }
+    },
+    {
+      "sequence": 1674,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.660",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 48009.808091
+      }
+    },
+    {
+      "sequence": 1676,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.657",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 48067.662927
+      }
+    },
+    {
+      "sequence": 1678,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.660",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 48069.848114
+      }
+    },
+    {
+      "sequence": 1680,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.657",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 48127.706448
+      }
+    },
+    {
+      "sequence": 1682,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.660",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 48129.887521
+      }
+    },
+    {
+      "sequence": 1684,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.657",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 48187.749947
+      }
+    },
+    {
+      "sequence": 1686,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.660",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 48189.926772
+      }
+    },
+    {
+      "sequence": 1688,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.657",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 48247.78989
+      }
+    },
+    {
+      "sequence": 1690,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.660",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 48249.966296
+      }
+    },
+    {
+      "sequence": 1692,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.657",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 48307.831929
+      }
+    },
+    {
+      "sequence": 1694,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.660",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 48310.005772
+      }
+    },
+    {
+      "sequence": 1696,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.657",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 48367.870986
+      }
+    },
+    {
+      "sequence": 1698,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.660",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 48370.044236
+      }
+    },
+    {
+      "sequence": 1700,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.657",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 48427.909973
+      }
+    },
+    {
+      "sequence": 1702,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.660",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 48430.084171
+      }
+    },
+    {
+      "sequence": 1704,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.657",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 48487.950647
+      }
+    },
+    {
+      "sequence": 1706,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.660",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 48490.20713
+      }
+    },
+    {
+      "sequence": 1708,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.657",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 48547.990457
+      }
+    },
+    {
+      "sequence": 1710,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.660",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 48550.244445
+      }
+    },
+    {
+      "sequence": 1712,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.657",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 48608.033575
+      }
+    },
+    {
+      "sequence": 1714,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.660",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 48610.29766
+      }
+    },
+    {
+      "sequence": 1716,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.657",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 48668.076807
+      }
+    },
+    {
+      "sequence": 1718,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.660",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 48670.338337
+      }
+    },
+    {
+      "sequence": 1720,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.657",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 48728.119533
+      }
+    },
+    {
+      "sequence": 1722,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.660",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 48730.37796
+      }
+    },
+    {
+      "sequence": 1724,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.657",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 48788.160764
+      }
+    },
+    {
+      "sequence": 1726,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.660",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 48790.417078
+      }
+    },
+    {
+      "sequence": 1728,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.657",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 48848.202763
+      }
+    },
+    {
+      "sequence": 1730,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.660",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 48850.457386
+      }
+    },
+    {
+      "sequence": 1732,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.657",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 48908.244368
+      }
+    },
+    {
+      "sequence": 1734,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.660",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 48910.500234
+      }
+    },
+    {
+      "sequence": 1736,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.657",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 48968.354187
+      }
+    },
+    {
+      "sequence": 1738,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.660",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 48970.539062
+      }
+    },
+    {
+      "sequence": 1740,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.657",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 49028.396247
+      }
+    },
+    {
+      "sequence": 1742,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.660",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 49030.577574
+      }
+    },
+    {
+      "sequence": 1743,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.660",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "MLAXACNjc2dvL3Byb2R1Y3QvZGV0YWlsL2NzZ29fbWNfMjM5NjA0N3siZXZlbnRfbmFtZSI6ImNzZ28tZGV0YWlsLWJwIiwiZGF0YSI6eyJmcm9tX3ZlciI6IjAiLCJtYXRjaCI6eyJib3V0c19zdGF0ZSI6W10sImdsb2JhbF9zdGF0ZSI6eyJhdmdfcGxheWVyX3N0YXRzIjpudWxsLCJiYXJfY2hhcnRfcGxheWVyX3N0YXRzIjpudWxsLCJicF9tYXBfaXRlbSI6W3siYnBfdHlwZSI6ImJhbiIsIm1hcF9pY29uIjoiaHR0cHM6Ly9vc3MuNWVwbGF5LmNvbS9jbG91ZHgvcC9zcG9ydC9jc2dvL21hcC9jbHZ2NG5zY29ua3FrczYzZDFzMC5wbmciLCJtYXBfbG9nbyI6Imh0dHBzOi8vb3NzLjVlcGxheS5jb20vY2xvdWR4L3Avc3BvcnQvY3Nnby9tYXAvY28xdTcyY2NvbmtsZ3Nqdmd2dTAucG5nIiwibWFwX25hbWUiOiJEdXN0MiIsInRlYW1fc2lkZSI6InQyIn0seyJicF90eXBlIjoiYmFuIiwibWFwX2ljb24iOiJodHRwczovL29zcy41ZXBsYXkuY29tL2Nsb3VkeC9wL3Nwb3J0L2NzZ28vbWFwL2NsdnY0NWNjb25rcWtzNjNkMXIwLnBuZyIsIm1hcF9sb2dvIjoiaHR0cHM6Ly9vc3MuNWVwbGF5LmNvbS9jbG91ZHgvcC9zcG9ydC9jc2dvL21hcC9jazYwaWJrY29ua3FrczYzYmliMC5wbmciLCJtYXBfbmFtZSI6IkFuY2llbnQiLCJ0ZWFtX3NpZGUiOiJ0MSJ9LHsiYnBfdHlwZSI6InBpY2siLCJtYXBfaWNvbiI6Imh0dHBzOi8vb3NzLjVlcGxheS5jb20vY2xvdWR4L3Avc3BvcnQvY3Nnby9tYXAvY2x2djRzY2Nvbmtxa3M2M2QxdGcucG5nIiwibWFwX2xvZ28iOiJodHRwczovL29zcy41ZXBsYXkuY29tL2Nsb3VkeC9wL3Nwb3J0L2NzZ28vbWFwL2NrNjBrNWtjb25rcWtzNjNiaW4wLnBuZyIsIm1hcF9uYW1lIjoiTnVrZSIsInRlYW1fc2lkZSI6InQyIn0seyJicF90eXBlIjoicGljayIsIm1hcF9pY29uIjoiaHR0cHM6Ly9vc3MuNWVwbGF5LmNvbS9jbG91ZHgvcC9zcG9ydC9jc2dvL21hcC9jbHZ2NTBrY29ua3FrczYzZDF1Zy5wbmciLCJtYXBfbG9nbyI6Imh0dHBzOi8vb3NzLjVlcGxheS5jb20vY2xvdWR4L3Avc3BvcnQvY3Nnby9tYXAvY2s2MGttY2Nvbmtxa3M2M2JpdDAucG5nIiwibWFwX25hbWUiOiJBbnViaXMiLCJ0ZWFtX3NpZGUiOiJ0MSJ9LHsiYnBfdHlwZSI6ImJhbiIsIm1hcF9pY29uIjoiaHR0cHM6Ly9vc3MuNWVwbGF5LmNvbS9jbG91ZHgvcC9zcG9ydC9jc2dvL21hcC9jbHZ2NHBjY29ua3FrczYzZDFzZy5wbmciLCJtYXBfbG9nbyI6Imh0dHBzOi8vb3NzLjVlcGxheS5jb20vY2xvdWR4L3Avc3BvcnQvY3Nnby9tYXAvY2s2MGplc2Nvbmtxa3M2M2JpZ2cucG5nIiwibWFwX25hbWUiOiJNaXJhZ2UiLCJ0ZWFtX3NpZGUiOiJ0MiJ9LHsiYnBfdHlwZSI6ImJhbiIsIm1hcF9pY29uIjoiaHR0cHM6Ly9vc3MuNWVwbGF5LmNvbS9jbG91ZHgvcC9zcG9ydC9jc2dvL21hcC9kN29yZ3Y0Y29ua3B1ZGhyNGRyMC5wbmciLCJtYXBfbG9nbyI6Imh0dHBzOi8vb3NzLjVlcGxheS5jb20vY2xvdWR4L3Avc3BvcnQvY3Nnby9tYXAvZDdvcmdsc2NvbmtwdWRocjRkcDAucG5nIiwibWFwX25hbWUiOiJDYWNoZSIsInRlYW1fc2lkZSI6InQxIn0seyJicF90eXBlIjoibGVmdCIsIm1hcF9pY29uIjoiaHR0cHM6Ly9vc3MuNWVwbGF5LmNvbS9jbG91ZHgvcC9zcG9ydC9jc2dvL21hcC9jbHZ2NHU0Y29ua3FrczYzZDF1MC5wbmciLCJtYXBfbG9nbyI6Imh0dHBzOi8vb3NzLjVlcGxheS5jb20vY2xvdWR4L3Avc3BvcnQvY3Nnby9tYXAvY2s2MGtlY2Nvbmtxa3M2M2JpcTAucG5nIiwibWFwX25hbWUiOiJJbmZlcm5vIiwidGVhbV9zaWRlIjoiIn1dLCJkYXJrX2hvcnNlIjoiIiwiZGlzcF9uYW1lIjoi5Zyw5Zu+5oC76KeIIiwibGl2ZV9zdGF0dXMiOiIwIiwibG9nX3RleHQiOiIiLCJtYXhfcGxheWVyX3N0YXRzIjpudWxsLCJtdnBfcGxheWVyX3N0YXRzIjpudWxsLCJzdGF0dXMiOiIxIiwidDFfb2RkcyI6IiIsInQxX29kZHNfcGVyY2VudCI6IiIsInQxX3BsYXllcl9zdGF0cyI6W10sInQxX3Njb3JlIjoiMCIsInQyX29kZHMiOiIiLCJ0Ml9vZGRzX3BlcmNlbnQiOiIiLCJ0Ml9wbGF5ZXJfc3RhdHMiOltdLCJ0Ml9zY29yZSI6IjAifSwibWNfaW5mbyI6eyJmaWVsZF9jb25mIjp7ImJwX2luZm8iOiIxIn0sImZvcm1hdCI6IjMiLCJnYW1lX3R5cGUiOiJjc2dvIiwiZ3JhZGUiOiI1IiwiZ3JvdXBfaWQiOjUxNDAsImhpZ2hfbGlnaHRzX2NmZ19saXN0IjpbXSwiaWQiOiJjc2dvX21jXzIzOTYwNDciLCJsaXZlX2NmZ19saXN0IjpbXSwicGxhbl90cyI6IjE3ODQ0ODYxMDAiLCJyZW1hcmsiOiIiLCJ0MV9pbmZvIjp7ImJvbnVzIjoiIiwiY291bnRyeSI6IiIsImRpc3BfbmFtZSI6Ikp1bGllXHUwMDI2Q2llIiwiaWQiOiJobHR2X3RlYW1fMTM3OTEiLCJsb2dvIjoiaHR0cHM6Ly9vc3MuNWVwbGF5LmNvbS9zcG9ydC9jc2dvL3RlYW0vbnVsbC5wbmciLCJyYW5rIjoiMCJ9LCJ0Ml9pbmZvIjp7ImJvbnVzIjoiIiwiY291bnRyeSI6IiIsImRpc3BfbmFtZSI6IlN0cmFlbCBCb3JhIiwiaWQiOiJobHR2X3RlYW1fMTM1NDYiLCJsb2dvIjoiaHR0cHM6Ly9vc3MuNWVwbGF5LmNvbS9zcG9ydC9jc2dvL3RlYW0vbnVsbC5wbmciLCJyYW5rIjoiMCJ9LCJ0dF9zdGFnZSI6Iua3mOaxsOi1myIsInR0X3N0YWdlX2Rlc2MiOiLmt5jmsbDotZsgIOWGs+i1myJ9LCJ0dF9pbmZvIjp7ImFkZHIiOiJGcmFuY2UtU3RyYXNib3VyZywgRnJhbmNlIiwiYm9udXMiOiIkNCw1NTkiLCJjb2xvciI6Ijc5ODNhMiIsImRpc3BfbmFtZSI6IumcjeaZruWFsCAyMDI2IiwiZW5kX3RpbWUiOiIiLCJncmFkZSI6IjUiLCJncmFkZV9sYWJlbCI6IkPnuqfotZvkuosiLCJpZCI6ImNzZ29fdHRfOTI0OCIsImxvZ28iOiJodHRwczovL29zcy41ZXBsYXkuY29tL2Nsb3VkeC9wL3Nwb3J0L2NzZ28vdG91cm5hbWVudC9kOHZiaGY0Y29ua3B1ZGhyNTN1Zy5wbmciLCJyZWxhdGVkX3R5cGUiOiIiLCJzdGFydF90aW1lIjoiMjAyNi0wNy0xOCAxODowMDowMCIsInN0YXR1cyI6ImxpdmUifX0sInRoaXNfdmVyIjoiMTc4NDQ4NjE2NyJ9fQ=="
+        },
+        "timestamp": 49074.690747
+      }
+    },
+    {
+      "sequence": 1745,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.657",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 49088.450533
+      }
+    },
+    {
+      "sequence": 1747,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.660",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 49090.616688
+      }
+    },
+    {
+      "sequence": 1748,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.660",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "MLAXACNjc2dvL3Byb2R1Y3QvZGV0YWlsL2NzZ29fbWNfMjM5NjA0N3siZXZlbnRfbmFtZSI6ImNzZ28tZGV0YWlsLWJwIiwiZGF0YSI6eyJmcm9tX3ZlciI6IjAiLCJtYXRjaCI6eyJib3V0c19zdGF0ZSI6W10sImdsb2JhbF9zdGF0ZSI6eyJhdmdfcGxheWVyX3N0YXRzIjpudWxsLCJiYXJfY2hhcnRfcGxheWVyX3N0YXRzIjpudWxsLCJicF9tYXBfaXRlbSI6W3siYnBfdHlwZSI6ImJhbiIsIm1hcF9pY29uIjoiaHR0cHM6Ly9vc3MuNWVwbGF5LmNvbS9jbG91ZHgvcC9zcG9ydC9jc2dvL21hcC9jbHZ2NG5zY29ua3FrczYzZDFzMC5wbmciLCJtYXBfbG9nbyI6Imh0dHBzOi8vb3NzLjVlcGxheS5jb20vY2xvdWR4L3Avc3BvcnQvY3Nnby9tYXAvY28xdTcyY2NvbmtsZ3Nqdmd2dTAucG5nIiwibWFwX25hbWUiOiJEdXN0MiIsInRlYW1fc2lkZSI6InQyIn0seyJicF90eXBlIjoiYmFuIiwibWFwX2ljb24iOiJodHRwczovL29zcy41ZXBsYXkuY29tL2Nsb3VkeC9wL3Nwb3J0L2NzZ28vbWFwL2NsdnY0NWNjb25rcWtzNjNkMXIwLnBuZyIsIm1hcF9sb2dvIjoiaHR0cHM6Ly9vc3MuNWVwbGF5LmNvbS9jbG91ZHgvcC9zcG9ydC9jc2dvL21hcC9jazYwaWJrY29ua3FrczYzYmliMC5wbmciLCJtYXBfbmFtZSI6IkFuY2llbnQiLCJ0ZWFtX3NpZGUiOiJ0MSJ9LHsiYnBfdHlwZSI6InBpY2siLCJtYXBfaWNvbiI6Imh0dHBzOi8vb3NzLjVlcGxheS5jb20vY2xvdWR4L3Avc3BvcnQvY3Nnby9tYXAvY2x2djRzY2Nvbmtxa3M2M2QxdGcucG5nIiwibWFwX2xvZ28iOiJodHRwczovL29zcy41ZXBsYXkuY29tL2Nsb3VkeC9wL3Nwb3J0L2NzZ28vbWFwL2NrNjBrNWtjb25rcWtzNjNiaW4wLnBuZyIsIm1hcF9uYW1lIjoiTnVrZSIsInRlYW1fc2lkZSI6InQyIn0seyJicF90eXBlIjoicGljayIsIm1hcF9pY29uIjoiaHR0cHM6Ly9vc3MuNWVwbGF5LmNvbS9jbG91ZHgvcC9zcG9ydC9jc2dvL21hcC9jbHZ2NTBrY29ua3FrczYzZDF1Zy5wbmciLCJtYXBfbG9nbyI6Imh0dHBzOi8vb3NzLjVlcGxheS5jb20vY2xvdWR4L3Avc3BvcnQvY3Nnby9tYXAvY2s2MGttY2Nvbmtxa3M2M2JpdDAucG5nIiwibWFwX25hbWUiOiJBbnViaXMiLCJ0ZWFtX3NpZGUiOiJ0MSJ9LHsiYnBfdHlwZSI6ImJhbiIsIm1hcF9pY29uIjoiaHR0cHM6Ly9vc3MuNWVwbGF5LmNvbS9jbG91ZHgvcC9zcG9ydC9jc2dvL21hcC9jbHZ2NHBjY29ua3FrczYzZDFzZy5wbmciLCJtYXBfbG9nbyI6Imh0dHBzOi8vb3NzLjVlcGxheS5jb20vY2xvdWR4L3Avc3BvcnQvY3Nnby9tYXAvY2s2MGplc2Nvbmtxa3M2M2JpZ2cucG5nIiwibWFwX25hbWUiOiJNaXJhZ2UiLCJ0ZWFtX3NpZGUiOiJ0MiJ9LHsiYnBfdHlwZSI6ImJhbiIsIm1hcF9pY29uIjoiaHR0cHM6Ly9vc3MuNWVwbGF5LmNvbS9jbG91ZHgvcC9zcG9ydC9jc2dvL21hcC9kN29yZ3Y0Y29ua3B1ZGhyNGRyMC5wbmciLCJtYXBfbG9nbyI6Imh0dHBzOi8vb3NzLjVlcGxheS5jb20vY2xvdWR4L3Avc3BvcnQvY3Nnby9tYXAvZDdvcmdsc2NvbmtwdWRocjRkcDAucG5nIiwibWFwX25hbWUiOiJDYWNoZSIsInRlYW1fc2lkZSI6InQxIn0seyJicF90eXBlIjoibGVmdCIsIm1hcF9pY29uIjoiaHR0cHM6Ly9vc3MuNWVwbGF5LmNvbS9jbG91ZHgvcC9zcG9ydC9jc2dvL21hcC9jbHZ2NHU0Y29ua3FrczYzZDF1MC5wbmciLCJtYXBfbG9nbyI6Imh0dHBzOi8vb3NzLjVlcGxheS5jb20vY2xvdWR4L3Avc3BvcnQvY3Nnby9tYXAvY2s2MGtlY2Nvbmtxa3M2M2JpcTAucG5nIiwibWFwX25hbWUiOiJJbmZlcm5vIiwidGVhbV9zaWRlIjoiIn1dLCJkYXJrX2hvcnNlIjoiIiwiZGlzcF9uYW1lIjoi5Zyw5Zu+5oC76KeIIiwibGl2ZV9zdGF0dXMiOiIwIiwibG9nX3RleHQiOiIiLCJtYXhfcGxheWVyX3N0YXRzIjpudWxsLCJtdnBfcGxheWVyX3N0YXRzIjpudWxsLCJzdGF0dXMiOiIxIiwidDFfb2RkcyI6IiIsInQxX29kZHNfcGVyY2VudCI6IiIsInQxX3BsYXllcl9zdGF0cyI6W10sInQxX3Njb3JlIjoiMCIsInQyX29kZHMiOiIiLCJ0Ml9vZGRzX3BlcmNlbnQiOiIiLCJ0Ml9wbGF5ZXJfc3RhdHMiOltdLCJ0Ml9zY29yZSI6IjAifSwibWNfaW5mbyI6eyJmaWVsZF9jb25mIjp7ImJwX2luZm8iOiIxIn0sImZvcm1hdCI6IjMiLCJnYW1lX3R5cGUiOiJjc2dvIiwiZ3JhZGUiOiI1IiwiZ3JvdXBfaWQiOjUxNDAsImhpZ2hfbGlnaHRzX2NmZ19saXN0IjpbXSwiaWQiOiJjc2dvX21jXzIzOTYwNDciLCJsaXZlX2NmZ19saXN0IjpbXSwicGxhbl90cyI6IjE3ODQ0ODYxMDAiLCJyZW1hcmsiOiIiLCJ0MV9pbmZvIjp7ImJvbnVzIjoiIiwiY291bnRyeSI6IiIsImRpc3BfbmFtZSI6Ikp1bGllXHUwMDI2Q2llIiwiaWQiOiJobHR2X3RlYW1fMTM3OTEiLCJsb2dvIjoiaHR0cHM6Ly9vc3MuNWVwbGF5LmNvbS9zcG9ydC9jc2dvL3RlYW0vbnVsbC5wbmciLCJyYW5rIjoiMCJ9LCJ0Ml9pbmZvIjp7ImJvbnVzIjoiIiwiY291bnRyeSI6IiIsImRpc3BfbmFtZSI6IlN0cmFlbCBCb3JhIiwiaWQiOiJobHR2X3RlYW1fMTM1NDYiLCJsb2dvIjoiaHR0cHM6Ly9vc3MuNWVwbGF5LmNvbS9zcG9ydC9jc2dvL3RlYW0vbnVsbC5wbmciLCJyYW5rIjoiMCJ9LCJ0dF9zdGFnZSI6Iua3mOaxsOi1myIsInR0X3N0YWdlX2Rlc2MiOiLmt5jmsbDotZsgIOWGs+i1myJ9LCJ0dF9pbmZvIjp7ImFkZHIiOiJGcmFuY2UtU3RyYXNib3VyZywgRnJhbmNlIiwiYm9udXMiOiIkNCw1NTkiLCJjb2xvciI6Ijc5ODNhMiIsImRpc3BfbmFtZSI6IumcjeaZruWFsCAyMDI2IiwiZW5kX3RpbWUiOiIiLCJncmFkZSI6IjUiLCJncmFkZV9sYWJlbCI6IkPnuqfotZvkuosiLCJpZCI6ImNzZ29fdHRfOTI0OCIsImxvZ28iOiJodHRwczovL29zcy41ZXBsYXkuY29tL2Nsb3VkeC9wL3Nwb3J0L2NzZ28vdG91cm5hbWVudC9kOHZiaGY0Y29ua3B1ZGhyNTN1Zy5wbmciLCJyZWxhdGVkX3R5cGUiOiIiLCJzdGFydF90aW1lIjoiMjAyNi0wNy0xOCAxODowMDowMCIsInN0YXR1cyI6ImxpdmUifX0sInRoaXNfdmVyIjoiMTc4NDQ4NjIxMCJ9fQ=="
+        },
+        "timestamp": 49117.010494
+      }
+    },
+    {
+      "sequence": 1750,
+      "source": {
+        "tabId": 351693933
+      },
+      "method": "Network.webSocketFrameReceived",
+      "params": {
+        "requestId": "63489.657",
+        "response": {
+          "mask": false,
+          "opcode": 2,
+          "payloadData": "0AA="
+        },
+        "timestamp": 49148.49124
+      }
+    }
+  ],
+  "hasMore": false,
+  "truncated": false
+}

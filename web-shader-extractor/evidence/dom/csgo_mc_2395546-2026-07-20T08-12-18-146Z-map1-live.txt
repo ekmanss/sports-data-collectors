@@ -1,0 +1,850 @@
+- banner:
+  - link:
+    - /url: https://www.5eplay.com/
+  - link:
+    - /url: https://event.5eplay.com/csgo/matches
+  - list:
+    - link "CS":
+      - /url: /csgo/events
+      - text: CS
+    - link "VAL":
+      - /url: https://valdata.5eplay.com/esports
+      - text: VAL
+  - textbox "搜索战队、选手、赛事"
+  - generic: 分享
+  - generic: 收藏
+  - generic: 登录
+- list:
+  - link "赛程":
+    - /url: /csgo/matches
+  - link "赛事":
+    - /url: /csgo/events
+  - link "战队":
+    - /url: /csgo/teams
+  - link "选手":
+    - /url: /csgo/player
+- generic: 欧洲职业联赛 系列赛8
+- generic: ">"
+- generic: Just Players
+- generic: VS
+- generic: Walczaki
+- paragraph:
+  - generic: 欧洲职业联赛 系列赛8
+- paragraph: 比赛时间：2026-07-20
+- generic: Just Players
+- paragraph: V社排名：108
+- generic: LIVE
+- generic: 0 - 0
+- generic: BO3
+- generic: Walczaki
+- paragraph: V社排名：42
+- generic: 29%
+- generic: 71%
+- generic: 图文直播
+- generic: "0"
+- text: "0"
+- generic: "0 : 0"
+- generic: "0 : 0"
+- generic: Nuke
+- generic: 0：13
+- generic: 第1回合
+- generic: +
+- generic: "-"
+- generic: $
+- text: KDA
+- text: reNIK
+- generic: "37"
+- generic: "29450"
+- generic: "10"
+- generic: "8"
+- generic: "0"
+- text: h1te
+- generic: "0"
+- generic: "43450"
+- generic: "4"
+- generic: "3"
+- generic: "0"
+- text: spirit
+- generic: "0"
+- generic: "39950"
+- generic: "3"
+- generic: "7"
+- generic: "0"
+- text: sstiNiX
+- generic: "0"
+- generic: "42650"
+- generic: "2"
+- generic: "4"
+- generic: "0"
+- text: sm3t
+- generic: "0"
+- generic: "53500"
+- generic: "1"
+- generic: "1"
+- generic: "0"
+- list:
+- text: olimp
+- generic: "0"
+- generic: "27600"
+- generic: "11"
+- generic: "9"
+- generic: "0"
+- text: bajmi
+- generic: "0"
+- generic: "41550"
+- generic: "9"
+- generic: "10"
+- generic: "1"
+- text: SaMey
+- generic: "31"
+- generic: "0"
+- generic: "1"
+- generic: "0"
+- generic: "0"
+- text: moonwalk
+- generic: "100"
+- generic: "57300"
+- generic: "0"
+- generic: "0"
+- generic: "0"
+- text: sk1tt
+- generic: "0"
+- generic: "51500"
+- generic: "0"
+- generic: "1"
+- generic: "0"
+- generic: 实时日志
+- text: reNIK
+- text: bajmi
+- text: reNIK
+- text: olimp
+- text: olimp
+- text: spirit
+- text: olimp
+- text: sm3t
+- text: sm3t
+- text: bajmi
+- text: bajmi
+- text: h1te
+- text: h1te
+- text: bajmi
+- text: reNIK
+- text: olimp
+- text: h1te
+- text: bajmi
+- generic: spirit 加入比赛
+- generic: spirit 退出了游戏
+- generic: spirit 退出了游戏
+- text: SaMey
+- text: reNIK
+- text: reNIK
+- text: bajmi
+- text: h1te
+- text: olimp
+- text: reNIK
+- text: olimp
+- generic: spirit 加入比赛
+- generic: spirit 退出了游戏
+- text: olimp
+- text: reNIK
+- text: olimp
+- text: spirit
+- text: reNIK
+- text: bajmi
+- text: olimp
+- text: h1te
+- text: h1te
+- text: olimp
+- text: reNIK
+- text: bajmi
+- text: bajmi
+- text: spirit
+- text: bajmi
+- text: reNIK
+- text: olimp
+- text: h1te
+- text: bajmi
+- text: reNIK
+- generic: VIZE 加入比赛
+- text: olimp
+- text: reNIK
+- text: bajmi
+- text: sstiNiX
+- text: reNIK
+- text: sk1tt
+- text: bajmi
+- text: spirit
+- text: reNIK
+- text: olimp
+- text: olimp
+- text: reNIK
+- text: bajmi
+- text: sstiNiX
+- text: reNIK
+- text: bajmi
+- text: olimp
+- text: reNIK
+- generic: h1te 加入比赛
+- text: olimp
+- text: reNIK
+- generic: h1te 退出了游戏
+- text: spirit
+- text: olimp
+- generic: reNIK 加入比赛
+- text: spirit
+- text: bajmi
+- text: sstiNiX
+- text: bajmi
+- text: spirit
+- text: olimp
+- text: olimp
+- text: spirit
+- text: sstiNiX
+- text: olimp
+- generic: sk1tt 加入比赛
+- generic: spirit 加入比赛
+- text: bajmi
+- text: sstiNiX
+- generic: sm3t 加入比赛
+- generic: SaMey 加入比赛
+- generic: moonwalk 加入比赛
+- text: bajmi
+- text: sstiNiX
+- generic: bajmi 加入比赛
+- generic: sstiNiX 加入比赛
+- generic: sstiNiX 退出了游戏
+- generic: sstiNiX 退出了游戏
+- generic: sstiNiX 加入比赛
+- generic: olimp 加入比赛
+- generic: sstiNiX 退出了游戏
+- generic: sstiNiX 加入比赛
+- generic: obs 加入比赛
+- generic: 地图BP
+- list:
+  - paragraph: Walczaki
+  - generic: ban
+  - paragraph: Dust2
+  - paragraph: Just Players
+  - generic: ban
+  - paragraph: Inferno
+  - paragraph: Walczaki
+  - generic: pick
+  - paragraph: Nuke
+  - paragraph: Just Players
+  - generic: pick
+  - paragraph: Mirage
+  - paragraph: Walczaki
+  - generic: ban
+  - paragraph: Ancient
+  - paragraph: Just Players
+  - generic: ban
+  - paragraph: Cache
+  - generic: left
+  - paragraph: Anubis
+- generic: 比赛数据
+- list:
+  - paragraph: 第一局 / Nuke
+  - generic: "0"
+  - generic: ":"
+  - generic: "0"
+  - generic: 0/0/0
+  - generic: 0/0/0
+  - paragraph: 第二局 / Mirage
+  - generic: VS
+  - generic: "-"
+  - generic: ":"
+  - generic: "-"
+  - paragraph: 第三局 / Anubis
+  - generic: VS
+  - generic: "-"
+  - generic: ":"
+  - generic: "-"
+- generic: 回合
+- generic: "1"
+- generic: "2"
+- generic: "3"
+- generic: "4"
+- generic: "5"
+- generic: "6"
+- generic: "7"
+- generic: "8"
+- generic: "9"
+- generic: "10"
+- generic: "11"
+- generic: "12"
+- generic: "13"
+- generic: "14"
+- generic: "15"
+- generic: "16"
+- generic: "17"
+- generic: "18"
+- generic: "19"
+- generic: "20"
+- generic: "21"
+- generic: "22"
+- generic: "23"
+- generic: "24"
+- generic: 实时计分板
+- generic: Just Players
+- generic: 击杀
+- generic: 死亡
+- generic: 助攻
+- generic: KD差
+- generic: ADR
+- generic: reNIK
+- generic: "10"
+- generic: "8"
+- generic: "0"
+- generic: "+2"
+- generic: "660.0"
+- generic: h1te
+- generic: "4"
+- generic: "3"
+- generic: "0"
+- generic: "+1"
+- generic: "103.0"
+- generic: spirit
+- generic: "3"
+- generic: "7"
+- generic: "0"
+- generic: "-4"
+- generic: "68.0"
+- generic: sstiNiX
+- generic: "2"
+- generic: "4"
+- generic: "0"
+- generic: "-2"
+- generic: "200.0"
+- generic: sm3t
+- generic: "1"
+- generic: "1"
+- generic: "0"
+- generic: "0"
+- generic: "22.0"
+- generic: Walczaki
+- generic: 击杀
+- generic: 死亡
+- generic: 助攻
+- generic: KD差
+- generic: ADR
+- generic: olimp
+- generic: "11"
+- generic: "9"
+- generic: "0"
+- generic: "+2"
+- generic: "633.0"
+- generic: bajmi
+- generic: "9"
+- generic: "10"
+- generic: "1"
+- generic: "-1"
+- generic: "593.0"
+- generic: SaMey
+- generic: "1"
+- generic: "0"
+- generic: "0"
+- generic: "+1"
+- generic: "74.0"
+- generic: moonwalk
+- generic: "0"
+- generic: "0"
+- generic: "0"
+- generic: "0"
+- generic: "0.0"
+- generic: sk1tt
+- generic: "0"
+- generic: "1"
+- generic: "0"
+- generic: "-1"
+- generic: "0.0"
+- heading "赛前分析" [level=4]
+- generic: 选手分析（近三个月数据）
+- paragraph: sstiNiX
+- paragraph: sm3t
+- paragraph: spirit
+- paragraph: h1te
+- paragraph: reNIK
+- paragraph: olimp
+- paragraph: SaMey
+- paragraph: moonwalk
+- paragraph: sk1tt
+- paragraph: bajmi
+- generic: sstiNiX
+- generic: "1.19"
+- generic: Rating
+- generic: "1.15"
+- generic: "1.09"
+- generic: K/D
+- generic: "1.02"
+- generic: "72.1"
+- generic: KAST
+- generic: "71.8"
+- generic: +1.05%
+- generic: SWING
+- generic: +1.15%
+- generic: "81.2"
+- generic: ADR
+- generic: "81.9"
+- generic: "0.73"
+- generic: KPR
+- generic: "0.71"
+- generic: olimp
+- generic: 地图分析（近三个月数据）
+- generic: 地图
+- paragraph: Just Players
+- paragraph: Walczaki
+- generic: Nuke
+- text: 36%
+- generic: (11场)
+- text: 64%
+- text: (28场)
+- generic: Pick
+- generic: Mirage
+- text: 59%
+- text: (22场)
+- generic: Pick
+- text: 73%
+- generic: (11场)
+- generic: Anubis
+- text: 100%
+- generic: (3场)
+- generic: Left
+- text: 70%
+- generic: (20场)
+- generic: Dust2
+- text: 40%
+- generic: (15场)
+- text: 39%
+- text: (18场)
+- generic: Ban
+- generic: Inferno
+- text: "-"
+- text: (0场)
+- generic: Ban
+- text: 69%
+- generic: (13场)
+- generic: Ancient
+- text: 65%
+- generic: (20场)
+- text: 75%
+- text: (20场)
+- generic: Ban
+- generic: Cache
+- text: 0%
+- text: (3场)
+- generic: Ban
+- text: 0%
+- generic: (1场)
+- generic: 战队分析（近三个月数据）
+- generic: Just Players
+- generic: Walczaki
+- generic: 54%
+- generic: 胜率（小局）
+- generic: 63%
+- generic: "1.09"
+- generic: rating
+- generic: "1.10"
+- generic: "1.02"
+- generic: K/D
+- generic: "1.04"
+- generic: 48%
+- generic: 上半场手枪局胜率
+- generic: 56%
+- generic: 44%
+- generic: 下半场手枪局胜率
+- generic: 45%
+- generic: 近期战绩
+- generic: Just Players
+- generic: Walczaki
+- generic: 54%
+- generic: 胜率
+- generic: 63%
+- generic: 对阵战队
+- generic: 日期
+- generic: 赛事
+- generic: 赛果
+- generic: QUAZAR
+- generic: 2026-07-18
+- generic: GLuck Yungstar 2026 第2赛季
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Spirit.A
+- generic: 2026-07-18
+- generic: GLuck Yungstar 2026 第2赛季
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: NEW VISION
+- generic: 2026-07-17
+- generic: GLuck Yungstar 2026 第2赛季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: ex-RUBY
+- generic: 2026-07-17
+- generic: GLuck Yungstar 2026 第2赛季
+- generic: "1"
+- text: "-"
+- generic: "2"
+- generic: WW
+- generic: 2026-07-16
+- generic: 欧洲职业联赛 系列赛8
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: Lavked
+- generic: 2026-07-15
+- generic: 欧洲职业联赛 系列赛8
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Entropy
+- generic: 2026-07-13
+- generic: ESL 挑战者联赛 第52赛季 欧洲杯 1
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Genone
+- generic: 2026-07-13
+- generic: ESL 挑战者联赛 第52赛季 欧洲杯 1
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Atreides
+- generic: 2026-07-12
+- generic: ESL 挑战者联赛 第52赛季 欧洲杯 1
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: WROTBERRY
+- generic: 2026-07-10
+- generic: 欧洲职业联赛 系列赛8
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Lavked
+- generic: 2026-07-06
+- generic: 欧洲职业联赛 系列赛8
+- generic: "1"
+- text: "-"
+- generic: "0"
+- generic: SAW
+- generic: 2026-07-01
+- generic: CCT 2026 挑战者 欧洲 第4季
+- generic: "1"
+- text: "-"
+- generic: "2"
+- generic: Atreides
+- generic: 2026-06-29
+- generic: CCT 2026 挑战者 欧洲 第4季
+- generic: "0"
+- text: "-"
+- generic: "1"
+- generic: OlyBet
+- generic: 2026-06-27
+- generic: CCT 2026 挑战者 欧洲 第4季
+- generic: "1"
+- text: "-"
+- generic: "0"
+- generic: OG
+- generic: 2026-05-30
+- generic: TP 世界锦标赛 2026 欧洲 第1赛季
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Genone
+- generic: 2026-05-30
+- generic: CCT 2026 欧洲系列赛 第2季
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Tricked
+- generic: 2026-05-28
+- generic: CCT 2026 欧洲系列赛 第2季
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: Acend
+- generic: 2026-05-28
+- generic: TP 世界锦标赛 2026 欧洲 第1赛季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: ex-Zero Tenacity
+- generic: 2026-05-26
+- generic: TP 世界锦标赛 2026 欧洲 第1赛季
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: Algo
+- generic: 2026-05-26
+- generic: CCT 2026 欧洲系列赛 第2季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Lazer Cats
+- generic: 2026-05-25
+- generic: TP 世界锦标赛 2026 欧洲 第1赛季
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: AM
+- generic: 2026-05-23
+- generic: CCT 2026 欧洲系列赛 第2季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Bushido Wildcats
+- generic: 2026-05-23
+- generic: CCT 2026 欧洲系列赛 第2季封闭预选
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Rune Eaters
+- generic: 2026-05-23
+- generic: CCT 2026 欧洲系列赛 第2季封闭预选
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: ex-RUBY
+- generic: 2026-05-22
+- generic: CCT 2026 欧洲系列赛 第2季
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Lilmix
+- generic: 2026-05-21
+- generic: CCT 2026 欧洲系列赛 第2季封闭预选
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: SPARTA
+- generic: 2026-05-18
+- generic: CCT 2026 欧洲系列赛 第2季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: OlyBet
+- generic: 2026-05-17
+- generic: CCT 2026 欧洲系列赛 第2季封闭预选
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: ex-Zero Tenacity
+- generic: 2026-05-16
+- generic: CCT 2026 欧洲系列赛 第2季封闭预选
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Hashiras
+- generic: 2026-05-15
+- generic: CCT 2026 欧洲系列赛 第2季封闭预选
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: 对阵战队
+- generic: 日期
+- generic: 赛事
+- generic: 赛果
+- generic: SPARTA
+- generic: 2026-07-16
+- generic: 欧洲职业联赛 系列赛8
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: Inner Circle
+- generic: 2026-06-26
+- generic: 数字圣战・超德古拉杯 第一赛季
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: ex-Tricked
+- generic: 2026-06-25
+- generic: 数字圣战・超德古拉杯 第一赛季
+- generic: "1"
+- text: "-"
+- generic: "2"
+- generic: EAC
+- generic: 2026-06-24
+- generic: 数字圣战・超德古拉杯 第一赛季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: K27
+- generic: 2026-06-23
+- generic: 数字圣战・超德古拉杯 第一赛季
+- generic: "1"
+- text: "-"
+- generic: "0"
+- generic: KOLESIE
+- generic: 2026-06-22
+- generic: 欧洲职业联赛 系列赛 7
+- generic: "3"
+- text: "-"
+- generic: "2"
+- generic: Phantom
+- generic: 2026-06-21
+- generic: Stake 排位赛 第3季 封闭预选
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Infinite
+- generic: 2026-06-20
+- generic: 欧洲职业联赛 系列赛 7
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Oxuji
+- generic: 2026-06-19
+- generic: Stake 排位赛 第3季 封闭预选
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: TDK
+- generic: 2026-06-18
+- generic: 欧洲职业联赛 系列赛 7
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: G2 Ares
+- generic: 2026-06-15
+- generic: 欧洲职业联赛 系列赛 7
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: K27
+- generic: 2026-06-14
+- generic: NODWIN Clutch 系列赛 第9季
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: INOX Division
+- generic: 2026-06-10
+- generic: NODWIN Clutch 系列赛 第9季
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: ARCRED
+- generic: 2026-06-07
+- generic: NODWIN Clutch 系列赛 第9季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: TDK
+- generic: 2026-06-06
+- generic: NODWIN Clutch 系列赛 第9季
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: KOLESIE
+- generic: 2026-06-05
+- generic: NODWIN Clutch 系列赛 第9季
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: Alliance
+- generic: 2026-05-24
+- generic: Tipsport 征服布拉格 2026 决赛
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Sashi
+- generic: 2026-05-23
+- generic: Tipsport 征服布拉格 2026 决赛
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Alliance
+- generic: 2026-05-22
+- generic: Tipsport 征服布拉格 2026 决赛
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Tricked
+- generic: 2026-05-21
+- generic: NODWIN Clutch 系列赛 第8季
+- generic: "1"
+- text: "-"
+- generic: "2"
+- generic: Nemesis
+- generic: 2026-05-18
+- generic: NODWIN Clutch 系列赛 第8季
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: SPARTA
+- generic: 2026-05-16
+- generic: NODWIN Clutch 系列赛 第8季
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: Nemiga
+- generic: 2026-05-15
+- generic: CCT 2026 欧洲系列赛 第1季
+- generic: "1"
+- text: "-"
+- generic: "2"
+- generic: HOTU
+- generic: 2026-05-15
+- generic: CCT 2026 欧洲系列赛 第1季
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: FT
+- generic: 2026-05-14
+- generic: NODWIN Clutch 系列赛 第8季
+- generic: "1"
+- text: "-"
+- generic: "0"
+- generic: Johnny Speeds
+- generic: 2026-05-13
+- generic: NODWIN Clutch 系列赛 第8季
+- generic: "0"
+- text: "-"
+- generic: "1"
+- generic: BET-M
+- generic: 2026-05-12
+- generic: CCT 2026 欧洲系列赛 第1季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: AM
+- generic: 2026-05-11
+- generic: NODWIN Clutch 系列赛 第8季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Nemiga
+- generic: 2026-05-11
+- generic: BC Game 大师赛 欧洲 第二季 S1
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: Nuclear TigeRES
+- generic: 2026-05-10
+- generic: BC Game 大师赛 欧洲 第二季 S1
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: 交手战绩（最近五场）
+- generic: Just Players
+- generic: 0%
+- generic: 胜率
+- generic: 0%
+- generic: 胜率
+- generic: Walczaki
+- paragraph: 暂无数据
+- contentinfo
+- region "Notifications"
+- document:
+  - button "翻译":
+  - button "朗读":
+  - button "词典":
+- region "Notifications"
+- document:
+  - button:
+  - img "Read Frog"
+  - button:
+- region "Notifications"
+- region "Notifications"

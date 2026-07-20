@@ -1,0 +1,1249 @@
+- banner:
+  - link:
+    - /url: https://www.5eplay.com/
+  - link:
+    - /url: https://event.5eplay.com/csgo/matches
+  - list:
+    - link "CS":
+      - /url: /csgo/events
+      - text: CS
+    - link "VAL":
+      - /url: https://valdata.5eplay.com/esports
+      - text: VAL
+  - textbox "搜索战队、选手、赛事"
+  - generic: 分享
+  - generic: 收藏
+  - generic: 登录
+- list:
+  - link "赛程":
+    - /url: /csgo/matches
+  - link "赛事":
+    - /url: /csgo/events
+  - link "战队":
+    - /url: /csgo/teams
+  - link "选手":
+    - /url: /csgo/player
+- generic: CCT 2026 南美系列赛 第四季
+- generic: ">"
+- generic: PDF
+- generic: VS
+- generic: ODDIK
+- paragraph:
+  - generic: CCT 2026 南美系列赛 第四季
+- paragraph: 比赛时间：2026-07-20
+- generic: PDF
+- paragraph: V社排名：252
+- generic: LIVE
+- generic: 1 - 0
+- generic: BO3
+- generic: ODDIK
+- paragraph: V社排名：-
+- generic: 50%
+- generic: 50%
+- generic: 图文直播
+- generic: "13"
+- text: "11"
+- generic: "5 : 7"
+- generic: "8 : 4"
+- generic: Ancient
+- generic: Round over
+- generic: 第24回合
+- generic: +
+- generic: "-"
+- generic: $
+- text: KDA
+- text: history
+- generic: "0"
+- generic: "3550"
+- generic: "21"
+- generic: "13"
+- generic: "1"
+- text: nicks
+- generic: "100"
+- generic: "8550"
+- generic: "17"
+- generic: "13"
+- generic: "5"
+- text: t9rnay
+- generic: "0"
+- generic: "4150"
+- generic: "16"
+- generic: "13"
+- generic: "4"
+- text: mlhzin
+- generic: "100"
+- generic: "2450"
+- generic: "11"
+- generic: "15"
+- generic: "10"
+- text: CutzMeretz
+- generic: "100"
+- generic: "2350"
+- generic: "11"
+- generic: "14"
+- generic: "4"
+- list:
+- text: righi
+- generic: "0"
+- generic: "50"
+- generic: "19"
+- generic: "14"
+- generic: "4"
+- text: nardes
+- generic: "0"
+- generic: "650"
+- generic: "18"
+- generic: "13"
+- generic: "6"
+- text: diozera
+- generic: "0"
+- generic: "100"
+- generic: "11"
+- generic: "15"
+- generic: "6"
+- text: Ceruttera
+- generic: "0"
+- generic: "100"
+- generic: "10"
+- generic: "17"
+- generic: "10"
+- text: PremiuM
+- generic: "0"
+- generic: "400"
+- generic: "10"
+- generic: "17"
+- generic: "4"
+- generic: 实时日志
+- generic: CutzMeretz 退出了游戏
+- generic: Ceruttera 退出了游戏
+- generic: PremiuM 退出了游戏
+- generic: 回合结束，CT获胜（13:11）拆弹获胜
+- generic: nardes 退出了游戏
+- generic: diozera 退出了游戏
+- text: CutzMeretz
+- text: Ceruttera
+- text: nicks
+- text: nardes
+- generic: nardes 放置了炸弹 (当前 3 v 2)
+- text: nicks
+- text: PremiuM
+- text: PremiuM
+- text: t9rnay
+- text: nardes
+- text: history
+- text: t9rnay
+- text: righi
+- text: history
+- text: diozera
+- text: nicks
+- text: nardes
+- text: nardes
+- text: CutzMeretz
+- text: nicks
+- text: Ceruttera
+- generic: Ceruttera 放置了炸弹 (当前 2 v 2)
+- text: nardes
+- text: t9rnay
+- text: t9rnay
+- text: PremiuM
+- text: PremiuM
+- text: mlhzin
+- text: mlhzin
+- text: righi
+- text: righi
+- text: history
+- text: t9rnay
+- text: diozera
+- generic: map1 Ancient 第23回合开始
+- generic: 回合结束，CT获胜（11:11）超时获胜
+- text: CutzMeretz
+- text: righi
+- text: CutzMeretz
+- text: Ceruttera
+- generic: map1 Ancient 第22回合开始
+- generic: 回合结束，T获胜（11:10）歼灭敌人
+- text: righi
+- text: CutzMeretz
+- text: righi
+- text: nicks
+- text: righi
+- text: history
+- text: PremiuM
+- text: mlhzin
+- text: mlhzin
+- text: Ceruttera
+- text: Ceruttera
+- text: t9rnay
+- text: t9rnay
+- text: diozera
+- generic: map1 Ancient 第21回合开始
+- generic: 回合结束，T获胜（10:10）炸弹爆炸
+- text: history
+- text: nardes
+- text: righi
+- text: mlhzin
+- text: diozera
+- text: CutzMeretz
+- text: mlhzin
+- text: Ceruttera
+- generic: PremiuM 放置了炸弹 (当前 3 v 5)
+- text: nardes
+- text: nicks
+- text: Ceruttera
+- text: t9rnay
+- generic: map1 Ancient 第20回合开始
+- generic: 回合结束，CT获胜（10:9）歼灭敌人
+- text: t9rnay
+- text: diozera
+- text: history
+- text: nardes
+- text: history
+- text: Ceruttera
+- text: nicks
+- text: PremiuM
+- text: t9rnay
+- text: righi
+- generic: map1 Ancient 第19回合开始
+- generic: 回合结束，CT获胜（9:9）歼灭敌人
+- text: CutzMeretz
+- text: righi
+- text: nicks
+- text: PremiuM
+- text: nicks
+- text: nardes
+- text: history
+- text: diozera
+- text: CutzMeretz
+- text: Ceruttera
+- generic: map1 Ancient 第18回合开始
+- generic: 回合结束，CT获胜（8:9）歼灭敌人
+- text: history
+- text: righi
+- text: history
+- text: nardes
+- text: CutzMeretz
+- text: Ceruttera
+- text: history
+- text: diozera
+- text: mlhzin
+- text: PremiuM
+- generic: map1 Ancient 第17回合开始
+- generic: 回合结束，CT获胜（7:9）歼灭敌人
+- text: history
+- text: righi
+- text: history
+- text: diozera
+- text: mlhzin
+- text: PremiuM
+- text: mlhzin
+- text: nardes
+- text: diozera
+- text: CutzMeretz
+- text: CutzMeretz
+- text: Ceruttera
+- text: nardes
+- text: nicks
+- generic: map1 Ancient 第16回合开始
+- generic: 回合结束，CT获胜（6:9）歼灭敌人
+- text: history
+- text: nardes
+- text: nardes
+- text: nicks
+- text: nicks
+- text: PremiuM
+- text: nicks
+- text: righi
+- text: righi
+- text: t9rnay
+- text: righi
+- text: CutzMeretz
+- text: CutzMeretz
+- text: Ceruttera
+- text: nardes
+- text: mlhzin
+- text: nicks
+- text: diozera
+- generic: map1 Ancient 第15回合开始
+- generic: 回合结束，T获胜（9:5）炸弹爆炸
+- generic: righi 放置了炸弹 (当前 2 v 3)
+- text: righi
+- text: t9rnay
+- text: t9rnay
+- text: nardes
+- text: nardes
+- text: mlhzin
+- text: mlhzin
+- text: diozera
+- text: diozera
+- text: history
+- generic: map1 Ancient 第14回合开始
+- generic: 回合结束，T获胜（8:5）炸弹爆炸
+- generic: PremiuM 放置了炸弹 (当前 2 v 4)
+- text: nardes
+- text: CutzMeretz
+- text: PremiuM
+- text: history
+- text: Ceruttera
+- text: nicks
+- text: nicks
+- text: diozera
+- generic: map1 Ancient 第13回合开始
+- generic: 回合结束，CT获胜（7:5）拆弹获胜
+- text: PremiuM
+- text: CutzMeretz
+- text: nardes
+- text: history
+- text: righi
+- text: nicks
+- generic: history 放置了炸弹 (当前 5 v 3)
+- text: Ceruttera
+- text: mlhzin
+- text: righi
+- text: t9rnay
+- generic: map1 Ancient 第12回合开始
+- generic: 回合结束，CT获胜（6:5）歼灭敌人
+- text: nardes
+- text: nicks
+- text: nardes
+- text: t9rnay
+- text: diozera
+- text: history
+- text: t9rnay
+- text: PremiuM
+- text: t9rnay
+- text: Ceruttera
+- text: Ceruttera
+- text: CutzMeretz
+- text: PremiuM
+- text: mlhzin
+- generic: map1 Ancient 第11回合开始
+- generic: 回合结束，T获胜（5:5）炸弹爆炸
+- generic: t9rnay 放置了炸弹 (当前 3 v 3)
+- text: nardes
+- text: history
+- text: history
+- text: Ceruttera
+- text: Ceruttera
+- text: mlhzin
+- text: mlhzin
+- text: PremiuM
+- generic: map1 Ancient 第10回合开始
+- generic: 回合结束，T获胜（4:5）炸弹爆炸
+- generic: nicks 放置了炸弹 (当前 1 v 4)
+- text: nicks
+- text: PremiuM
+- text: t9rnay
+- text: diozera
+- text: nicks
+- text: nardes
+- text: t9rnay
+- text: righi
+- text: diozera
+- text: mlhzin
+- generic: map1 Ancient 第9回合开始
+- generic: 回合结束，T获胜（3:5）炸弹爆炸
+- generic: history 放置了炸弹 (当前 3 v 5)
+- text: nicks
+- text: righi
+- text: t9rnay
+- text: PremiuM
+- generic: map1 Ancient 第8回合开始
+- generic: 回合结束，CT获胜（5:2）拆弹获胜
+- text: righi
+- text: history
+- text: righi
+- text: nicks
+- text: nicks
+- text: nardes
+- text: history
+- text: PremiuM
+- generic: nicks 放置了炸弹 (当前 3 v 2)
+- text: nicks
+- text: diozera
+- text: righi
+- text: t9rnay
+- text: diozera
+- text: CutzMeretz
+- text: CutzMeretz
+- text: Ceruttera
+- text: diozera
+- text: mlhzin
+- generic: map1 Ancient 第7回合开始
+- generic: 回合结束，T获胜（2:4）炸弹爆炸
+- generic: t9rnay 放置了炸弹 (当前 2 v 3)
+- text: nardes
+- text: CutzMeretz
+- text: nicks
+- text: PremiuM
+- text: PremiuM
+- text: mlhzin
+- text: CutzMeretz
+- text: righi
+- text: mlhzin
+- text: Ceruttera
+- generic: map1 Ancient 第6回合开始
+- generic: 回合结束，CT获胜（4:1）歼灭敌人
+- text: Ceruttera
+- text: history
+- text: history
+- text: righi
+- text: righi
+- text: nicks
+- text: history
+- text: PremiuM
+- text: PremiuM
+- text: t9rnay
+- text: history
+- text: nardes
+- text: righi
+- text: CutzMeretz
+- text: Ceruttera
+- text: mlhzin
+- generic: map1 Ancient 第5回合开始
+- generic: 回合结束，T获胜（1:3）歼灭敌人
+- text: t9rnay
+- text: diozera
+- text: CutzMeretz
+- text: righi
+- generic: CutzMeretz 放置了炸弹 (当前 2 v 4)
+- text: mlhzin
+- text: Ceruttera
+- text: diozera
+- text: nicks
+- text: history
+- text: PremiuM
+- text: mlhzin
+- text: nardes
+- generic: map1 Ancient 第4回合开始
+- generic: 回合结束，CT获胜（3:0）拆弹获胜
+- text: nardes
+- text: t9rnay
+- generic: t9rnay 放置了炸弹 (当前 4 v 1)
+- text: nardes
+- text: CutzMeretz
+- text: diozera
+- text: history
+- text: history
+- text: Ceruttera
+- text: Ceruttera
+- text: mlhzin
+- text: righi
+- text: nicks
+- generic: map1 Ancient 第3回合开始
+- generic: 回合结束，CT获胜（2:0）歼灭敌人
+- text: righi
+- text: mlhzin
+- text: righi
+- text: t9rnay
+- text: t9rnay
+- text: PremiuM
+- text: PremiuM
+- text: CutzMeretz
+- text: righi
+- text: nicks
+- text: PremiuM
+- text: history
+- text: t9rnay
+- text: diozera
+- generic: map1 Ancient 第2回合开始
+- generic: 回合结束，CT获胜（1:0）歼灭敌人
+- text: nardes
+- text: t9rnay
+- text: t9rnay
+- text: diozera
+- text: diozera
+- text: history
+- text: history
+- text: PremiuM
+- text: history
+- text: Ceruttera
+- text: Ceruttera
+- text: nicks
+- text: diozera
+- text: CutzMeretz
+- generic: map1 Ancient 第1回合开始
+- text: PremiuM
+- text: history
+- text: Ceruttera
+- text: t9rnay
+- text: nicks
+- text: diozera
+- text: righi
+- text: history
+- text: history
+- text: nardes
+- text: PremiuM
+- text: t9rnay
+- text: nicks
+- text: Ceruttera
+- text: nicks
+- text: diozera
+- text: nicks
+- text: nardes
+- text: nicks
+- text: PremiuM
+- text: nardes
+- text: t9rnay
+- text: PremiuM
+- text: t9rnay
+- text: t9rnay
+- text: Ceruttera
+- text: nardes
+- text: nicks
+- text: nardes
+- text: history
+- text: history
+- text: diozera
+- text: Ceruttera
+- text: mlhzin
+- text: nardes
+- text: t9rnay
+- text: nardes
+- text: nicks
+- text: nicks
+- text: diozera
+- text: diozera
+- text: mlhzin
+- text: mlhzin
+- text: Ceruttera
+- text: Ceruttera
+- text: t9rnay
+- text: t9rnay
+- text: nardes
+- generic: 地图BP
+- list:
+  - paragraph: PDF
+  - generic: ban
+  - paragraph: Anubis
+  - paragraph: ODDIK
+  - generic: ban
+  - paragraph: Inferno
+  - paragraph: PDF
+  - generic: pick
+  - paragraph: Ancient
+  - paragraph: ODDIK
+  - generic: pick
+  - paragraph: Dust2
+  - paragraph: PDF
+  - generic: ban
+  - paragraph: Cache
+  - paragraph: ODDIK
+  - generic: ban
+  - paragraph: Nuke
+  - generic: left
+  - paragraph: Mirage
+- generic: 比赛数据
+- list:
+  - paragraph: 第一局 / Ancient
+  - generic: "13"
+  - generic: ":"
+  - generic: "11"
+  - generic: 5/8/0
+  - generic: 7/4/0
+  - paragraph: 第二局 / Dust2
+  - generic: VS
+  - generic: "-"
+  - generic: ":"
+  - generic: "-"
+  - paragraph: 第三局 / Mirage
+  - generic: VS
+  - generic: "-"
+  - generic: ":"
+  - generic: "-"
+- generic: 回合
+- generic: "1"
+- generic: "2"
+- generic: "3"
+- generic: "4"
+- generic: "5"
+- generic: "6"
+- generic: "7"
+- generic: "8"
+- generic: "9"
+- generic: "10"
+- generic: "11"
+- generic: "12"
+- generic: "13"
+- generic: "14"
+- generic: "15"
+- generic: "16"
+- generic: "17"
+- generic: "18"
+- generic: "19"
+- generic: "20"
+- generic: "21"
+- generic: "22"
+- generic: "23"
+- generic: "24"
+- list:
+  - listitem: 数据总览
+  - listitem: 选手对比
+- generic: PDF
+- generic: Rating
+- generic: K-D-A
+- generic: K/D
+- generic: KD差
+- generic: KAST
+- generic: ADR
+- generic: Swing
+- generic: KPR
+- generic: DPR
+- generic: 爆头率
+- generic: 首杀次数
+- generic: history
+- generic: "--"
+- generic: 21-13-1
+- generic: "1.62"
+- generic: "+8"
+- generic: "--"
+- generic: "74.6"
+- generic: "--"
+- generic: "0.88"
+- generic: "0.54"
+- generic: "--"
+- generic: "--"
+- generic: nicks
+- generic: "--"
+- generic: 17-13-5
+- generic: "1.31"
+- generic: "+4"
+- generic: "--"
+- generic: "73.6"
+- generic: "--"
+- generic: "0.71"
+- generic: "0.54"
+- generic: "--"
+- generic: "--"
+- generic: t9rnay
+- generic: "--"
+- generic: 16-13-4
+- generic: "1.23"
+- generic: "+3"
+- generic: "--"
+- generic: "70.5"
+- generic: "--"
+- generic: "0.67"
+- generic: "0.54"
+- generic: "--"
+- generic: "--"
+- generic: mlhzin
+- generic: "--"
+- generic: 11-15-10
+- generic: "0.73"
+- generic: "-4"
+- generic: "--"
+- generic: "72.8"
+- generic: "--"
+- generic: "0.46"
+- generic: "0.62"
+- generic: "--"
+- generic: "--"
+- generic: CutzMeretz
+- generic: "--"
+- generic: 11-14-4
+- generic: "0.79"
+- generic: "-3"
+- generic: "--"
+- generic: "60.2"
+- generic: "--"
+- generic: "0.46"
+- generic: "0.58"
+- generic: "--"
+- generic: "--"
+- generic: ODDIK
+- generic: Rating
+- generic: K-D-A
+- generic: K/D
+- generic: KD差
+- generic: KAST
+- generic: ADR
+- generic: Swing
+- generic: KPR
+- generic: DPR
+- generic: 爆头率
+- generic: 首杀次数
+- generic: righi
+- generic: "--"
+- generic: 19-14-4
+- generic: "1.36"
+- generic: "+5"
+- generic: "--"
+- generic: "80.8"
+- generic: "--"
+- generic: "0.79"
+- generic: "0.58"
+- generic: "--"
+- generic: "--"
+- generic: nardes
+- generic: "--"
+- generic: 18-13-6
+- generic: "1.38"
+- generic: "+5"
+- generic: "--"
+- generic: "65.7"
+- generic: "--"
+- generic: "0.75"
+- generic: "0.54"
+- generic: "--"
+- generic: "--"
+- generic: diozera
+- generic: "--"
+- generic: 11-15-6
+- generic: "0.73"
+- generic: "-4"
+- generic: "--"
+- generic: "65.9"
+- generic: "--"
+- generic: "0.46"
+- generic: "0.62"
+- generic: "--"
+- generic: "--"
+- generic: Ceruttera
+- generic: "--"
+- generic: 10-17-10
+- generic: "0.59"
+- generic: "-7"
+- generic: "--"
+- generic: "61.4"
+- generic: "--"
+- generic: "0.42"
+- generic: "0.71"
+- generic: "--"
+- generic: "--"
+- generic: PremiuM
+- generic: "--"
+- generic: 10-17-4
+- generic: "0.59"
+- generic: "-7"
+- generic: "--"
+- generic: "46.0"
+- generic: "--"
+- generic: "0.42"
+- generic: "0.71"
+- generic: "--"
+- generic: "--"
+- heading "赛前分析" [level=4]
+- generic: 选手分析（近三个月数据）
+- paragraph: history
+- paragraph: nicks
+- paragraph: t9rnay
+- paragraph: mlhzin
+- paragraph: CutzMeretz
+- paragraph: nardes
+- paragraph: diozera
+- paragraph: PremiuM
+- paragraph: Ceruttera
+- paragraph: righi
+- generic: history
+- generic: "1.31"
+- generic: Rating
+- generic: "1.21"
+- generic: "1.46"
+- generic: K/D
+- generic: "1.15"
+- generic: "77.1"
+- generic: KAST
+- generic: "75.9"
+- generic: +3.24%
+- generic: SWING
+- generic: +1.52%
+- generic: "81.0"
+- generic: ADR
+- generic: "79.8"
+- generic: "0.83"
+- generic: KPR
+- generic: "0.74"
+- generic: nardes
+- generic: 地图分析（近三个月数据）
+- generic: 地图
+- paragraph: PDF
+- paragraph: ODDIK
+- generic: Ancient
+- text: 100%
+- text: (3场)
+- generic: Pick
+- text: 0%
+- generic: (1场)
+- generic: Dust2
+- text: 50%
+- generic: (2场)
+- text: 75%
+- text: (4场)
+- generic: Pick
+- generic: Mirage
+- text: 100%
+- generic: (4场)
+- generic: Left
+- text: "-"
+- generic: (0场)
+- generic: Anubis
+- text: "-"
+- text: (0场)
+- generic: Ban
+- text: 67%
+- generic: (3场)
+- generic: Inferno
+- text: "-"
+- generic: (0场)
+- text: 100%
+- text: (1场)
+- generic: Ban
+- generic: Cache
+- text: 100%
+- text: (1场)
+- generic: Ban
+- text: 100%
+- generic: (1场)
+- generic: Nuke
+- text: 25%
+- generic: (4场)
+- text: 0%
+- text: (1场)
+- generic: Ban
+- generic: 战队分析（近三个月数据）
+- generic: PDF
+- generic: ODDIK
+- generic: 71%
+- generic: 胜率（小局）
+- generic: 64%
+- generic: "1.13"
+- generic: rating
+- generic: "1.10"
+- generic: "1.10"
+- generic: K/D
+- generic: "1.07"
+- generic: 50%
+- generic: 上半场手枪局胜率
+- generic: 36%
+- generic: 71%
+- generic: 下半场手枪局胜率
+- generic: 64%
+- generic: 近期战绩
+- generic: PDF
+- generic: ODDIK
+- generic: 71%
+- generic: 胜率
+- generic: 64%
+- generic: 对阵战队
+- generic: 日期
+- generic: 赛事
+- generic: 赛果
+- generic: Grêmio
+- generic: 2026-07-18
+- generic: CCT 2026 南美系列赛 第四季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: METANOIA Wolves
+- generic: 2026-07-14
+- generic: CCT 2026 南美系列赛 第四季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Fluxo
+- generic: 2026-07-08
+- generic: CCT 2026 南美系列赛 第3季
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: UNO
+- generic: 2026-07-08
+- generic: CCT 2026 南美系列赛 第3季
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: BESTIA Academy
+- generic: 2026-07-03
+- generic: CCT 2026 南美系列赛 第3季
+- generic: "1"
+- text: "-"
+- generic: "0"
+- generic: Guara
+- generic: 2026-07-01
+- generic: CCT 2026 南美系列赛 第3季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Mibr.A
+- generic: 2026-06-29
+- generic: CCT 2026 南美系列赛 第3季
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: Solid
+- generic: 2025-01-31
+- generic: CCT 第2赛季 南美系列赛6
+- generic: "1"
+- text: "-"
+- generic: "2"
+- generic: FURIA fe
+- generic: 2025-01-30
+- generic: CCT 第2赛季 南美系列赛6
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: adalYamigos
+- generic: 2025-01-23
+- generic: CCT 第2赛季 南美系列赛6
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: MIBR.fe
+- generic: 2025-01-21
+- generic: CCT 第2赛季 南美系列赛6
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Solid
+- generic: 2025-01-19
+- generic: CCT 第2赛季 南美系列赛6
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Tropa do Taco
+- generic: 2025-01-17
+- generic: CCT 第2赛季 南美系列赛6
+- generic: "1"
+- text: "-"
+- generic: "2"
+- generic: UNO
+- generic: 2025-01-16
+- generic: CCT 第2赛季 南美系列赛6
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: ShindeN
+- generic: 2025-01-10
+- generic: Frost and Fire 南美洲第一赛季
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Nitro
+- generic: 2024-12-22
+- generic: Frost and Fire 南美洲第一赛季封闭资格赛
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Vikings KR
+- generic: 2024-12-21
+- generic: Frost and Fire 南美洲第一赛季封闭资格赛
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Players
+- generic: 2024-12-18
+- generic: Frost and Fire 南美洲第一赛季封闭资格赛
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: Galorys Academy
+- generic: 2024-12-15
+- generic: Frost and Fire 南美洲第一赛季封闭资格赛
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Solid
+- generic: 2024-12-14
+- generic: Frost and Fire 南美洲第一赛季封闭资格赛
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: "2070"
+- generic: 2024-11-27
+- generic: CCT 第2赛季 南美系列赛5
+- generic: "1"
+- text: "-"
+- generic: "2"
+- generic: LaChampionsLiga
+- generic: 2024-11-24
+- generic: CCT 第2赛季 南美系列赛5
+- generic: "1"
+- text: "-"
+- generic: "0"
+- generic: JOGA DE TERNO
+- generic: 2024-11-23
+- generic: CCT 第2赛季 南美系列赛5
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: BeBold
+- generic: 2024-11-21
+- generic: CCT 第2赛季 南美系列赛5
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Nitro
+- generic: 2024-11-19
+- generic: CCT 第2赛季 南美系列赛5
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: BESTIA
+- generic: 2024-08-14
+- generic: United21 联赛 南美 第2赛季
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Case
+- generic: 2024-08-13
+- generic: United21 联赛 南美 第2赛季
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: KRÜ
+- generic: 2024-08-12
+- generic: United21 联赛 南美 第2赛季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Dusty Roots
+- generic: 2024-08-11
+- generic: United21 联赛 南美 第2赛季
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: BESTIA
+- generic: 2024-08-10
+- generic: United21 联赛 南美 第2赛季
+- generic: "1"
+- text: "-"
+- generic: "2"
+- generic: 对阵战队
+- generic: 日期
+- generic: 赛事
+- generic: 赛果
+- generic: Procyon
+- generic: 2026-07-18
+- generic: CCT 2026 南美系列赛 第四季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: paiN.A
+- generic: 2026-07-15
+- generic: CCT 2026 南美系列赛 第四季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Keyd
+- generic: 2026-04-29
+- generic: ESL 挑战者联赛 S51 南美杯 第4季
+- generic: "1"
+- text: "-"
+- generic: "2"
+- generic: Fake do Biru
+- generic: 2026-04-28
+- generic: ESL 挑战者联赛 S51 南美杯 第4季
+- generic: "1"
+- text: "-"
+- generic: "2"
+- generic: RTT100
+- generic: 2026-04-27
+- generic: ESL 挑战者联赛 S51 南美杯 第4季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Fluxo
+- generic: 2026-04-04
+- generic: BB Circuit X 圣保罗狂欢节 2026
+- generic: "1"
+- text: "-"
+- generic: "2"
+- generic: 9z
+- generic: 2026-04-04
+- generic: PGL 阿斯塔纳 2026 南美 封闭预选
+- generic: "1"
+- text: "-"
+- generic: "3"
+- generic: Fake do Biru
+- generic: 2026-04-04
+- generic: PGL 阿斯塔纳 2026 南美 封闭预选
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Gaimin Gladiators
+- generic: 2026-04-03
+- generic: BB Circuit X 圣保罗狂欢节 2026
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: GameHunters
+- generic: 2026-04-03
+- generic: BB Circuit X 圣保罗狂欢节 2026
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: 9z
+- generic: 2026-04-03
+- generic: PGL 阿斯塔纳 2026 南美 封闭预选
+- generic: "1"
+- text: "-"
+- generic: "2"
+- generic: Keyd
+- generic: 2026-04-02
+- generic: PGL 阿斯塔纳 2026 南美 封闭预选
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: Mibr.A
+- generic: 2026-04-01
+- generic: PGL 阿斯塔纳 2026 南美 封闭预选
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Legacy
+- generic: 2026-03-30
+- generic: FERJEE In House 2026
+- generic: "1"
+- text: "-"
+- generic: "2"
+- generic: Marsborne
+- generic: 2026-03-29
+- generic: FERJEE In House 2026
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: GameHunters
+- generic: 2026-03-29
+- generic: FERJEE In House 2026
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Marsborne
+- generic: 2026-03-27
+- generic: FERJEE In House 2026
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Bounty Hunters
+- generic: 2026-03-22
+- generic: Aorus联赛 巴西 决赛 2026
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Galorys
+- generic: 2026-03-21
+- generic: Aorus联赛 巴西 决赛 2026
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Crashers
+- generic: 2026-03-18
+- generic: Aorus联赛 巴西 2026
+- generic: "13"
+- text: "-"
+- generic: "9"
+- generic: ALZON
+- generic: 2026-03-18
+- generic: Aorus联赛 巴西 2026
+- generic: "13"
+- text: "-"
+- generic: "3"
+- generic: Yawara
+- generic: 2026-03-07
+- generic: BB Circuit X 库亚巴 2026
+- generic: "1"
+- text: "-"
+- generic: "2"
+- generic: Sharks
+- generic: 2026-03-05
+- generic: BB Circuit X 库亚巴 2026
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Yawara
+- generic: 2026-03-05
+- generic: BB Circuit X 库亚巴 2026
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Fluxo
+- generic: 2026-02-28
+- generic: BB RUSH B Summit 第2赛季
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Galorys
+- generic: 2026-02-27
+- generic: BB RUSH B Summit 第2赛季
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: 9z
+- generic: 2026-02-26
+- generic: BB RUSH B Summit 第2赛季
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: MIBR
+- generic: 2026-02-25
+- generic: ESL 挑战者联赛 S51 南美杯第1季
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Galorys
+- generic: 2026-02-24
+- generic: ESL 挑战者联赛 S51 南美杯第1季
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: LP
+- generic: 2026-02-23
+- generic: ESL 挑战者联赛 S51 南美杯第1季
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: 交手战绩（最近五场）
+- generic: PDF
+- generic: 0%
+- generic: 胜率
+- generic: 100%
+- generic: 胜率
+- generic: ODDIK
+- generic: 2024-07-27
+- generic: PDF
+- generic: "0"
+- generic: ":"
+- generic: "2"
+- generic: ODDIK
+- generic: KaBuM! 联赛 2024
+- generic: 2024-07-26
+- generic: PDF
+- generic: "0"
+- generic: ":"
+- generic: "2"
+- generic: ODDIK
+- generic: FERJEE州立巡回赛2024
+- generic: 2024-07-22
+- generic: PDF
+- generic: "0"
+- generic: ":"
+- generic: "2"
+- generic: ODDIK
+- generic: FERJEE州立巡回赛2024
+- generic: 2024-07-11
+- generic: PDF
+- generic: "0"
+- generic: ":"
+- generic: "2"
+- generic: ODDIK
+- generic: EPL 世界系列赛 美洲 第9赛季
+- generic: 2024-01-10
+- generic: PDF
+- generic: "0"
+- generic: ":"
+- generic: "2"
+- generic: ODDIK
+- generic: 哥本哈根Major南美RMR OQ1
+- contentinfo
+- region "Notifications"
+- document:
+  - button:
+  - img "Read Frog"
+  - button:
+- region "Notifications"
+- region "Notifications"
+- document:
+  - button "翻译":
+  - button "朗读":
+  - button "词典":
+- region "Notifications"

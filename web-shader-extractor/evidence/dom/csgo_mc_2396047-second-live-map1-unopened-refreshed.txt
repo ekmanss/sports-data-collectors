@@ -1,0 +1,436 @@
+- banner:
+  - link:
+    - /url: https://www.5eplay.com/
+  - link:
+    - /url: https://event.5eplay.com/csgo/matches
+  - list:
+    - link "CS":
+      - /url: /csgo/events
+      - text: CS
+    - link "VAL":
+      - /url: https://valdata.5eplay.com/esports
+      - text: VAL
+  - textbox "搜索战队、选手、赛事"
+  - generic: 分享
+  - generic: 收藏
+  - generic: 登录
+- list:
+  - link "赛程":
+    - /url: /csgo/matches
+  - link "赛事":
+    - /url: /csgo/events
+  - link "战队":
+    - /url: /csgo/teams
+  - link "选手":
+    - /url: /csgo/player
+- generic: 霍普兰 2026
+- generic: ">"
+- generic: Julie&Cie
+- generic: VS
+- generic: Strael Bora
+- paragraph:
+  - generic: 霍普兰 2026
+- paragraph: 比赛时间：2026-07-20
+- generic: Julie&Cie
+- paragraph: V社排名：195
+- generic: LIVE
+- generic: 0 - 0
+- generic: BO3
+- generic: Strael Bora
+- paragraph: V社排名：147
+- generic: 50%
+- generic: 50%
+- generic: 图文直播
+- generic: 实时日志
+- generic: 地图BP
+- list:
+  - paragraph: Strael Bora
+  - generic: ban
+  - paragraph: Dust2
+  - paragraph: Julie&Cie
+  - generic: ban
+  - paragraph: Ancient
+  - paragraph: Strael Bora
+  - generic: pick
+  - paragraph: Nuke
+  - paragraph: Julie&Cie
+  - generic: pick
+  - paragraph: Anubis
+  - paragraph: Strael Bora
+  - generic: ban
+  - paragraph: Mirage
+  - paragraph: Julie&Cie
+  - generic: ban
+  - paragraph: Cache
+  - generic: left
+  - paragraph: Inferno
+- generic: 比赛数据
+- list:
+  - paragraph: 第一局 / Nuke
+  - generic: VS
+  - generic: "-"
+  - generic: ":"
+  - generic: "-"
+  - paragraph: 第二局 / Anubis
+  - generic: VS
+  - generic: "-"
+  - generic: ":"
+  - generic: "-"
+  - paragraph: 第三局 / Inferno
+  - generic: VS
+  - generic: "-"
+  - generic: ":"
+  - generic: "-"
+- heading "赛前分析" [level=4]
+- generic: 选手分析（近三个月数据）
+- paragraph: JACKZ
+- paragraph: weaven
+- paragraph: amanek
+- paragraph: devoduvek
+- paragraph: Monkey D Julie
+- paragraph: Wumbo
+- paragraph: 5 Star
+- paragraph: maddeN
+- paragraph: AdaMmMm
+- paragraph: newhope
+- generic: JACKZ
+- generic: "1.19"
+- generic: Rating
+- generic: "1.56"
+- generic: "1.13"
+- generic: K/D
+- generic: "1.70"
+- generic: "71.8"
+- generic: KAST
+- generic: "79.0"
+- generic: +0.64%
+- generic: SWING
+- generic: +1.53%
+- generic: "79.3"
+- generic: ADR
+- generic: "94.9"
+- generic: "0.77"
+- generic: KPR
+- generic: "0.96"
+- generic: Wumbo
+- generic: 地图分析（近三个月数据）
+- generic: 地图
+- paragraph: Julie&Cie
+- paragraph: Strael Bora
+- generic: Nuke
+- text: 100%
+- generic: (1场)
+- text: 75%
+- text: (4场)
+- generic: Pick
+- generic: Anubis
+- text: 43%
+- text: (7场)
+- generic: Pick
+- text: 0%
+- generic: (1场)
+- generic: Inferno
+- text: 50%
+- generic: (6场)
+- generic: Left
+- text: 50%
+- generic: (4场)
+- generic: Dust2
+- text: 22%
+- generic: (9场)
+- text: "-"
+- text: (0场)
+- generic: Ban
+- generic: Ancient
+- text: 17%
+- text: (6场)
+- generic: Ban
+- text: 60%
+- generic: (5场)
+- generic: Mirage
+- text: 0%
+- generic: (4场)
+- text: "-"
+- text: (0场)
+- generic: Ban
+- generic: Cache
+- text: "-"
+- text: (0场)
+- generic: Ban
+- text: "-"
+- generic: (0场)
+- generic: 战队分析（近三个月数据）
+- generic: Julie&Cie
+- generic: Strael Bora
+- generic: 30%
+- generic: 胜率（小局）
+- generic: 53%
+- generic: "0.95"
+- generic: rating
+- generic: "1.14"
+- generic: "0.82"
+- generic: K/D
+- generic: "1.08"
+- generic: 27%
+- generic: 上半场手枪局胜率
+- generic: 53%
+- generic: 33%
+- generic: 下半场手枪局胜率
+- generic: 60%
+- generic: 近期战绩
+- generic: Julie&Cie
+- generic: Strael Bora
+- generic: 30%
+- generic: 胜率
+- generic: 53%
+- generic: 对阵战队
+- generic: 日期
+- generic: 赛事
+- generic: 赛果
+- generic: Citronnade
+- generic: 2026-07-19
+- generic: 霍普兰 2026
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Strael Bora
+- generic: 2026-07-19
+- generic: 霍普兰 2026
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Megoshort
+- generic: 2026-07-15
+- generic: NODWIN Clutch 系列赛 第10季 封闭预选
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Mai Tai
+- generic: 2026-07-14
+- generic: NODWIN Clutch 系列赛 第10季 封闭预选
+- generic: "1"
+- text: "-"
+- generic: "0"
+- generic: Honvéd
+- generic: 2026-07-13
+- generic: NODWIN Clutch 系列赛 第10季 封闭预选
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Wampirki
+- generic: 2026-07-01
+- generic: CCT 2026 挑战者 欧洲 第4季
+- generic: "0"
+- text: "-"
+- generic: "1"
+- generic: Subtop De France
+- generic: 2026-06-30
+- generic: CCT 2026 挑战者 欧洲 第4季
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: eternal premium
+- generic: 2026-06-29
+- generic: 欧洲职业联赛 系列赛8 封闭预选赛
+- generic: "1"
+- text: "-"
+- generic: "2"
+- generic: NEW VISION
+- generic: 2026-06-27
+- generic: CCT 2026 挑战者 欧洲 第4季
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: Enjoy
+- generic: 2026-06-25
+- generic: 欧洲职业联赛 系列赛8 封闭预选赛
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Hashiras
+- generic: 2026-05-27
+- generic: CCT 2026 挑战者 欧洲 第3季
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: EC BANGA
+- generic: 2026-05-25
+- generic: CCT 2026 挑战者 欧洲 第3季
+- generic: "1"
+- text: "-"
+- generic: "0"
+- generic: ex-Zero Tenacity
+- generic: 2026-05-23
+- generic: CCT 2026 欧洲系列赛 第2季封闭预选
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: brazylijski luz
+- generic: 2026-05-23
+- generic: CCT 2026 挑战者 欧洲 第3季
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Subtop De France
+- generic: 2026-05-22
+- generic: CCT 2026 欧洲系列赛 第2季封闭预选
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: SAW
+- generic: 2026-05-21
+- generic: CCT 2026 欧洲系列赛 第2季封闭预选
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: BET-M
+- generic: 2026-04-24
+- generic: ESL 挑战者联赛 S51 欧洲杯 第4季
+- generic: "1"
+- text: "-"
+- generic: "2"
+- generic: BIG.A
+- generic: 2026-04-22
+- generic: ESL 挑战者联赛 S51 欧洲杯 第4季
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: aAa
+- generic: 2026-04-06
+- generic: 游戏玩家节 2026
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Subtop De France
+- generic: 2026-04-05
+- generic: 游戏玩家节 2026
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: aAa
+- generic: 2026-04-05
+- generic: 游戏玩家节 2026
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: VCGO
+- generic: 2026-04-05
+- generic: 游戏玩家节 2026
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: MyHUD
+- generic: 2026-04-04
+- generic: 游戏玩家节 2026
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: 对阵战队
+- generic: 日期
+- generic: 赛事
+- generic: 赛果
+- generic: Citronnade
+- generic: 2026-07-19
+- generic: 霍普兰 2026
+- generic: "13"
+- text: "-"
+- generic: "5"
+- generic: Citron
+- generic: 2026-07-19
+- generic: 霍普兰 2026
+- generic: "13"
+- text: "-"
+- generic: "1"
+- generic: Myth
+- generic: 2026-07-19
+- generic: 霍普兰 2026
+- generic: "13"
+- text: "-"
+- generic: "2"
+- generic: Julie&Cie
+- generic: 2026-07-19
+- generic: 霍普兰 2026
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Fortress
+- generic: 2026-05-24
+- generic: 帕肯挑战者 锦标赛 第八季
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Invicta
+- generic: 2026-05-24
+- generic: 帕肯挑战者 锦标赛 第八季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Eternal 21
+- generic: 2026-05-23
+- generic: 帕肯挑战者 锦标赛 第八季
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: Sashi Academy
+- generic: 2026-05-23
+- generic: 帕肯挑战者 锦标赛 第八季
+- generic: "1"
+- text: "-"
+- generic: "2"
+- generic: HAVU
+- generic: 2026-03-30
+- generic: DraculaN 第六季
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: SINQU
+- generic: 2026-03-29
+- generic: DraculaN 第六季
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: Sashi
+- generic: 2026-03-29
+- generic: DraculaN 第六季
+- generic: "2"
+- text: "-"
+- generic: "13"
+- generic: illwill
+- generic: 2025-11-20
+- generic: DraculaN 第三季
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Genone
+- generic: 2025-11-20
+- generic: DraculaN 第三季
+- generic: "3"
+- text: "-"
+- generic: "13"
+- generic: 交手战绩（最近五场）
+- generic: Julie&Cie
+- generic: 100%
+- generic: 胜率
+- generic: 0%
+- generic: 胜率
+- generic: Strael Bora
+- generic: 2026-07-19
+- generic: Julie&Cie
+- generic: "2"
+- generic: ":"
+- generic: "0"
+- generic: Strael Bora
+- generic: 霍普兰 2026
+- contentinfo
+- region "Notifications"
+- document:
+  - button:
+  - img "Read Frog"
+  - button:
+- region "Notifications"
+- region "Notifications"
+- document:
+  - button "翻译":
+  - button "朗读":
+  - button "词典":
+- region "Notifications"

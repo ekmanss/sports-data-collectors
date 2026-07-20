@@ -1,0 +1,559 @@
+- banner:
+  - link:
+    - /url: https://www.5eplay.com/
+  - link:
+    - /url: https://event.5eplay.com/csgo/matches
+  - list:
+    - link "CS":
+      - /url: /csgo/events
+      - text: CS
+    - link "VAL":
+      - /url: https://valdata.5eplay.com/esports
+      - text: VAL
+  - textbox "搜索战队、选手、赛事"
+  - generic: 分享
+  - generic: 收藏
+  - generic: 登录
+- list:
+  - link "赛程":
+    - /url: /csgo/matches
+  - link "赛事":
+    - /url: /csgo/events
+  - link "战队":
+    - /url: /csgo/teams
+  - link "选手":
+    - /url: /csgo/player
+- generic: CCT 2026 南美系列赛 第四季
+- generic: ">"
+- generic: PDF
+- generic: VS
+- generic: ODDIK
+- paragraph:
+  - generic: CCT 2026 南美系列赛 第四季
+- paragraph: 比赛时间：2026-07-20
+- generic: PDF
+- paragraph: V社排名：252
+- generic: 06:00
+- generic: BO3
+- generic: ODDIK
+- paragraph: V社排名：-
+- generic: 51%
+- generic: 49%
+- heading "赛前分析" [level=4]
+- generic: 选手分析（近三个月数据）
+- paragraph: history
+- paragraph: nicks
+- paragraph: t9rnay
+- paragraph: mlhzin
+- paragraph: CutzMeretz
+- paragraph: nardes
+- paragraph: diozera
+- paragraph: PremiuM
+- paragraph: Ceruttera
+- paragraph: righi
+- generic: history
+- generic: "1.31"
+- generic: Rating
+- generic: "1.21"
+- generic: "1.46"
+- generic: K/D
+- generic: "1.15"
+- generic: "77.1"
+- generic: KAST
+- generic: "75.9"
+- generic: +3.24%
+- generic: SWING
+- generic: +1.52%
+- generic: "81.0"
+- generic: ADR
+- generic: "79.8"
+- generic: "0.83"
+- generic: KPR
+- generic: "0.74"
+- generic: nardes
+- generic: 地图分析（近三个月数据）
+- generic: 地图
+- paragraph: PDF
+- paragraph: ODDIK
+- generic: Dust2
+- text: 50%
+- generic: (2场)
+- text: 75%
+- generic: (4场)
+- generic: Nuke
+- text: 25%
+- generic: (4场)
+- text: 0%
+- generic: (1场)
+- generic: Mirage
+- text: 100%
+- generic: (4场)
+- text: "-"
+- generic: (0场)
+- generic: Ancient
+- text: 100%
+- generic: (3场)
+- text: 0%
+- generic: (1场)
+- generic: Anubis
+- text: "-"
+- generic: (0场)
+- text: 67%
+- generic: (3场)
+- generic: Cache
+- text: 100%
+- generic: (1场)
+- text: 100%
+- generic: (1场)
+- generic: Inferno
+- text: "-"
+- generic: (0场)
+- text: 100%
+- generic: (1场)
+- generic: 战队分析（近三个月数据）
+- generic: PDF
+- generic: ODDIK
+- generic: 71%
+- generic: 胜率（小局）
+- generic: 64%
+- generic: "1.13"
+- generic: rating
+- generic: "1.10"
+- generic: "1.10"
+- generic: K/D
+- generic: "1.07"
+- generic: 50%
+- generic: 上半场手枪局胜率
+- generic: 36%
+- generic: 71%
+- generic: 下半场手枪局胜率
+- generic: 64%
+- generic: 近期战绩
+- generic: PDF
+- generic: ODDIK
+- generic: 71%
+- generic: 胜率
+- generic: 64%
+- generic: 对阵战队
+- generic: 日期
+- generic: 赛事
+- generic: 赛果
+- generic: Grêmio
+- generic: 2026-07-18
+- generic: CCT 2026 南美系列赛 第四季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: METANOIA Wolves
+- generic: 2026-07-14
+- generic: CCT 2026 南美系列赛 第四季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Fluxo
+- generic: 2026-07-08
+- generic: CCT 2026 南美系列赛 第3季
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: UNO
+- generic: 2026-07-08
+- generic: CCT 2026 南美系列赛 第3季
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: BESTIA Academy
+- generic: 2026-07-03
+- generic: CCT 2026 南美系列赛 第3季
+- generic: "1"
+- text: "-"
+- generic: "0"
+- generic: Guara
+- generic: 2026-07-01
+- generic: CCT 2026 南美系列赛 第3季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Mibr.A
+- generic: 2026-06-29
+- generic: CCT 2026 南美系列赛 第3季
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: Solid
+- generic: 2025-01-31
+- generic: CCT 第2赛季 南美系列赛6
+- generic: "1"
+- text: "-"
+- generic: "2"
+- generic: FURIA fe
+- generic: 2025-01-30
+- generic: CCT 第2赛季 南美系列赛6
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: adalYamigos
+- generic: 2025-01-23
+- generic: CCT 第2赛季 南美系列赛6
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: MIBR.fe
+- generic: 2025-01-21
+- generic: CCT 第2赛季 南美系列赛6
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Solid
+- generic: 2025-01-19
+- generic: CCT 第2赛季 南美系列赛6
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Tropa do Taco
+- generic: 2025-01-17
+- generic: CCT 第2赛季 南美系列赛6
+- generic: "1"
+- text: "-"
+- generic: "2"
+- generic: UNO
+- generic: 2025-01-16
+- generic: CCT 第2赛季 南美系列赛6
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: ShindeN
+- generic: 2025-01-10
+- generic: Frost and Fire 南美洲第一赛季
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Nitro
+- generic: 2024-12-22
+- generic: Frost and Fire 南美洲第一赛季封闭资格赛
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Vikings KR
+- generic: 2024-12-21
+- generic: Frost and Fire 南美洲第一赛季封闭资格赛
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Players
+- generic: 2024-12-18
+- generic: Frost and Fire 南美洲第一赛季封闭资格赛
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: Galorys Academy
+- generic: 2024-12-15
+- generic: Frost and Fire 南美洲第一赛季封闭资格赛
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Solid
+- generic: 2024-12-14
+- generic: Frost and Fire 南美洲第一赛季封闭资格赛
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: "2070"
+- generic: 2024-11-27
+- generic: CCT 第2赛季 南美系列赛5
+- generic: "1"
+- text: "-"
+- generic: "2"
+- generic: LaChampionsLiga
+- generic: 2024-11-24
+- generic: CCT 第2赛季 南美系列赛5
+- generic: "1"
+- text: "-"
+- generic: "0"
+- generic: JOGA DE TERNO
+- generic: 2024-11-23
+- generic: CCT 第2赛季 南美系列赛5
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: BeBold
+- generic: 2024-11-21
+- generic: CCT 第2赛季 南美系列赛5
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Nitro
+- generic: 2024-11-19
+- generic: CCT 第2赛季 南美系列赛5
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: BESTIA
+- generic: 2024-08-14
+- generic: United21 联赛 南美 第2赛季
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Case
+- generic: 2024-08-13
+- generic: United21 联赛 南美 第2赛季
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: KRÜ
+- generic: 2024-08-12
+- generic: United21 联赛 南美 第2赛季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Dusty Roots
+- generic: 2024-08-11
+- generic: United21 联赛 南美 第2赛季
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: BESTIA
+- generic: 2024-08-10
+- generic: United21 联赛 南美 第2赛季
+- generic: "1"
+- text: "-"
+- generic: "2"
+- generic: 对阵战队
+- generic: 日期
+- generic: 赛事
+- generic: 赛果
+- generic: Procyon
+- generic: 2026-07-18
+- generic: CCT 2026 南美系列赛 第四季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: paiN.A
+- generic: 2026-07-15
+- generic: CCT 2026 南美系列赛 第四季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Keyd
+- generic: 2026-04-29
+- generic: ESL 挑战者联赛 S51 南美杯 第4季
+- generic: "1"
+- text: "-"
+- generic: "2"
+- generic: Fake do Biru
+- generic: 2026-04-28
+- generic: ESL 挑战者联赛 S51 南美杯 第4季
+- generic: "1"
+- text: "-"
+- generic: "2"
+- generic: RTT100
+- generic: 2026-04-27
+- generic: ESL 挑战者联赛 S51 南美杯 第4季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Fluxo
+- generic: 2026-04-04
+- generic: BB Circuit X 圣保罗狂欢节 2026
+- generic: "1"
+- text: "-"
+- generic: "2"
+- generic: 9z
+- generic: 2026-04-04
+- generic: PGL 阿斯塔纳 2026 南美 封闭预选
+- generic: "1"
+- text: "-"
+- generic: "3"
+- generic: Fake do Biru
+- generic: 2026-04-04
+- generic: PGL 阿斯塔纳 2026 南美 封闭预选
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Gaimin Gladiators
+- generic: 2026-04-03
+- generic: BB Circuit X 圣保罗狂欢节 2026
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: GameHunters
+- generic: 2026-04-03
+- generic: BB Circuit X 圣保罗狂欢节 2026
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: 9z
+- generic: 2026-04-03
+- generic: PGL 阿斯塔纳 2026 南美 封闭预选
+- generic: "1"
+- text: "-"
+- generic: "2"
+- generic: Keyd
+- generic: 2026-04-02
+- generic: PGL 阿斯塔纳 2026 南美 封闭预选
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: Mibr.A
+- generic: 2026-04-01
+- generic: PGL 阿斯塔纳 2026 南美 封闭预选
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Legacy
+- generic: 2026-03-30
+- generic: FERJEE In House 2026
+- generic: "1"
+- text: "-"
+- generic: "2"
+- generic: Marsborne
+- generic: 2026-03-29
+- generic: FERJEE In House 2026
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: GameHunters
+- generic: 2026-03-29
+- generic: FERJEE In House 2026
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Marsborne
+- generic: 2026-03-27
+- generic: FERJEE In House 2026
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Bounty Hunters
+- generic: 2026-03-22
+- generic: Aorus联赛 巴西 决赛 2026
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Galorys
+- generic: 2026-03-21
+- generic: Aorus联赛 巴西 决赛 2026
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Crashers
+- generic: 2026-03-18
+- generic: Aorus联赛 巴西 2026
+- generic: "13"
+- text: "-"
+- generic: "9"
+- generic: ALZON
+- generic: 2026-03-18
+- generic: Aorus联赛 巴西 2026
+- generic: "13"
+- text: "-"
+- generic: "3"
+- generic: Yawara
+- generic: 2026-03-07
+- generic: BB Circuit X 库亚巴 2026
+- generic: "1"
+- text: "-"
+- generic: "2"
+- generic: Sharks
+- generic: 2026-03-05
+- generic: BB Circuit X 库亚巴 2026
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Yawara
+- generic: 2026-03-05
+- generic: BB Circuit X 库亚巴 2026
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Fluxo
+- generic: 2026-02-28
+- generic: BB RUSH B Summit 第2赛季
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Galorys
+- generic: 2026-02-27
+- generic: BB RUSH B Summit 第2赛季
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: 9z
+- generic: 2026-02-26
+- generic: BB RUSH B Summit 第2赛季
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: MIBR
+- generic: 2026-02-25
+- generic: ESL 挑战者联赛 S51 南美杯第1季
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Galorys
+- generic: 2026-02-24
+- generic: ESL 挑战者联赛 S51 南美杯第1季
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: LP
+- generic: 2026-02-23
+- generic: ESL 挑战者联赛 S51 南美杯第1季
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: 交手战绩（最近五场）
+- generic: PDF
+- generic: 0%
+- generic: 胜率
+- generic: 100%
+- generic: 胜率
+- generic: ODDIK
+- generic: 2024-07-27
+- generic: PDF
+- generic: "0"
+- generic: ":"
+- generic: "2"
+- generic: ODDIK
+- generic: KaBuM! 联赛 2024
+- generic: 2024-07-26
+- generic: PDF
+- generic: "0"
+- generic: ":"
+- generic: "2"
+- generic: ODDIK
+- generic: FERJEE州立巡回赛2024
+- generic: 2024-07-22
+- generic: PDF
+- generic: "0"
+- generic: ":"
+- generic: "2"
+- generic: ODDIK
+- generic: FERJEE州立巡回赛2024
+- generic: 2024-07-11
+- generic: PDF
+- generic: "0"
+- generic: ":"
+- generic: "2"
+- generic: ODDIK
+- generic: EPL 世界系列赛 美洲 第9赛季
+- generic: 2024-01-10
+- generic: PDF
+- generic: "0"
+- generic: ":"
+- generic: "2"
+- generic: ODDIK
+- generic: 哥本哈根Major南美RMR OQ1
+- contentinfo
+- region "Notifications"
+- document:
+  - button:
+  - img "Read Frog"
+  - button:
+- region "Notifications"
+- region "Notifications"
+- document:
+  - button "翻译":
+  - button "朗读":
+  - button "词典":
+- region "Notifications"

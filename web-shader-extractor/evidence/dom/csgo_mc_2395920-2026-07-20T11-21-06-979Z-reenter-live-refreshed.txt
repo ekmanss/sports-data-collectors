@@ -1,0 +1,194 @@
+- banner:
+  - link:
+    - /url: https://www.5eplay.com/
+  - link:
+    - /url: https://event.5eplay.com/csgo/matches
+  - list:
+    - link "CS":
+      - /url: /csgo/events
+      - text: CS
+    - link "VAL":
+      - /url: https://valdata.5eplay.com/esports
+      - text: VAL
+  - textbox "搜索战队、选手、赛事"
+  - generic: 分享
+  - generic: 收藏
+  - generic: 登录
+- list:
+  - link "赛程":
+    - /url: /csgo/matches
+  - link "赛事":
+    - /url: /csgo/events
+  - link "战队":
+    - /url: /csgo/teams
+  - link "选手":
+    - /url: /csgo/player
+- generic: CCT 2026 欧洲系列赛 第5季封闭预选
+- generic: ">"
+- generic: benched gods
+- generic: VS
+- generic: Mai Tai
+- paragraph:
+  - generic: CCT 2026 欧洲系列赛 第5季封闭预选
+- paragraph: 比赛时间：2026-07-20
+- generic: benched gods
+- paragraph: V社排名：220
+- generic: LIVE
+- generic: 0 - 0
+- generic: BO3
+- generic: Mai Tai
+- paragraph: V社排名：212
+- generic: 59%
+- generic: 41%
+- generic: 图文直播
+- generic: 实时日志
+- generic: 回合结束，CT获胜（1:0）歼灭敌人
+- text: Wign
+- text: Pelle
+- text: facer
+- text: darchevile
+- text: f1chper
+- text: chudy
+- text: BloodyK
+- text: Melavi
+- text: Wign
+- text: Nami
+- generic: map1 Ancient 第1回合开始
+- text: facer
+- text: chudy
+- text: BloodyK
+- text: Pelle
+- text: BloodyK
+- text: darchevile
+- text: K014NZ
+- text: chudy
+- text: chudy
+- text: Wign
+- text: Wign
+- text: chudy
+- text: chudy
+- text: facer
+- text: chudy
+- text: f1chper
+- text: facer
+- text: Nami
+- text: Nami
+- text: BloodyK
+- text: f1chper
+- text: Melavi
+- text: Melavi
+- text: K014NZ
+- text: K014NZ
+- text: darchevile
+- text: K014NZ
+- text: chudy
+- text: chudy
+- text: f1chper
+- text: chudy
+- text: Wign
+- text: chudy
+- text: BloodyK
+- text: BloodyK
+- text: darchevile
+- text: BloodyK
+- text: Melavi
+- text: Melavi
+- text: facer
+- text: facer
+- text: chudy
+- text: darchevile
+- text: K014NZ
+- generic: 地图BP
+- list:
+  - paragraph: Mai Tai
+  - generic: ban
+  - paragraph: Inferno
+  - paragraph: benched gods
+  - generic: ban
+  - paragraph: Nuke
+  - paragraph: Mai Tai
+  - generic: pick
+  - paragraph: Ancient
+  - paragraph: benched gods
+  - generic: pick
+  - paragraph: Cache
+  - paragraph: Mai Tai
+  - generic: ban
+  - paragraph: Dust2
+  - paragraph: benched gods
+  - generic: ban
+  - paragraph: Mirage
+  - generic: left
+  - paragraph: Anubis
+- generic: 比赛数据
+- list:
+  - paragraph: 第一局 / Ancient
+  - generic: VS
+  - generic: "-"
+  - generic: ":"
+  - generic: "-"
+  - paragraph: 第二局 / Cache
+  - generic: VS
+  - generic: "-"
+  - generic: ":"
+  - generic: "-"
+  - paragraph: 第三局 / Anubis
+  - generic: VS
+  - generic: "-"
+  - generic: ":"
+  - generic: "-"
+- heading "赛前分析" [level=4]
+- generic: 选手分析（近三个月数据）
+- generic: Rating
+- generic: K/D
+- generic: KAST
+- generic: SWING
+- generic: ADR
+- generic: KPR
+- generic: 地图分析（近三个月数据）
+- generic: 地图
+- paragraph: benched gods
+- paragraph: Mai Tai
+- generic: 战队分析（近三个月数据）
+- generic: benched gods
+- generic: Mai Tai
+- generic: "-"
+- generic: 胜率（小局）
+- generic: "-"
+- generic: "-"
+- generic: rating
+- generic: "-"
+- generic: "-"
+- generic: K/D
+- generic: "-"
+- generic: "-"
+- generic: 上半场手枪局胜率
+- generic: "-"
+- generic: "-"
+- generic: 下半场手枪局胜率
+- generic: "-"
+- generic: 近期战绩
+- generic: benched gods
+- generic: Mai Tai
+- generic: "-"
+- generic: 胜率
+- generic: "-"
+- generic: 对阵战队
+- generic: 日期
+- generic: 赛事
+- generic: 赛果
+- paragraph: 暂无数据
+- generic: 对阵战队
+- generic: 日期
+- generic: 赛事
+- generic: 赛果
+- paragraph: 暂无数据
+- generic: 交手战绩（最近五场）
+- generic: benched gods
+- generic: 0%
+- generic: 胜率
+- generic: 0%
+- generic: 胜率
+- generic: Mai Tai
+- paragraph: 暂无数据
+- contentinfo

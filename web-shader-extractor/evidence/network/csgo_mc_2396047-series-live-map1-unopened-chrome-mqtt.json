@@ -1,0 +1,93 @@
+{
+  "capturedAt": "2026-07-19T17:48:20.318Z",
+  "events": [
+    {
+      "cdpSequence": 644,
+      "topic": "csgo/product/detail/csgo_mc_2396047",
+      "payload": {
+        "event_name": "csgo-detail-bp",
+        "data": {
+          "from_ver": "0",
+          "match": {
+            "bouts_state": [],
+            "global_state": {
+              "avg_player_stats": null,
+              "bar_chart_player_stats": null,
+              "bp_map_item": [
+                {
+                  "bp_type": "",
+                  "map_icon": "",
+                  "map_logo": "",
+                  "map_name": "",
+                  "team_side": ""
+                }
+              ],
+              "dark_horse": "",
+              "disp_name": "地图总览",
+              "live_status": "0",
+              "log_text": "",
+              "max_player_stats": null,
+              "mvp_player_stats": null,
+              "status": "1",
+              "t1_odds": "",
+              "t1_odds_percent": "",
+              "t1_player_stats": [],
+              "t1_score": "0",
+              "t2_odds": "",
+              "t2_odds_percent": "",
+              "t2_player_stats": [],
+              "t2_score": "0"
+            },
+            "mc_info": {
+              "field_conf": {
+                "bp_info": "1"
+              },
+              "format": "3",
+              "game_type": "csgo",
+              "grade": "5",
+              "group_id": 5140,
+              "high_lights_cfg_list": [],
+              "id": "csgo_mc_2396047",
+              "live_cfg_list": [],
+              "plan_ts": "1784483100",
+              "remark": "",
+              "t1_info": {
+                "bonus": "",
+                "country": "",
+                "disp_name": "Julie&Cie",
+                "id": "hltv_team_13791",
+                "logo": "https://oss.5eplay.com/sport/csgo/team/null.png",
+                "rank": "0"
+              },
+              "t2_info": {
+                "bonus": "",
+                "country": "",
+                "disp_name": "Strael Bora",
+                "id": "hltv_team_13546",
+                "logo": "https://oss.5eplay.com/sport/csgo/team/null.png",
+                "rank": "0"
+              },
+              "tt_stage": "淘汰赛",
+              "tt_stage_desc": "淘汰赛  决赛"
+            },
+            "tt_info": {
+              "addr": "France-Strasbourg, France",
+              "bonus": "$4,559",
+              "color": "7983a2",
+              "disp_name": "霍普兰 2026",
+              "end_time": "",
+              "grade": "5",
+              "grade_label": "C级赛事",
+              "id": "csgo_tt_9248",
+              "logo": "https://oss.5eplay.com/cloudx/p/sport/csgo/tournament/d8vbhf4conkpudhr53ug.png",
+              "related_type": "",
+              "start_time": "2026-07-18 18:00:00",
+              "status": "live"
+            }
+          },
+          "this_ver": "1784483202"
+        }
+      }
+    }
+  ]
+}

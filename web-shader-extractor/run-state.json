@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 3,
+  "state": "TARGET_LOCK_GATE",
+  "gateStatus": {
+    "targetAttributed": false,
+    "targetLocked": false,
+    "replayReady": false,
+    "baselineVerified": false,
+    "projectVerified": false
+  },
+  "strategy": {
+    "primaryTraceRoute": "none: no shader/GPU render surface exists on the investigated pages",
+    "replayRoute": "not applicable",
+    "toolProfile": "Chrome DOM/CDP inventory plus target-bound page bundle inspection"
+  },
+  "attempts": [
+    {
+      "strategy": "inventory list and match-detail render surfaces",
+      "result": "no canvas, WebGL, WebGPU, video, iframe, or SVG effect target found",
+      "evidence": [
+        "evidence/runtime/surface-inventory-initial.json",
+        "evidence/runtime/surface-inventory-detail-initial.json"
+      ]
+    }
+  ],
+  "targetSet": [],
+  "unknowns": {
+    "blocking": [
+      "No shader/GPU-backed target can be attributed or locked on either requested route."
+    ],
+    "important": [],
+    "deferred": [],
+    "external": []
+  },
+  "evidenceIndex": [
+    "evidence/runtime/surface-inventory-initial.json",
+    "evidence/runtime/surface-inventory-detail-initial.json",
+    "evidence/dom/detail-initial-snapshot.txt",
+    "evidence/source/index.json"
+  ],
+  "allowedGateArtifactStatuses": ["missing", "incomplete", "passed", "blocked"],
+  "artifacts": {
+    "scoutCard": "scout-card.json",
+    "manifest": "replay-manifest.json",
+    "qaReport": "qa-report.md",
+    "knownGaps": "known-gaps.md"
+  },
+  "gateArtifacts": {
+    "targetAttribution": {
+      "artifact": "scout-card.json",
+      "status": "incomplete"
+    },
+    "targetLock": {
+      "artifact": "scout-card.json",
+      "status": "blocked"
+    },
+    "replayReady": {
+      "artifact": "replay-manifest.json",
+      "status": "blocked"
+    },
+    "baselineVerify": {
+      "artifact": "qa-report.md",
+      "status": "blocked"
+    },
+    "projectVerify": {
+      "artifact": "qa-report.md",
+      "status": "blocked"
+    }
+  },
+  "budgets": {
+    "sameStrategyMax": 2,
+    "captureStrategyCategoriesMax": 3,
+    "repairRoundsMax": 6,
+    "plateauRoundsMax": 2
+  },
+  "plateau": {
+    "roundsWithoutProgress": 0,
+    "lastProgress": "Direct DOM/CDP inventories excluded all shader/GPU render surfaces."
+  },
+  "nextAction": {
+    "state": "TARGET_LOCK_GATE",
+    "unknown": "none within shader extraction scope",
+    "action": "Stop shader extraction and continue the user-authorized DOM/HTTP/MQTT protocol investigation outside this skill.",
+    "expectedEvidence": "Observed match-state transitions and public data-source captures."
+  },
+  "replayTier": "not applicable",
+  "qa": {
+    "sourceToBaseline": [],
+    "baselineToEditable": []
+  }
+}

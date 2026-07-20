@@ -1,0 +1,1345 @@
+- banner:
+  - link:
+    - /url: https://www.5eplay.com/
+  - link:
+    - /url: https://event.5eplay.com/csgo/matches
+  - list:
+    - link "CS":
+      - /url: /csgo/events
+      - text: CS
+    - link "VAL":
+      - /url: https://valdata.5eplay.com/esports
+      - text: VAL
+  - textbox "搜索战队、选手、赛事"
+  - generic: 分享
+  - generic: 收藏
+  - generic: 登录
+- list:
+  - link "赛程":
+    - /url: /csgo/matches
+  - link "赛事":
+    - /url: /csgo/events
+  - link "战队":
+    - /url: /csgo/teams
+  - link "选手":
+    - /url: /csgo/player
+- generic: 欧洲职业联赛 系列赛8
+- generic: ">"
+- generic: ARCRED
+- generic: VS
+- generic: 1win
+- paragraph:
+  - generic: 欧洲职业联赛 系列赛8
+- paragraph: 比赛时间：2026-07-20
+- generic: ARCRED
+- paragraph: V社排名：68
+- generic: LIVE
+- generic: 1 - 0
+- generic: BO3
+- generic: 1win
+- paragraph: V社排名：59
+- generic: 45%
+- generic: 55%
+- generic: 图文直播
+- generic: "0"
+- text: "0"
+- generic: "0 : 0"
+- generic: "0 : 0"
+- generic: Cache
+- generic: 0：40
+- generic: 第1回合
+- generic: +
+- generic: "-"
+- generic: $
+- text: KDA
+- text: DSSj
+- generic: "6"
+- generic: "14600"
+- generic: "18"
+- generic: "19"
+- generic: "2"
+- text: shg
+- generic: "0"
+- generic: "13600"
+- generic: "15"
+- generic: "25"
+- generic: "2"
+- text: Ryujin
+- generic: "0"
+- generic: "11850"
+- generic: "8"
+- generic: "21"
+- generic: "5"
+- text: synyx
+- generic: "74"
+- generic: "38450"
+- generic: "4"
+- generic: "6"
+- generic: "0"
+- text: Raijin
+- generic: "100"
+- generic: "4900"
+- generic: "0"
+- generic: "0"
+- generic: "0"
+- list:
+- text: oz1k
+- generic: "41"
+- generic: "31550"
+- generic: "17"
+- generic: "11"
+- generic: "1"
+- text: cronuss
+- generic: "0"
+- generic: "30450"
+- generic: "16"
+- generic: "10"
+- generic: "2"
+- text: lattykk
+- generic: "0"
+- generic: "39500"
+- generic: "14"
+- generic: "10"
+- generic: "11"
+- text: reyoz
+- generic: "0"
+- generic: "41800"
+- generic: "12"
+- generic: "6"
+- generic: "1"
+- text: Qikert
+- generic: "0"
+- generic: "33750"
+- generic: "9"
+- generic: "7"
+- generic: "1"
+- generic: 实时日志
+- text: shg
+- text: oz1k
+- text: oz1k
+- text: synyx
+- text: oz1k
+- text: DSSj
+- text: synyx
+- text: reyoz
+- text: reyoz
+- text: Ryujin
+- text: DSSj
+- text: lattykk
+- text: oz1k
+- text: shg
+- text: oz1k
+- text: synyx
+- text: synyx
+- text: Qikert
+- text: Qikert
+- text: Ryujin
+- text: oz1k
+- text: shg
+- text: shg
+- text: cronuss
+- text: cronuss
+- text: DSSj
+- text: Qikert
+- text: synyx
+- text: cronuss
+- text: Ryujin
+- text: shg
+- text: reyoz
+- text: reyoz
+- text: synyx
+- text: synyx
+- text: oz1k
+- text: Qikert
+- text: shg
+- text: Qikert
+- text: Ryujin
+- text: Qikert
+- text: DSSj
+- text: DSSj
+- text: lattykk
+- text: lattykk
+- text: synyx
+- text: synyx
+- text: cronuss
+- text: lattykk
+- text: shg
+- text: cronuss
+- text: synyx
+- text: synyx
+- text: oz1k
+- text: oz1k
+- text: DSSj
+- text: DSSj
+- text: reyoz
+- text: reyoz
+- text: Ryujin
+- text: reyoz
+- text: synyx
+- text: reyoz
+- text: DSSj
+- text: DSSj
+- text: lattykk
+- text: Ryujin
+- text: oz1k
+- text: oz1k
+- text: shg
+- text: oz1k
+- text: Ryujin
+- text: lattykk
+- text: shg
+- text: shg
+- text: Qikert
+- text: DSSj
+- text: reyoz
+- text: shg
+- text: cronuss
+- generic: synyx 加入比赛
+- text: cronuss
+- text: DSSj
+- text: Qikert
+- text: Ryujin
+- text: Qikert
+- text: shg
+- text: shg
+- text: oz1k
+- text: Qikert
+- text: DSSj
+- text: Ryujin
+- text: reyoz
+- text: shg
+- text: cronuss
+- text: reyoz
+- text: DSSj
+- text: reyoz
+- text: Ryujin
+- text: DSSj
+- text: lattykk
+- text: reyoz
+- text: shg
+- text: shg
+- text: Qikert
+- text: shg
+- text: oz1k
+- text: lattykk
+- text: Ryujin
+- text: Ryujin
+- text: cronuss
+- text: cronuss
+- text: shg
+- text: cronuss
+- text: DSSj
+- text: DSSj
+- text: Qikert
+- text: Qikert
+- text: Ryujin
+- text: Ryujin
+- text: reyoz
+- text: DSSj
+- text: oz1k
+- text: oz1k
+- text: shg
+- text: DSSj
+- text: lattykk
+- text: reyoz
+- text: Ryujin
+- text: oz1k
+- text: DSSj
+- text: DSSj
+- text: cronuss
+- text: reyoz
+- text: shg
+- text: reyoz
+- text: Ryujin
+- text: cronuss
+- text: shg
+- text: lattykk
+- text: DSSj
+- text: lattykk
+- text: shg
+- text: lattykk
+- text: Ryujin
+- text: reyoz
+- text: Ryujin
+- text: reyoz
+- text: shg
+- text: shg
+- text: cronuss
+- text: cronuss
+- text: DSSj
+- text: DSSj
+- text: lattykk
+- text: cronuss
+- text: Ryujin
+- text: lattykk
+- text: shg
+- text: DSSj
+- text: cronuss
+- text: DSSj
+- text: lattykk
+- text: DSSj
+- text: reyoz
+- text: lattykk
+- text: shg
+- text: shg
+- text: oz1k
+- text: shg
+- text: cronuss
+- text: cronuss
+- text: Ryujin
+- text: cronuss
+- text: DSSj
+- text: lattykk
+- text: Ryujin
+- text: cronuss
+- text: shg
+- text: lattykk
+- text: DSSj
+- generic: reyoz 加入比赛
+- text: lattykk
+- text: Ryujin
+- text: cronuss
+- text: shg
+- text: Ryujin
+- text: Qikert
+- text: Ryujin
+- text: oz1k
+- text: cronuss
+- text: DSSj
+- text: oz1k
+- text: shg
+- text: shg
+- text: lattykk
+- text: lattykk
+- text: Ryujin
+- text: oz1k
+- text: DSSj
+- text: shg
+- text: Qikert
+- text: Ryujin
+- text: cronuss
+- text: cronuss
+- text: shg
+- text: cronuss
+- text: DSSj
+- text: DSSj
+- text: lattykk
+- text: DSSj
+- text: oz1k
+- text: oz1k
+- text: Ryujin
+- text: oz1k
+- text: shg
+- text: oz1k
+- text: DSSj
+- text: Ryujin
+- text: shg
+- text: shg
+- text: lattykk
+- generic: cronuss 加入比赛
+- text: lattykk
+- text: DSSj
+- text: DSSj
+- text: oz1k
+- generic: Qikert 加入比赛
+- text: oz1k
+- text: shg
+- text: shg
+- text: Ryujin
+- generic: lattykk 加入比赛
+- text: DSSj
+- text: oz1k
+- text: oz1k
+- text: shg
+- text: oz1k
+- text: DSSj
+- text: oz1k
+- text: shg
+- generic: shg 加入比赛
+- generic: Raijin 加入比赛
+- generic: DSSj 加入比赛
+- generic: Ryujin 加入比赛
+- generic: oz1k 加入比赛
+- generic: obs 加入比赛
+- generic: VIZE 加入比赛
+- generic: lattykk 退出了游戏
+- generic: shg 退出了游戏
+- generic: Raijin 退出了游戏
+- generic: synyx 退出了游戏
+- generic: reyoz 退出了游戏
+- generic: Qikert 退出了游戏
+- generic: cronuss 退出了游戏
+- generic: oz1k 退出了游戏
+- generic: 回合结束，T获胜（13:2）歼灭敌人
+- text: shg
+- text: lattykk
+- text: synyx
+- text: Qikert
+- text: synyx
+- text: cronuss
+- text: cronuss
+- text: DSSj
+- text: Ryujin
+- text: oz1k
+- text: shg
+- text: reyoz
+- text: reyoz
+- text: Raijin
+- generic: map1 Anubis 第15回合开始
+- generic: 回合结束，T获胜（12:2）歼灭敌人
+- text: Raijin
+- text: Qikert
+- text: Raijin
+- text: lattykk
+- text: Raijin
+- text: oz1k
+- text: lattykk
+- text: Ryujin
+- generic: Ryujin 放置了炸弹 (当前 3 v 3)
+- text: lattykk
+- text: shg
+- text: shg
+- text: reyoz
+- text: Ryujin
+- text: cronuss
+- text: reyoz
+- text: DSSj
+- generic: map1 Anubis 第14回合开始
+- generic: 回合结束，T获胜（11:2）歼灭敌人
+- text: Ryujin
+- text: cronuss
+- generic: Ryujin 放置了炸弹 (当前 1 v 5)
+- text: synyx
+- text: Qikert
+- text: synyx
+- text: oz1k
+- text: Raijin
+- text: lattykk
+- text: DSSj
+- text: reyoz
+- generic: map1 Anubis 第13回合开始
+- generic: 回合结束，CT获胜（10:2）拆弹获胜
+- text: lattykk
+- text: shg
+- generic: lattykk 放置了炸弹 (当前 2 v 1)
+- text: shg
+- text: reyoz
+- text: lattykk
+- text: Raijin
+- text: Raijin
+- text: oz1k
+- text: oz1k
+- text: synyx
+- text: oz1k
+- text: DSSj
+- text: synyx
+- text: cronuss
+- text: DSSj
+- text: Qikert
+- generic: map1 Anubis 第12回合开始
+- generic: 回合结束，CT获胜（9:2）歼灭敌人
+- text: DSSj
+- text: cronuss
+- text: cronuss
+- text: synyx
+- text: synyx
+- text: reyoz
+- text: synyx
+- text: oz1k
+- text: oz1k
+- text: Ryujin
+- text: Raijin
+- text: Qikert
+- text: Ryujin
+- text: lattykk
+- generic: map1 Anubis 第11回合开始
+- generic: 回合结束，CT获胜（8:2）歼灭敌人
+- text: Ryujin
+- text: Qikert
+- text: Ryujin
+- text: cronuss
+- text: Ryujin
+- text: reyoz
+- text: reyoz
+- text: synyx
+- text: synyx
+- text: lattykk
+- text: Raijin
+- text: oz1k
+- generic: map1 Anubis 第10回合开始
+- generic: 回合结束，T获胜（2:7）
+- generic: 回合结束，T获胜（2:7）
+- generic: map1 Anubis 第10回合开始
+- generic: 回合结束，CT获胜（7:2）歼灭敌人
+- text: Raijin
+- text: lattykk
+- text: Raijin
+- text: reyoz
+- text: reyoz
+- text: Ryujin
+- text: reyoz
+- text: synyx
+- generic: oz1k 加入比赛
+- generic: oz1k 退出了游戏
+- text: DSSj
+- text: cronuss
+- text: Raijin
+- text: Qikert
+- text: Qikert
+- text: shg
+- text: shg
+- text: oz1k
+- generic: map1 Anubis 第9回合开始
+- generic: 回合结束，CT获胜（6:2）歼灭敌人
+- text: Ryujin
+- text: lattykk
+- text: lattykk
+- text: DSSj
+- text: lattykk
+- text: Raijin
+- text: Raijin
+- text: oz1k
+- text: Raijin
+- text: Qikert
+- text: Raijin
+- text: reyoz
+- text: Qikert
+- text: shg
+- text: lattykk
+- text: synyx
+- text: DSSj
+- text: cronuss
+- generic: map1 Anubis 第8回合开始
+- generic: 回合结束，CT获胜（5:2）超时获胜
+- text: lattykk
+- text: DSSj
+- text: shg
+- text: oz1k
+- text: synyx
+- text: Qikert
+- text: Qikert
+- text: Ryujin
+- text: Ryujin
+- text: cronuss
+- text: cronuss
+- text: Raijin
+- text: DSSj
+- text: reyoz
+- generic: map1 Anubis 第7回合开始
+- generic: 回合结束，CT获胜（4:2）超时获胜
+- text: Ryujin
+- text: reyoz
+- text: reyoz
+- text: synyx
+- text: synyx
+- text: cronuss
+- text: Ryujin
+- text: lattykk
+- generic: map1 Anubis 第6回合开始
+- generic: 回合结束，T获胜（2:3）歼灭敌人
+- text: Qikert
+- text: shg
+- text: Qikert
+- text: Raijin
+- text: Qikert
+- text: Ryujin
+- generic: reyoz 放置了炸弹 (当前 3 v 4)
+- generic: 回合结束，CT获胜（3:1）歼灭敌人
+- text: synyx
+- text: Qikert
+- text: synyx
+- text: lattykk
+- text: synyx
+- text: reyoz
+- text: reyoz
+- text: DSSj
+- text: DSSj
+- text: cronuss
+- text: DSSj
+- text: oz1k
+- generic: map1 Anubis 第4回合开始
+- generic: 回合结束，CT获胜（2:1）歼灭敌人
+- text: Ryujin
+- text: lattykk
+- text: DSSj
+- text: Qikert
+- text: shg
+- text: reyoz
+- text: Qikert
+- text: Raijin
+- text: Raijin
+- text: oz1k
+- text: oz1k
+- text: synyx
+- text: synyx
+- text: cronuss
+- generic: map1 Anubis 第1回合开始
+- generic: lattykk 加入比赛
+- generic: h1te 退出了游戏
+- generic: 回合结束，CT获胜（1:1）拆弹获胜
+- generic: lattykk 退出了游戏
+- text: DSSj
+- text: reyoz
+- generic: reyoz 放置了炸弹 (当前 1 v 1)
+- text: reyoz
+- text: Raijin
+- text: reyoz
+- text: shg
+- text: shg
+- text: cronuss
+- text: shg
+- text: oz1k
+- text: shg
+- text: Qikert
+- text: cronuss
+- text: Ryujin
+- text: reyoz
+- text: synyx
+- text: DSSj
+- text: lattykk
+- generic: map1 Anubis 第2回合开始
+- generic: 回合结束，T获胜（1:0）歼灭敌人
+- text: reyoz
+- text: Raijin
+- text: Qikert
+- text: DSSj
+- text: cronuss
+- text: synyx
+- generic: 地图BP
+- list:
+  - paragraph: ARCRED
+  - generic: ban
+  - paragraph: Ancient
+  - paragraph: 1win
+  - generic: ban
+  - paragraph: Nuke
+  - paragraph: ARCRED
+  - generic: pick
+  - paragraph: Anubis
+  - paragraph: 1win
+  - generic: pick
+  - paragraph: Cache
+  - paragraph: ARCRED
+  - generic: ban
+  - paragraph: Dust2
+  - paragraph: 1win
+  - generic: ban
+  - paragraph: Inferno
+  - generic: left
+  - paragraph: Mirage
+- generic: 比赛数据
+- list:
+  - paragraph: 第一局 / Anubis
+  - generic: "13"
+  - generic: ":"
+  - generic: "2"
+  - generic: 10/3/0
+  - generic: 2/0/0
+  - paragraph: 第二局 / Cache
+  - generic: "0"
+  - generic: ":"
+  - generic: "0"
+  - generic: 0/0/0
+  - generic: 0/0/0
+  - paragraph: 第三局 / Mirage
+  - generic: VS
+  - generic: "-"
+  - generic: ":"
+  - generic: "-"
+- generic: 回合
+- generic: "1"
+- generic: "2"
+- generic: "3"
+- generic: "4"
+- generic: "5"
+- generic: "6"
+- generic: "7"
+- generic: "8"
+- generic: "9"
+- generic: "10"
+- generic: "11"
+- generic: "12"
+- generic: "13"
+- generic: "14"
+- generic: "15"
+- generic: "16"
+- generic: "17"
+- generic: "18"
+- generic: "19"
+- generic: "20"
+- generic: "21"
+- generic: "22"
+- generic: "23"
+- generic: "24"
+- list:
+  - listitem: 数据总览
+  - listitem: 选手对比
+- generic: ARCRED
+- generic: Rating
+- generic: K-D-A
+- generic: K/D
+- generic: KD差
+- generic: KAST
+- generic: ADR
+- generic: Swing
+- generic: KPR
+- generic: DPR
+- generic: 爆头率
+- generic: 首杀次数
+- generic: Ryujin
+- generic: "--"
+- generic: 14-7-5
+- generic: "2.00"
+- generic: "+7"
+- generic: "--"
+- generic: "99.3"
+- generic: "--"
+- generic: "0.93"
+- generic: "0.47"
+- generic: "--"
+- generic: "--"
+- generic: Raijin
+- generic: "--"
+- generic: 14-8-5
+- generic: "1.75"
+- generic: "+6"
+- generic: "--"
+- generic: "110.1"
+- generic: "--"
+- generic: "0.93"
+- generic: "0.53"
+- generic: "--"
+- generic: "--"
+- generic: synyx
+- generic: "--"
+- generic: 14-10-5
+- generic: "1.40"
+- generic: "+4"
+- generic: "--"
+- generic: "90.4"
+- generic: "--"
+- generic: "0.93"
+- generic: "0.67"
+- generic: "--"
+- generic: "--"
+- generic: DSSj
+- generic: "--"
+- generic: 11-8-4
+- generic: "1.38"
+- generic: "+3"
+- generic: "--"
+- generic: "82.6"
+- generic: "--"
+- generic: "0.73"
+- generic: "0.53"
+- generic: "--"
+- generic: "--"
+- generic: shg
+- generic: "--"
+- generic: 11-7-2
+- generic: "1.57"
+- generic: "+4"
+- generic: "--"
+- generic: "62.7"
+- generic: "--"
+- generic: "0.73"
+- generic: "0.47"
+- generic: "--"
+- generic: "--"
+- generic: 1win
+- generic: Rating
+- generic: K-D-A
+- generic: K/D
+- generic: KD差
+- generic: KAST
+- generic: ADR
+- generic: Swing
+- generic: KPR
+- generic: DPR
+- generic: 爆头率
+- generic: 首杀次数
+- generic: reyoz
+- generic: "--"
+- generic: 12-13-6
+- generic: "0.92"
+- generic: "-1"
+- generic: "--"
+- generic: "95.4"
+- generic: "--"
+- generic: "0.80"
+- generic: "0.87"
+- generic: "--"
+- generic: "--"
+- generic: Qikert
+- generic: "--"
+- generic: 9-12-3
+- generic: "0.75"
+- generic: "-3"
+- generic: "--"
+- generic: "70.0"
+- generic: "--"
+- generic: "0.60"
+- generic: "0.80"
+- generic: "--"
+- generic: "--"
+- generic: lattykk
+- generic: "--"
+- generic: 8-12-2
+- generic: "0.67"
+- generic: "-4"
+- generic: "--"
+- generic: "46.9"
+- generic: "--"
+- generic: "0.53"
+- generic: "0.80"
+- generic: "--"
+- generic: "--"
+- generic: cronuss
+- generic: "--"
+- generic: 7-14-1
+- generic: "0.50"
+- generic: "-7"
+- generic: "--"
+- generic: "53.4"
+- generic: "--"
+- generic: "0.47"
+- generic: "0.93"
+- generic: "--"
+- generic: "--"
+- generic: oz1k
+- generic: "--"
+- generic: 4-13-6
+- generic: "0.31"
+- generic: "-9"
+- generic: "--"
+- generic: "47.1"
+- generic: "--"
+- generic: "0.27"
+- generic: "0.87"
+- generic: "--"
+- generic: "--"
+- heading "赛前分析" [level=4]
+- generic: 选手分析（近三个月数据）
+- paragraph: Raijin
+- paragraph: synyx
+- paragraph: Ryujin
+- paragraph: DSSj
+- paragraph: shg
+- paragraph: lattykk
+- paragraph: cronuss
+- paragraph: oz1k
+- paragraph: reyoz
+- paragraph: Qikert
+- generic: Raijin
+- generic: "1.32"
+- generic: Rating
+- generic: "1.20"
+- generic: "1.31"
+- generic: K/D
+- generic: "1.32"
+- generic: "76.0"
+- generic: KAST
+- generic: "74.7"
+- generic: +2.84%
+- generic: SWING
+- generic: +2.01%
+- generic: "86.8"
+- generic: ADR
+- generic: "73.3"
+- generic: "0.81"
+- generic: KPR
+- generic: "0.74"
+- generic: lattykk
+- generic: 地图分析（近三个月数据）
+- generic: 地图
+- paragraph: ARCRED
+- paragraph: 1win
+- generic: Anubis
+- text: 75%
+- text: (4场)
+- generic: Pick
+- text: 75%
+- generic: (4场)
+- generic: Cache
+- text: "-"
+- generic: (0场)
+- text: 100%
+- text: (1场)
+- generic: Pick
+- generic: Mirage
+- text: 50%
+- generic: (4场)
+- generic: Left
+- text: 40%
+- generic: (10场)
+- generic: Ancient
+- text: 20%
+- text: (5场)
+- generic: Ban
+- text: 50%
+- generic: (6场)
+- generic: Nuke
+- text: 50%
+- generic: (2场)
+- text: "-"
+- text: (0场)
+- generic: Ban
+- generic: Dust2
+- text: 100%
+- text: (3场)
+- generic: Ban
+- text: 75%
+- generic: (8场)
+- generic: Inferno
+- text: 100%
+- generic: (1场)
+- text: 100%
+- text: (2场)
+- generic: Ban
+- generic: 战队分析（近三个月数据）
+- generic: ARCRED
+- generic: 1win
+- generic: 58%
+- generic: 胜率（小局）
+- generic: 54%
+- generic: "1.16"
+- generic: rating
+- generic: "1.10"
+- generic: "1.15"
+- generic: K/D
+- generic: "1.04"
+- generic: 63%
+- generic: 上半场手枪局胜率
+- generic: 38%
+- generic: 58%
+- generic: 下半场手枪局胜率
+- generic: 59%
+- generic: 近期战绩
+- generic: ARCRED
+- generic: 1win
+- generic: 58%
+- generic: 胜率
+- generic: 54%
+- generic: 对阵战队
+- generic: 日期
+- generic: 赛事
+- generic: 赛果
+- generic: TLR
+- generic: 2026-07-17
+- generic: 欧洲职业联赛 系列赛8
+- generic: "1"
+- text: "-"
+- generic: "0"
+- generic: Acend
+- generic: 2026-06-10
+- generic: NODWIN Clutch 系列赛 第9季
+- generic: "0"
+- text: "-"
+- generic: "1"
+- generic: Walczaki
+- generic: 2026-06-07
+- generic: NODWIN Clutch 系列赛 第9季
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: ASTRAL
+- generic: 2026-06-06
+- generic: NODWIN Clutch 系列赛 第9季
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: INOX Division
+- generic: 2026-06-03
+- generic: NODWIN Clutch 系列赛 第9季
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: VP
+- generic: 2026-05-29
+- generic: MPKBK CIS 第5季
+- generic: "1"
+- text: "-"
+- generic: "2"
+- generic: Nuclear TigeRES
+- generic: 2026-05-28
+- generic: MPKBK CIS 第5季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: CYBERSHOKE
+- generic: 2026-05-27
+- generic: MPKBK CIS 第5季
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: Aurora YB
+- generic: 2026-05-26
+- generic: MPKBK CIS 第5季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: 163NEWS
+- generic: 2026-05-26
+- generic: MPKBK CIS 第5季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Metizport
+- generic: 2026-04-16
+- generic: 欧洲职业联赛 系列赛 6
+- generic: "1"
+- text: "-"
+- generic: "3"
+- generic: Lavked
+- generic: 2026-04-14
+- generic: 欧洲职业联赛 系列赛 6
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: MOUZ.N
+- generic: 2026-04-12
+- generic: 欧洲职业联赛 系列赛 6
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Aab
+- generic: 2026-04-08
+- generic: 欧洲职业联赛 系列赛 6
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: WW
+- generic: 2026-04-04
+- generic: MPKBK CIS 第4季
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: HOTU
+- generic: 2026-04-04
+- generic: MPKBK CIS 第4季
+- generic: "1"
+- text: "-"
+- generic: "2"
+- generic: Younglings
+- generic: 2026-04-03
+- generic: MPKBK CIS 第4季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Nemesis
+- generic: 2026-03-11
+- generic: MPKBK CIS 第3季
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Nemiga
+- generic: 2026-03-11
+- generic: MPKBK CIS 第3季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: 5Actors
+- generic: 2026-03-10
+- generic: MPKBK CIS 第3季
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: WW
+- generic: 2026-03-07
+- generic: IZI WEX 第一季
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: WW
+- generic: 2026-03-06
+- generic: IZI WEX 第一季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: 1win
+- generic: 2026-03-06
+- generic: IZI WEX 第一季
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: Nuclear TigeRES
+- generic: 2026-03-05
+- generic: IZI WEX 第一季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Oxuji
+- generic: 2026-03-05
+- generic: IZI WEX 第一季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: VP.P
+- generic: 2026-03-04
+- generic: IZI WEX 第一季
+- generic: "1"
+- text: "-"
+- generic: "2"
+- generic: KOLESIE
+- generic: 2026-02-27
+- generic: JB 职业联赛 第2赛季
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Alliance
+- generic: 2026-02-25
+- generic: CCT 第3赛季 欧洲系列赛 16
+- generic: "1"
+- text: "-"
+- generic: "2"
+- generic: ex-Zero Tenacity
+- generic: 2026-02-24
+- generic: JB 职业联赛 第2赛季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Omega
+- generic: 2026-02-23
+- generic: CCT 第3赛季 欧洲系列赛 16
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: 对阵战队
+- generic: 日期
+- generic: 赛事
+- generic: 赛果
+- generic: Genone
+- generic: 2026-07-17
+- generic: 欧洲职业联赛 系列赛8
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: VP
+- generic: 2026-06-20
+- generic: CCT 2026 欧洲系列赛 第4季
+- generic: "1"
+- text: "-"
+- generic: "2"
+- generic: INOX Division
+- generic: 2026-06-19
+- generic: CCT 2026 欧洲系列赛 第4季
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: TDK
+- generic: 2026-06-14
+- generic: NODWIN Clutch 系列赛 第9季
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Johnny Speeds
+- generic: 2026-06-06
+- generic: CCT 2026 欧洲系列赛 第3季
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Betclic
+- generic: 2026-06-05
+- generic: CCT 2026 欧洲系列赛 第3季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Lavked
+- generic: 2026-06-03
+- generic: CCT 2026 欧洲系列赛 第3季
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: AM
+- generic: 2026-05-28
+- generic: CCT 2026 欧洲系列赛 第2季
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: CYBERSHOKE
+- generic: 2026-05-27
+- generic: MPKBK CIS 第5季
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Dark Moon
+- generic: 2026-05-27
+- generic: MPKBK CIS 第5季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: VP
+- generic: 2026-05-26
+- generic: MPKBK CIS 第5季
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Tricked
+- generic: 2026-05-21
+- generic: NODWIN Clutch 系列赛 第8季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Nuclear TigeRES
+- generic: 2026-05-21
+- generic: NODWIN Clutch 系列赛 第8季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: FOKUS
+- generic: 2026-05-20
+- generic: NODWIN Clutch 系列赛 第8季
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: EF
+- generic: 2026-05-18
+- generic: NODWIN Clutch 系列赛 第8季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Genone
+- generic: 2026-04-21
+- generic: NODWIN Clutch 系列 7
+- generic: "1"
+- text: "-"
+- generic: "2"
+- generic: CYBERSHOKE
+- generic: 2026-04-19
+- generic: NODWIN Clutch 系列 7
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Nuclear TigeRES
+- generic: 2026-04-16
+- generic: NODWIN Clutch 系列 7
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Bebop
+- generic: 2026-04-15
+- generic: NODWIN Clutch 系列 7
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: BET-M
+- generic: 2026-04-06
+- generic: MPKBK CIS 第4季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: WW
+- generic: 2026-04-05
+- generic: MPKBK CIS 第4季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: TDK
+- generic: 2026-04-04
+- generic: MPKBK CIS 第4季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: JUMBO
+- generic: 2026-04-02
+- generic: MPKBK CIS 第4季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: K27
+- generic: 2026-04-02
+- generic: MPKBK CIS 第4季
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: JUMBO
+- generic: 2026-04-02
+- generic: MPKBK CIS 第4季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Nemiga
+- generic: 2026-03-28
+- generic: ESL 挑战者联赛 S51 欧洲杯 第2季
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: K27
+- generic: 2026-03-26
+- generic: ESL 挑战者联赛 S51 欧洲杯 第2季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Ursa
+- generic: 2026-03-24
+- generic: ESL 挑战者联赛 S51 欧洲杯 第2季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Nemiga
+- generic: 2026-03-22
+- generic: ESL 挑战者联赛 S51 欧洲杯 第2季
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: EF
+- generic: 2026-03-20
+- generic: ESL 挑战者联赛 S51 欧洲杯 第2季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: 交手战绩（最近五场）
+- generic: ARCRED
+- generic: 60%
+- generic: 胜率
+- generic: 40%
+- generic: 胜率
+- generic: 1win
+- generic: 2026-03-06
+- generic: ARCRED
+- generic: "2"
+- generic: ":"
+- generic: "1"
+- generic: 1win
+- generic: IZI WEX 第一季
+- generic: 2025-09-26
+- generic: ARCRED
+- generic: "0"
+- generic: ":"
+- generic: "2"
+- generic: 1win
+- generic: CCT 第3赛季 欧洲系列赛 7
+- generic: 2025-08-21
+- generic: ARCRED
+- generic: "0"
+- generic: ":"
+- generic: "2"
+- generic: 1win
+- generic: Majestic LanDaLan 3 封闭预选
+- generic: 2025-05-08
+- generic: ARCRED
+- generic: "2"
+- generic: ":"
+- generic: "0"
+- generic: 1win
+- generic: BB LanDaLan 2
+- generic: 2024-03-06
+- generic: ARCRED
+- generic: "2"
+- generic: ":"
+- generic: "0"
+- generic: 1win
+- generic: ESEA Advanced 第48赛季 欧洲
+- contentinfo
+- region "Notifications"
+- document:
+  - button "翻译":
+  - button "朗读":
+  - button "词典":
+- region "Notifications"
+- document:
+  - button:
+  - img "Read Frog"
+  - button:
+- region "Notifications"
+- region "Notifications"

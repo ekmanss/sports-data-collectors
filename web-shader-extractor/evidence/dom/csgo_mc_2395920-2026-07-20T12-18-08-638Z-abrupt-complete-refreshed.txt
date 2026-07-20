@@ -1,0 +1,245 @@
+- banner:
+  - link:
+    - /url: https://www.5eplay.com/
+  - link:
+    - /url: https://event.5eplay.com/csgo/matches
+  - list:
+    - link "CS":
+      - /url: /csgo/events
+      - text: CS
+    - link "VAL":
+      - /url: https://valdata.5eplay.com/esports
+      - text: VAL
+  - textbox "搜索战队、选手、赛事"
+  - generic: 分享
+  - generic: 收藏
+  - generic: 登录
+- list:
+  - link "赛程":
+    - /url: /csgo/matches
+  - link "赛事":
+    - /url: /csgo/events
+  - link "战队":
+    - /url: /csgo/teams
+  - link "选手":
+    - /url: /csgo/player
+- generic: CCT 2026 欧洲系列赛 第5季封闭预选
+- generic: ">"
+- generic: benched gods
+- generic: VS
+- generic: Mai Tai
+- paragraph:
+  - generic: CCT 2026 欧洲系列赛 第5季封闭预选
+- paragraph: 比赛时间：2026-07-20
+- generic: benched gods
+- paragraph: V社排名：211
+- generic: 2 - 0
+- generic: BO3
+- generic: Mai Tai
+- paragraph: V社排名：219
+- generic: 59%
+- generic: 41%
+- generic: 地图BP
+- list:
+  - paragraph: Mai Tai
+  - generic: ban
+  - paragraph: Inferno
+  - paragraph: benched gods
+  - generic: ban
+  - paragraph: Nuke
+  - paragraph: Mai Tai
+  - generic: pick
+  - paragraph: Ancient
+  - paragraph: benched gods
+  - generic: pick
+  - paragraph: Cache
+  - paragraph: Mai Tai
+  - generic: ban
+  - paragraph: Dust2
+  - paragraph: benched gods
+  - generic: ban
+  - paragraph: Mirage
+  - generic: left
+  - paragraph: Anubis
+- generic: 比赛数据
+- list:
+  - paragraph: 地图总览
+  - generic: VS
+  - generic: "2"
+  - generic: ":"
+  - generic: "0"
+  - paragraph: 第一局 / Ancient
+  - generic: "13"
+  - generic: ":"
+  - generic: "6"
+  - generic: 9/4/0
+  - generic: 3/3/0
+  - paragraph: 第二局 / Cache
+  - generic: VS
+  - generic: "1"
+  - generic: ":"
+  - generic: "0"
+  - paragraph: 第三局 / Anubis
+  - generic: VS
+  - generic: "-"
+  - generic: ":"
+  - generic: "-"
+- list:
+  - listitem: 数据总览
+  - listitem: 选手对比
+- generic: benched gods
+- generic: Rating
+- generic: K-D-A
+- generic: K/D
+- generic: KD差
+- generic: KAST
+- generic: ADR
+- generic: Swing
+- generic: KPR
+- generic: DPR
+- generic: 爆头率
+- generic: 首杀次数
+- generic: Mai Tai
+- generic: Rating
+- generic: K-D-A
+- generic: K/D
+- generic: KD差
+- generic: KAST
+- generic: ADR
+- generic: Swing
+- generic: KPR
+- generic: DPR
+- generic: 爆头率
+- generic: 首杀次数
+- generic: 本场mvp
+- generic: 本场mvp
+- generic: //
+- generic: KDA
+- generic: Rating
+- generic: ADR
+- generic: 总击杀
+- generic: KPR
+- generic: DPR
+- generic: KAST
+- heading "赛前分析" [level=4]
+- generic: 选手分析（近三个月数据）
+- paragraph: Wign
+- paragraph: BloodyK
+- paragraph: f1chper
+- paragraph: K014NZ
+- paragraph: facer
+- paragraph: Pelle
+- paragraph: Melavi
+- paragraph: Nami
+- paragraph: chudy
+- paragraph: darchevile
+- generic: Wign
+- generic: "1.36"
+- generic: Rating
+- generic: "1.15"
+- generic: "1.20"
+- generic: K/D
+- generic: "1.11"
+- generic: "74.7"
+- generic: KAST
+- generic: "74.8"
+- generic: +2.96%
+- generic: SWING
+- generic: "--"
+- generic: "95.7"
+- generic: ADR
+- generic: "80.7"
+- generic: "0.87"
+- generic: KPR
+- generic: "0.74"
+- generic: Pelle
+- generic: 地图分析（近三个月数据）
+- generic: 地图
+- paragraph: benched gods
+- paragraph: Mai Tai
+- generic: Ancient
+- text: 50%
+- generic: (2场)
+- text: 50%
+- text: (2场)
+- generic: Pick
+- generic: Cache
+- text: 100%
+- text: (1场)
+- generic: Pick
+- text: 0%
+- generic: (1场)
+- generic: Anubis
+- text: 67%
+- generic: (3场)
+- generic: Left
+- text: "-"
+- generic: (0场)
+- generic: Inferno
+- text: 100%
+- generic: (1场)
+- text: "-"
+- text: (0场)
+- generic: Ban
+- generic: Nuke
+- text: 100%
+- text: (1场)
+- generic: Ban
+- text: 100%
+- generic: (1场)
+- generic: Dust2
+- text: 50%
+- generic: (4场)
+- text: "-"
+- text: (0场)
+- generic: Ban
+- generic: Mirage
+- text: "-"
+- text: (0场)
+- generic: Ban
+- text: 50%
+- generic: (4场)
+- generic: 战队分析（近三个月数据）
+- generic: benched gods
+- generic: Mai Tai
+- generic: 64%
+- generic: 胜率（小局）
+- generic: 44%
+- generic: "1.13"
+- generic: rating
+- generic: "1.02"
+- generic: "1.08"
+- generic: K/D
+- generic: "0.91"
+- generic: 57%
+- generic: 上半场手枪局胜率
+- generic: 22%
+- generic: 43%
+- generic: 下半场手枪局胜率
+- generic: 44%
+- generic: 近期战绩
+- generic: benched gods
+- generic: Mai Tai
+- generic: 64%
+- generic: 胜率
+- generic: 44%
+- generic: 对阵战队
+- generic: 日期
+- generic: 赛事
+- generic: 赛果
+- paragraph: 暂无数据
+- generic: 对阵战队
+- generic: 日期
+- generic: 赛事
+- generic: 赛果
+- paragraph: 暂无数据
+- generic: 交手战绩（最近五场）
+- generic: benched gods
+- generic: 0%
+- generic: 胜率
+- generic: 0%
+- generic: 胜率
+- generic: Mai Tai
+- paragraph: 暂无数据
+- contentinfo
+- region "Notifications"

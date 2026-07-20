@@ -1,0 +1,526 @@
+- banner:
+  - link:
+    - /url: https://www.5eplay.com/
+  - link:
+    - /url: https://event.5eplay.com/csgo/matches
+  - list:
+    - link "CS":
+      - /url: /csgo/events
+      - text: CS
+    - link "VAL":
+      - /url: https://valdata.5eplay.com/esports
+      - text: VAL
+  - textbox "搜索战队、选手、赛事"
+  - generic: 分享
+  - generic: 收藏
+  - generic: 登录
+- list:
+  - link "赛程":
+    - /url: /csgo/matches
+  - link "赛事":
+    - /url: /csgo/events
+  - link "战队":
+    - /url: /csgo/teams
+  - link "选手":
+    - /url: /csgo/player
+- generic: 欧洲职业联赛 系列赛8
+- generic: ">"
+- generic: Just Players
+- generic: VS
+- generic: Walczaki
+- paragraph:
+  - generic: 欧洲职业联赛 系列赛8
+- paragraph: 比赛时间：2026-07-20
+- generic: 比赛倒计时：0时10分32秒
+- generic: Just Players
+- paragraph: V社排名：108
+- generic: 16:00
+- generic: BO3
+- generic: Walczaki
+- paragraph: V社排名：42
+- generic: 28%
+- generic: 72%
+- heading "赛前分析" [level=4]
+- generic: 选手分析（近三个月数据）
+- paragraph: sstiNiX
+- paragraph: sm3t
+- paragraph: spirit
+- paragraph: h1te
+- paragraph: reNIK
+- paragraph: olimp
+- paragraph: SaMey
+- paragraph: moonwalk
+- paragraph: sk1tt
+- paragraph: bajmi
+- generic: sstiNiX
+- generic: "1.19"
+- generic: Rating
+- generic: "1.15"
+- generic: "1.09"
+- generic: K/D
+- generic: "1.02"
+- generic: "72.1"
+- generic: KAST
+- generic: "71.8"
+- generic: +1.05%
+- generic: SWING
+- generic: +1.15%
+- generic: "81.2"
+- generic: ADR
+- generic: "81.9"
+- generic: "0.73"
+- generic: KPR
+- generic: "0.71"
+- generic: olimp
+- generic: 地图分析（近三个月数据）
+- generic: 地图
+- paragraph: Just Players
+- paragraph: Walczaki
+- generic: Ancient
+- text: 65%
+- generic: (20场)
+- text: 75%
+- generic: (20场)
+- generic: Nuke
+- text: 36%
+- generic: (11场)
+- text: 64%
+- generic: (28场)
+- generic: Dust2
+- text: 40%
+- generic: (15场)
+- text: 39%
+- generic: (18场)
+- generic: Mirage
+- text: 59%
+- generic: (22场)
+- text: 73%
+- generic: (11场)
+- generic: Anubis
+- text: 100%
+- generic: (3场)
+- text: 70%
+- generic: (20场)
+- generic: Inferno
+- text: "-"
+- generic: (0场)
+- text: 69%
+- generic: (13场)
+- generic: Cache
+- text: 0%
+- generic: (3场)
+- text: 0%
+- generic: (1场)
+- generic: 战队分析（近三个月数据）
+- generic: Just Players
+- generic: Walczaki
+- generic: 54%
+- generic: 胜率（小局）
+- generic: 63%
+- generic: "1.09"
+- generic: rating
+- generic: "1.10"
+- generic: "1.02"
+- generic: K/D
+- generic: "1.04"
+- generic: 48%
+- generic: 上半场手枪局胜率
+- generic: 56%
+- generic: 44%
+- generic: 下半场手枪局胜率
+- generic: 45%
+- generic: 近期战绩
+- generic: Just Players
+- generic: Walczaki
+- generic: 54%
+- generic: 胜率
+- generic: 63%
+- generic: 对阵战队
+- generic: 日期
+- generic: 赛事
+- generic: 赛果
+- generic: QUAZAR
+- generic: 2026-07-18
+- generic: GLuck Yungstar 2026 第2赛季
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Spirit.A
+- generic: 2026-07-18
+- generic: GLuck Yungstar 2026 第2赛季
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: NEW VISION
+- generic: 2026-07-17
+- generic: GLuck Yungstar 2026 第2赛季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: ex-RUBY
+- generic: 2026-07-17
+- generic: GLuck Yungstar 2026 第2赛季
+- generic: "1"
+- text: "-"
+- generic: "2"
+- generic: WW
+- generic: 2026-07-16
+- generic: 欧洲职业联赛 系列赛8
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: Lavked
+- generic: 2026-07-15
+- generic: 欧洲职业联赛 系列赛8
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Entropy
+- generic: 2026-07-13
+- generic: ESL 挑战者联赛 第52赛季 欧洲杯 1
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Genone
+- generic: 2026-07-13
+- generic: ESL 挑战者联赛 第52赛季 欧洲杯 1
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Atreides
+- generic: 2026-07-12
+- generic: ESL 挑战者联赛 第52赛季 欧洲杯 1
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: WROTBERRY
+- generic: 2026-07-10
+- generic: 欧洲职业联赛 系列赛8
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Lavked
+- generic: 2026-07-06
+- generic: 欧洲职业联赛 系列赛8
+- generic: "1"
+- text: "-"
+- generic: "0"
+- generic: SAW
+- generic: 2026-07-01
+- generic: CCT 2026 挑战者 欧洲 第4季
+- generic: "1"
+- text: "-"
+- generic: "2"
+- generic: Atreides
+- generic: 2026-06-29
+- generic: CCT 2026 挑战者 欧洲 第4季
+- generic: "0"
+- text: "-"
+- generic: "1"
+- generic: OlyBet
+- generic: 2026-06-27
+- generic: CCT 2026 挑战者 欧洲 第4季
+- generic: "1"
+- text: "-"
+- generic: "0"
+- generic: OG
+- generic: 2026-05-30
+- generic: TP 世界锦标赛 2026 欧洲 第1赛季
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Genone
+- generic: 2026-05-30
+- generic: CCT 2026 欧洲系列赛 第2季
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Tricked
+- generic: 2026-05-28
+- generic: CCT 2026 欧洲系列赛 第2季
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: Acend
+- generic: 2026-05-28
+- generic: TP 世界锦标赛 2026 欧洲 第1赛季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: ex-Zero Tenacity
+- generic: 2026-05-26
+- generic: TP 世界锦标赛 2026 欧洲 第1赛季
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: Algo
+- generic: 2026-05-26
+- generic: CCT 2026 欧洲系列赛 第2季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Lazer Cats
+- generic: 2026-05-25
+- generic: TP 世界锦标赛 2026 欧洲 第1赛季
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: AM
+- generic: 2026-05-23
+- generic: CCT 2026 欧洲系列赛 第2季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Bushido Wildcats
+- generic: 2026-05-23
+- generic: CCT 2026 欧洲系列赛 第2季封闭预选
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Rune Eaters
+- generic: 2026-05-23
+- generic: CCT 2026 欧洲系列赛 第2季封闭预选
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: ex-RUBY
+- generic: 2026-05-22
+- generic: CCT 2026 欧洲系列赛 第2季
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Lilmix
+- generic: 2026-05-21
+- generic: CCT 2026 欧洲系列赛 第2季封闭预选
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: SPARTA
+- generic: 2026-05-18
+- generic: CCT 2026 欧洲系列赛 第2季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: OlyBet
+- generic: 2026-05-17
+- generic: CCT 2026 欧洲系列赛 第2季封闭预选
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: ex-Zero Tenacity
+- generic: 2026-05-16
+- generic: CCT 2026 欧洲系列赛 第2季封闭预选
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Hashiras
+- generic: 2026-05-15
+- generic: CCT 2026 欧洲系列赛 第2季封闭预选
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: 对阵战队
+- generic: 日期
+- generic: 赛事
+- generic: 赛果
+- generic: SPARTA
+- generic: 2026-07-16
+- generic: 欧洲职业联赛 系列赛8
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: Inner Circle
+- generic: 2026-06-26
+- generic: 数字圣战・超德古拉杯 第一赛季
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: ex-Tricked
+- generic: 2026-06-25
+- generic: 数字圣战・超德古拉杯 第一赛季
+- generic: "1"
+- text: "-"
+- generic: "2"
+- generic: EAC
+- generic: 2026-06-24
+- generic: 数字圣战・超德古拉杯 第一赛季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: K27
+- generic: 2026-06-23
+- generic: 数字圣战・超德古拉杯 第一赛季
+- generic: "1"
+- text: "-"
+- generic: "0"
+- generic: KOLESIE
+- generic: 2026-06-22
+- generic: 欧洲职业联赛 系列赛 7
+- generic: "3"
+- text: "-"
+- generic: "2"
+- generic: Phantom
+- generic: 2026-06-21
+- generic: Stake 排位赛 第3季 封闭预选
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Infinite
+- generic: 2026-06-20
+- generic: 欧洲职业联赛 系列赛 7
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Oxuji
+- generic: 2026-06-19
+- generic: Stake 排位赛 第3季 封闭预选
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: TDK
+- generic: 2026-06-18
+- generic: 欧洲职业联赛 系列赛 7
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: G2 Ares
+- generic: 2026-06-15
+- generic: 欧洲职业联赛 系列赛 7
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: K27
+- generic: 2026-06-14
+- generic: NODWIN Clutch 系列赛 第9季
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: INOX Division
+- generic: 2026-06-10
+- generic: NODWIN Clutch 系列赛 第9季
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: ARCRED
+- generic: 2026-06-07
+- generic: NODWIN Clutch 系列赛 第9季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: TDK
+- generic: 2026-06-06
+- generic: NODWIN Clutch 系列赛 第9季
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: KOLESIE
+- generic: 2026-06-05
+- generic: NODWIN Clutch 系列赛 第9季
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: Alliance
+- generic: 2026-05-24
+- generic: Tipsport 征服布拉格 2026 决赛
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Sashi
+- generic: 2026-05-23
+- generic: Tipsport 征服布拉格 2026 决赛
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Alliance
+- generic: 2026-05-22
+- generic: Tipsport 征服布拉格 2026 决赛
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Tricked
+- generic: 2026-05-21
+- generic: NODWIN Clutch 系列赛 第8季
+- generic: "1"
+- text: "-"
+- generic: "2"
+- generic: Nemesis
+- generic: 2026-05-18
+- generic: NODWIN Clutch 系列赛 第8季
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: SPARTA
+- generic: 2026-05-16
+- generic: NODWIN Clutch 系列赛 第8季
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: Nemiga
+- generic: 2026-05-15
+- generic: CCT 2026 欧洲系列赛 第1季
+- generic: "1"
+- text: "-"
+- generic: "2"
+- generic: HOTU
+- generic: 2026-05-15
+- generic: CCT 2026 欧洲系列赛 第1季
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: FT
+- generic: 2026-05-14
+- generic: NODWIN Clutch 系列赛 第8季
+- generic: "1"
+- text: "-"
+- generic: "0"
+- generic: Johnny Speeds
+- generic: 2026-05-13
+- generic: NODWIN Clutch 系列赛 第8季
+- generic: "0"
+- text: "-"
+- generic: "1"
+- generic: BET-M
+- generic: 2026-05-12
+- generic: CCT 2026 欧洲系列赛 第1季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: AM
+- generic: 2026-05-11
+- generic: NODWIN Clutch 系列赛 第8季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Nemiga
+- generic: 2026-05-11
+- generic: BC Game 大师赛 欧洲 第二季 S1
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: Nuclear TigeRES
+- generic: 2026-05-10
+- generic: BC Game 大师赛 欧洲 第二季 S1
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: 交手战绩（最近五场）
+- generic: Just Players
+- generic: 0%
+- generic: 胜率
+- generic: 0%
+- generic: 胜率
+- generic: Walczaki
+- paragraph: 暂无数据
+- contentinfo
+- region "Notifications"
+- document:
+  - button:
+  - img "Read Frog"
+  - button:
+- region "Notifications"
+- region "Notifications"
+- document:
+  - button "翻译":
+  - button "朗读":
+  - button "词典":
+- region "Notifications"

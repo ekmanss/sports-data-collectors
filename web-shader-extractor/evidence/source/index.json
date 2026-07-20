@@ -1,0 +1,42 @@
+[
+  {
+    "requestId": "97579.43659",
+    "url": "https://event.5eplay.com/static/js/index.bundle.35573775af207e434a7d.js",
+    "file": "index.bundle.35573775af207e434a7d.js",
+    "bytes": 401882,
+    "sha256": "1792d45f0492b30a63e701fa96d66449da32ad3db889b4d2d3198369bc46c85c",
+    "sourceMap": null
+  },
+  {
+    "requestId": "97579.43673",
+    "url": "https://event.5eplay.com/static/js/545.bundle.06250461f27db34424f6.js",
+    "file": "545.bundle.06250461f27db34424f6.js",
+    "bytes": 17366,
+    "sha256": "e7d34b314bfba22c5d6aa50acef61cd0188c41a2b43661a5e147291f50c44482",
+    "sourceMap": null
+  },
+  {
+    "requestId": "97579.43671",
+    "url": "https://event.5eplay.com/static/js/829.bundle.bc11046c1f8a3c177db1.js",
+    "file": "829.bundle.bc11046c1f8a3c177db1.js",
+    "bytes": 31300,
+    "sha256": "74153cd1631cad079c90e47fd614ee9028d6a5a3c2065c8272d246a9d1421635",
+    "sourceMap": null
+  },
+  {
+    "requestId": "97579.43675",
+    "url": "https://event.5eplay.com/static/js/428.bundle.27e3328e273076a6a7cc.js",
+    "file": "428.bundle.27e3328e273076a6a7cc.js",
+    "bytes": 188546,
+    "sha256": "b7923dc2b459dd688ecd13cd213744be28d7b48272971ddf74099795e436f891",
+    "sourceMap": null
+  },
+  {
+    "requestId": "97579.43672",
+    "url": "https://event.5eplay.com/static/js/815.bundle.8de08e0cd9fb0496d25b.js",
+    "file": "815.bundle.8de08e0cd9fb0496d25b.js",
+    "bytes": 725395,
+    "sha256": "ef9f8097c1ed06224e63655a3e9323f3614ace8f7802a5282ced86f8618d5b39",
+    "sourceMap": null
+  }
+]

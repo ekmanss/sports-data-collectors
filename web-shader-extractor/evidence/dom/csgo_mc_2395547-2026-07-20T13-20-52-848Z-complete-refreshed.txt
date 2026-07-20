@@ -1,0 +1,411 @@
+- banner:
+  - link:
+    - /url: https://www.5eplay.com/
+  - link:
+    - /url: https://event.5eplay.com/csgo/matches
+  - list:
+    - link "CS":
+      - /url: /csgo/events
+      - text: CS
+    - link "VAL":
+      - /url: https://valdata.5eplay.com/esports
+      - text: VAL
+  - textbox "搜索战队、选手、赛事"
+  - generic: 分享
+  - generic: 收藏
+  - generic: 登录
+- list:
+  - link "赛程":
+    - /url: /csgo/matches
+  - link "赛事":
+    - /url: /csgo/events
+  - link "战队":
+    - /url: /csgo/teams
+  - link "选手":
+    - /url: /csgo/player
+- generic: 欧洲职业联赛 系列赛8
+- generic: ">"
+- generic: ARCRED
+- generic: VS
+- generic: 1win
+- paragraph:
+  - generic: 欧洲职业联赛 系列赛8
+- paragraph: 比赛时间：2026-07-20
+- generic: ARCRED
+- paragraph: V社排名：68
+- generic: 1 - 2
+- generic: BO3
+- generic: 1win
+- paragraph: V社排名：59
+- generic: 45%
+- generic: 55%
+- generic: 地图BP
+- list:
+  - paragraph: ARCRED
+  - generic: ban
+  - paragraph: Ancient
+  - paragraph: 1win
+  - generic: ban
+  - paragraph: Nuke
+  - paragraph: ARCRED
+  - generic: pick
+  - paragraph: Anubis
+  - paragraph: 1win
+  - generic: pick
+  - paragraph: Cache
+  - paragraph: ARCRED
+  - generic: ban
+  - paragraph: Dust2
+  - paragraph: 1win
+  - generic: ban
+  - paragraph: Inferno
+  - generic: left
+  - paragraph: Mirage
+- generic: 比赛数据
+- list:
+  - paragraph: 地图总览
+  - generic: VS
+  - generic: "1"
+  - generic: ":"
+  - generic: "2"
+  - paragraph: 第一局 / Anubis
+  - generic: "13"
+  - generic: ":"
+  - generic: "2"
+  - generic: 10/3/0
+  - generic: 2/0/0
+  - paragraph: 第二局 / Cache
+  - generic: "10"
+  - generic: ":"
+  - generic: "13"
+  - generic: 6/4/0
+  - generic: 6/7/0
+  - paragraph: 第三局 / Mirage
+  - generic: "7"
+  - generic: ":"
+  - generic: "13"
+  - generic: 5/2/0
+  - generic: 7/6/0
+- list:
+  - listitem: 数据总览
+  - listitem: 选手对比
+- generic: ARCRED
+- generic: Rating
+- generic: K-D-A
+- generic: K/D
+- generic: KD差
+- generic: KAST
+- generic: ADR
+- generic: Swing
+- generic: KPR
+- generic: DPR
+- generic: 爆头率
+- generic: 首杀次数
+- generic: DSSj
+- generic: "--"
+- generic: 44-36-8
+- generic: "1.22"
+- generic: "+8"
+- generic: "--"
+- generic: "70.02"
+- generic: "--"
+- generic: "0.76"
+- generic: "0.62"
+- generic: "--"
+- generic: "--"
+- generic: shg
+- generic: "--"
+- generic: 45-40-9
+- generic: "1.12"
+- generic: "+5"
+- generic: "--"
+- generic: "84.63"
+- generic: "--"
+- generic: "0.78"
+- generic: "0.69"
+- generic: "--"
+- generic: "--"
+- generic: Ryujin
+- generic: "--"
+- generic: 39-38-15
+- generic: "1.03"
+- generic: "+1"
+- generic: "--"
+- generic: "75.75"
+- generic: "--"
+- generic: "0.67"
+- generic: "0.66"
+- generic: "--"
+- generic: "--"
+- generic: synyx
+- generic: "--"
+- generic: 41-44-11
+- generic: "0.93"
+- generic: "-3"
+- generic: "--"
+- generic: "71.41"
+- generic: "--"
+- generic: "0.71"
+- generic: "0.76"
+- generic: "--"
+- generic: "--"
+- generic: Raijin
+- generic: "--"
+- generic: 33-41-18
+- generic: "0.80"
+- generic: "-8"
+- generic: "--"
+- generic: "66.16"
+- generic: "--"
+- generic: "0.57"
+- generic: "0.71"
+- generic: "--"
+- generic: "--"
+- generic: 1win
+- generic: Rating
+- generic: K-D-A
+- generic: K/D
+- generic: KD差
+- generic: KAST
+- generic: ADR
+- generic: Swing
+- generic: KPR
+- generic: DPR
+- generic: 爆头率
+- generic: 首杀次数
+- generic: lattykk
+- generic: "--"
+- generic: 53-39-7
+- generic: "1.36"
+- generic: "+14"
+- generic: "--"
+- generic: "88.30"
+- generic: "--"
+- generic: "0.91"
+- generic: "0.67"
+- generic: "--"
+- generic: "--"
+- generic: cronuss
+- generic: "--"
+- generic: 46-43-9
+- generic: "1.07"
+- generic: "+3"
+- generic: "--"
+- generic: "86.48"
+- generic: "--"
+- generic: "0.79"
+- generic: "0.74"
+- generic: "--"
+- generic: "--"
+- generic: reyoz
+- generic: "--"
+- generic: 43-41-14
+- generic: "1.05"
+- generic: "+2"
+- generic: "--"
+- generic: "79.57"
+- generic: "--"
+- generic: "0.74"
+- generic: "0.71"
+- generic: "--"
+- generic: "--"
+- generic: Qikert
+- generic: "--"
+- generic: 29-38-12
+- generic: "0.76"
+- generic: "-9"
+- generic: "--"
+- generic: "55.99"
+- generic: "--"
+- generic: "0.50"
+- generic: "0.66"
+- generic: "--"
+- generic: "--"
+- generic: oz1k
+- generic: "--"
+- generic: 28-43-14
+- generic: "0.65"
+- generic: "-15"
+- generic: "--"
+- generic: "63.98"
+- generic: "--"
+- generic: "0.48"
+- generic: "0.74"
+- generic: "--"
+- generic: "--"
+- generic: 本场mvp
+- generic: 本场mvp
+- generic: lattykk
+- generic: 53/39/7
+- generic: KDA
+- generic: Rating
+- generic: "88.30"
+- generic: ADR
+- generic: "53"
+- generic: 总击杀
+- generic: "0.91"
+- generic: KPR
+- generic: "0.67"
+- generic: DPR
+- generic: KAST
+- heading "赛前分析" [level=4]
+- generic: 选手分析（近三个月数据）
+- paragraph: shg
+- paragraph: Raijin
+- paragraph: synyx
+- paragraph: DSSj
+- paragraph: Ryujin
+- paragraph: lattykk
+- paragraph: cronuss
+- paragraph: oz1k
+- paragraph: reyoz
+- paragraph: Qikert
+- generic: shg
+- generic: "1.37"
+- generic: Rating
+- generic: "1.20"
+- generic: "1.38"
+- generic: K/D
+- generic: "1.32"
+- generic: "83.6"
+- generic: KAST
+- generic: "74.2"
+- generic: +5.35%
+- generic: SWING
+- generic: +2.06%
+- generic: "86.5"
+- generic: ADR
+- generic: "73.7"
+- generic: "0.87"
+- generic: KPR
+- generic: "0.74"
+- generic: lattykk
+- generic: 地图分析（近三个月数据）
+- generic: 地图
+- paragraph: ARCRED
+- paragraph: 1win
+- generic: Anubis
+- text: 75%
+- text: (4场)
+- generic: Pick
+- text: 75%
+- generic: (4场)
+- generic: Cache
+- text: "-"
+- generic: (0场)
+- text: 100%
+- text: (1场)
+- generic: Pick
+- generic: Mirage
+- text: 50%
+- generic: (4场)
+- generic: Left
+- text: 40%
+- generic: (10场)
+- generic: Ancient
+- text: 20%
+- text: (5场)
+- generic: Ban
+- text: 50%
+- generic: (6场)
+- generic: Nuke
+- text: 50%
+- generic: (2场)
+- text: "-"
+- text: (0场)
+- generic: Ban
+- generic: Dust2
+- text: 100%
+- text: (3场)
+- generic: Ban
+- text: 75%
+- generic: (8场)
+- generic: Inferno
+- text: 100%
+- generic: (1场)
+- text: 100%
+- text: (2场)
+- generic: Ban
+- generic: 战队分析（近三个月数据）
+- generic: ARCRED
+- generic: 1win
+- generic: 57%
+- generic: 胜率（小局）
+- generic: 54%
+- generic: "1.16"
+- generic: rating
+- generic: "1.10"
+- generic: "1.15"
+- generic: K/D
+- generic: "1.03"
+- generic: 57%
+- generic: 上半场手枪局胜率
+- generic: 41%
+- generic: 62%
+- generic: 下半场手枪局胜率
+- generic: 56%
+- generic: 近期战绩
+- generic: ARCRED
+- generic: 1win
+- generic: 57%
+- generic: 胜率
+- generic: 54%
+- generic: 对阵战队
+- generic: 日期
+- generic: 赛事
+- generic: 赛果
+- paragraph: 暂无数据
+- generic: 对阵战队
+- generic: 日期
+- generic: 赛事
+- generic: 赛果
+- paragraph: 暂无数据
+- generic: 交手战绩（最近五场）
+- generic: ARCRED
+- generic: 60%
+- generic: 胜率
+- generic: 40%
+- generic: 胜率
+- generic: 1win
+- generic: 2026-03-06
+- generic: ARCRED
+- generic: "2"
+- generic: ":"
+- generic: "1"
+- generic: 1win
+- generic: IZI WEX 第一季
+- generic: 2025-09-26
+- generic: ARCRED
+- generic: "0"
+- generic: ":"
+- generic: "2"
+- generic: 1win
+- generic: CCT 第3赛季 欧洲系列赛 7
+- generic: 2025-08-21
+- generic: ARCRED
+- generic: "0"
+- generic: ":"
+- generic: "2"
+- generic: 1win
+- generic: Majestic LanDaLan 3 封闭预选
+- generic: 2025-05-08
+- generic: ARCRED
+- generic: "2"
+- generic: ":"
+- generic: "0"
+- generic: 1win
+- generic: BB LanDaLan 2
+- generic: 2024-03-06
+- generic: ARCRED
+- generic: "2"
+- generic: ":"
+- generic: "0"
+- generic: 1win
+- generic: ESEA Advanced 第48赛季 欧洲
+- contentinfo
+- region "Notifications"
+- document:
+  - button "翻译":
+  - button "朗读":
+  - button
+- region "Notifications"

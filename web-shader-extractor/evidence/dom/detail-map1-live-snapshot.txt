@@ -1,0 +1,865 @@
+- banner:
+  - link:
+    - /url: https://www.5eplay.com/
+  - link:
+    - /url: https://event.5eplay.com/csgo/matches
+  - list:
+    - link "CS":
+      - /url: /csgo/events
+      - text: CS
+    - link "VAL":
+      - /url: https://valdata.5eplay.com/esports
+      - text: VAL
+  - textbox "搜索战队、选手、赛事"
+  - generic: 分享
+  - generic: 收藏
+  - generic: 登录
+- list:
+  - link "赛程":
+    - /url: /csgo/matches
+  - link "赛事":
+    - /url: /csgo/events
+  - link "战队":
+    - /url: /csgo/teams
+  - link "选手":
+    - /url: /csgo/player
+- generic: CCT 2026 欧洲系列赛 第5季封闭预选
+- generic: ">"
+- generic: ex-MANA
+- generic: VS
+- generic: Misa
+- paragraph:
+  - generic: CCT 2026 欧洲系列赛 第5季封闭预选
+- paragraph: 比赛时间：2026-07-20
+- generic: ex-MANA
+- paragraph: V社排名：189
+- generic: LIVE
+- generic: 0 - 0
+- generic: BO3
+- generic: Misa
+- paragraph: V社排名：216
+- generic: 50%
+- generic: 50%
+- generic: 图文直播
+- generic: "0"
+- text: "0"
+- generic: "0 : 0"
+- generic: "0 : 0"
+- generic: Mirage
+- generic: Round over
+- generic: 第1回合
+- generic: +
+- generic: "-"
+- generic: $
+- text: KDA
+- text: ammar
+- generic: "0"
+- generic: "54000"
+- generic: "3"
+- generic: "2"
+- generic: "0"
+- text: vAloN
+- generic: "0"
+- generic: "54600"
+- generic: "1"
+- generic: "1"
+- generic: "0"
+- text: cerber
+- generic: "100"
+- generic: "57300"
+- generic: "0"
+- generic: "0"
+- generic: "0"
+- text: xonn1k
+- generic: "100"
+- generic: "57300"
+- generic: "0"
+- generic: "0"
+- generic: "0"
+- text: BledarD
+- generic: "0"
+- generic: "50450"
+- generic: "0"
+- generic: "1"
+- generic: "0"
+- list:
+- text: Ckanic
+- generic: "0"
+- generic: "51100"
+- generic: "2"
+- generic: "3"
+- generic: "1"
+- text: EMSTAR
+- generic: "100"
+- generic: "57100"
+- generic: "1"
+- generic: "0"
+- generic: "0"
+- text: Zuedsta
+- generic: "93"
+- generic: "58900"
+- generic: "1"
+- generic: "1"
+- generic: "0"
+- text: souv
+- generic: "100"
+- generic: "49200"
+- generic: "0"
+- generic: "1"
+- generic: "0"
+- text: h0kz
+- generic: "47"
+- generic: "51950"
+- generic: "0"
+- generic: "1"
+- generic: "0"
+- generic: 实时日志
+- text: Zuedsta
+- text: cerber
+- text: cerber
+- text: h0kz
+- text: cerber
+- text: EMSTAR
+- text: souv
+- text: BledarD
+- text: souv
+- text: ammar
+- text: ammar
+- text: Zuedsta
+- text: ammar
+- text: EMSTAR
+- text: h0kz
+- text: ammar
+- text: ammar
+- text: souv
+- text: ammar
+- text: EMSTAR
+- text: vAloN
+- text: h0kz
+- text: vAloN
+- text: Zuedsta
+- text: ammar
+- text: Ckanic
+- text: ammar
+- text: souv
+- text: ammar
+- text: Zuedsta
+- text: EMSTAR
+- text: BledarD
+- text: vAloN
+- text: Zuedsta
+- text: Zuedsta
+- text: BledarD
+- text: Zuedsta
+- text: ammar
+- text: ammar
+- text: Ckanic
+- text: ammar
+- text: souv
+- text: vAloN
+- text: Zuedsta
+- text: Ckanic
+- text: ammar
+- text: souv
+- text: vAloN
+- text: souv
+- text: vAloN
+- text: souv
+- text: ammar
+- text: vAloN
+- text: Zuedsta
+- text: vAloN
+- text: Ckanic
+- text: vAloN
+- text: souv
+- text: BledarD
+- text: Zuedsta
+- text: souv
+- text: ammar
+- text: Ckanic
+- text: vAloN
+- generic: souv 加入比赛
+- text: EMSTAR
+- text: ammar
+- text: ammar
+- text: Ckanic
+- generic: EMSTAR 加入比赛
+- text: Ckanic
+- text: vAloN
+- text: vAloN
+- text: Ckanic
+- text: Zuedsta
+- text: BledarD
+- text: Ckanic
+- text: ammar
+- text: ammar
+- text: h0kz
+- text: ammar
+- text: Ckanic
+- generic: Zuedsta 加入比赛
+- generic: Zuedsta 退出了游戏
+- generic: souv 退出了游戏
+- generic: Zuedsta 加入比赛
+- text: xonn1k
+- text: souv
+- text: xonn1k
+- text: Ckanic
+- generic: Zuedsta 退出了游戏
+- text: xonn1k
+- text: h0kz
+- text: xonn1k
+- text: souv
+- text: xonn1k
+- text: Ckanic
+- generic: Zuedsta 加入比赛
+- text: xonn1k
+- text: Ckanic
+- text: ammar
+- text: h0kz
+- text: Ckanic
+- text: BledarD
+- generic: Zuedsta 退出了游戏
+- text: ammar
+- text: h0kz
+- text: Ckanic
+- text: cerber
+- text: Ckanic
+- text: vAloN
+- text: ammar
+- text: Zuedsta
+- text: vAloN
+- text: souv
+- text: Zuedsta
+- text: xonn1k
+- text: xonn1k
+- text: souv
+- text: souv
+- text: ammar
+- text: souv
+- text: BledarD
+- text: BledarD
+- text: Zuedsta
+- text: Zuedsta
+- text: cerber
+- text: Zuedsta
+- text: xonn1k
+- text: vAloN
+- text: Ckanic
+- text: Ckanic
+- text: ammar
+- text: Zuedsta
+- text: ammar
+- text: ammar
+- text: h0kz
+- text: ammar
+- text: souv
+- text: xonn1k
+- text: Ckanic
+- text: xonn1k
+- text: h0kz
+- text: xonn1k
+- text: souv
+- text: cerber
+- text: Ckanic
+- text: xonn1k
+- text: h0kz
+- text: xonn1k
+- text: souv
+- text: vAloN
+- text: Zuedsta
+- text: xonn1k
+- text: Zuedsta
+- text: vAloN
+- text: h0kz
+- text: vAloN
+- text: souv
+- text: vAloN
+- text: Zuedsta
+- text: Zuedsta
+- text: cerber
+- text: ammar
+- text: souv
+- text: Zuedsta
+- text: ammar
+- text: Zuedsta
+- text: ammar
+- text: Zuedsta
+- text: xonn1k
+- text: xonn1k
+- text: Ckanic
+- text: xonn1k
+- text: h0kz
+- text: Ckanic
+- text: cerber
+- text: xonn1k
+- text: Zuedsta
+- text: xonn1k
+- text: Zuedsta
+- text: Zuedsta
+- text: vAloN
+- text: xonn1k
+- text: Ckanic
+- text: cerber
+- text: Zuedsta
+- text: xonn1k
+- text: h0kz
+- text: Zuedsta
+- text: souv
+- text: xonn1k
+- text: Ckanic
+- text: xonn1k
+- text: h0kz
+- text: xonn1k
+- text: Ckanic
+- text: xonn1k
+- text: h0kz
+- text: vAloN
+- text: Ckanic
+- text: vAloN
+- text: h0kz
+- text: ammar
+- text: Ckanic
+- text: Ckanic
+- text: ammar
+- text: vAloN
+- text: Zuedsta
+- text: vAloN
+- text: h0kz
+- text: vAloN
+- text: h0kz
+- text: Ckanic
+- text: ammar
+- text: vAloN
+- text: h0kz
+- text: vAloN
+- text: h0kz
+- text: vAloN
+- text: Zuedsta
+- text: Ckanic
+- text: ammar
+- text: vAloN
+- text: h0kz
+- text: vAloN
+- text: Zuedsta
+- text: Zuedsta
+- text: xonn1k
+- text: xonn1k
+- text: h0kz
+- text: Ckanic
+- text: ammar
+- text: ammar
+- text: Zuedsta
+- text: BledarD
+- text: Zuedsta
+- text: ammar
+- text: h0kz
+- text: Ckanic
+- text: ammar
+- text: ammar
+- text: Zuedsta
+- text: ammar
+- text: Zuedsta
+- generic: h0kz 加入比赛
+- text: Ckanic
+- text: ammar
+- text: Ckanic
+- text: souv
+- text: Ckanic
+- text: BledarD
+- generic: 地图BP
+- list:
+  - paragraph: ex-MANA
+  - generic: ban
+  - paragraph: Cache
+  - paragraph: Misa
+  - generic: ban
+  - paragraph: Ancient
+  - paragraph: ex-MANA
+  - generic: pick
+  - paragraph: Mirage
+  - paragraph: Misa
+  - generic: pick
+  - paragraph: Dust2
+  - paragraph: ex-MANA
+  - generic: ban
+  - paragraph: Anubis
+  - paragraph: Misa
+  - generic: ban
+  - paragraph: Nuke
+  - generic: left
+  - paragraph: Inferno
+- generic: 比赛数据
+- list:
+  - paragraph: 第一局 / Mirage
+  - generic: "0"
+  - generic: ":"
+  - generic: "0"
+  - generic: 0/0/0
+  - generic: 0/0/0
+  - paragraph: 第二局 / Dust2
+  - generic: VS
+  - generic: "-"
+  - generic: ":"
+  - generic: "-"
+  - paragraph: 第三局 / Inferno
+  - generic: VS
+  - generic: "-"
+  - generic: ":"
+  - generic: "-"
+- generic: 回合
+- generic: "1"
+- generic: "2"
+- generic: "3"
+- generic: "4"
+- generic: "5"
+- generic: "6"
+- generic: "7"
+- generic: "8"
+- generic: "9"
+- generic: "10"
+- generic: "11"
+- generic: "12"
+- generic: "13"
+- generic: "14"
+- generic: "15"
+- generic: "16"
+- generic: "17"
+- generic: "18"
+- generic: "19"
+- generic: "20"
+- generic: "21"
+- generic: "22"
+- generic: "23"
+- generic: "24"
+- generic: 实时计分板
+- generic: ex-MANA
+- generic: 击杀
+- generic: 死亡
+- generic: 助攻
+- generic: KD差
+- generic: ADR
+- generic: ammar
+- generic: "3"
+- generic: "2"
+- generic: "0"
+- generic: "+1"
+- generic: "299.0"
+- generic: vAloN
+- generic: "1"
+- generic: "1"
+- generic: "0"
+- generic: "0"
+- generic: "73.0"
+- generic: cerber
+- generic: "0"
+- generic: "0"
+- generic: "0"
+- generic: "0"
+- generic: "0.0"
+- generic: xonn1k
+- generic: "0"
+- generic: "0"
+- generic: "0"
+- generic: "0"
+- generic: "0.0"
+- generic: BledarD
+- generic: "0"
+- generic: "1"
+- generic: "0"
+- generic: "-1"
+- generic: "7.0"
+- generic: Misa
+- generic: 击杀
+- generic: 死亡
+- generic: 助攻
+- generic: KD差
+- generic: ADR
+- generic: Ckanic
+- generic: "2"
+- generic: "3"
+- generic: "1"
+- generic: "-1"
+- generic: "225.0"
+- generic: EMSTAR
+- generic: "1"
+- generic: "0"
+- generic: "0"
+- generic: "+1"
+- generic: "46.0"
+- generic: Zuedsta
+- generic: "1"
+- generic: "1"
+- generic: "0"
+- generic: "0"
+- generic: "100.0"
+- generic: souv
+- generic: "0"
+- generic: "1"
+- generic: "0"
+- generic: "-1"
+- generic: "0.0"
+- generic: h0kz
+- generic: "0"
+- generic: "1"
+- generic: "0"
+- generic: "-1"
+- generic: "0.0"
+- heading "赛前分析" [level=4]
+- generic: 选手分析（近三个月数据）
+- paragraph: BledarD
+- paragraph: vAloN
+- paragraph: ammar
+- paragraph: cerber
+- paragraph: xonn1k
+- paragraph: Ckanic
+- paragraph: EMSTAR
+- paragraph: Zuedsta
+- paragraph: Mertowsk1
+- paragraph: souv
+- generic: BledarD
+- generic: "1.10"
+- generic: Rating
+- generic: "1.08"
+- generic: "1.10"
+- generic: K/D
+- generic: "1.06"
+- generic: "69.9"
+- generic: KAST
+- generic: "71.8"
+- generic: +0.50%
+- generic: SWING
+- generic: "-0.05%"
+- generic: "76.7"
+- generic: ADR
+- generic: "72.8"
+- generic: "0.73"
+- generic: KPR
+- generic: "0.68"
+- generic: Ckanic
+- generic: 地图分析（近三个月数据）
+- generic: 地图
+- paragraph: ex-MANA
+- paragraph: Misa
+- generic: Mirage
+- text: 100%
+- text: (2场)
+- generic: Pick
+- text: 38%
+- generic: (13场)
+- generic: Dust2
+- text: 50%
+- generic: (8场)
+- text: 50%
+- text: (24场)
+- generic: Pick
+- generic: Inferno
+- text: "-"
+- generic: (0场)
+- generic: Left
+- text: 56%
+- generic: (9场)
+- generic: Cache
+- text: "-"
+- text: (0场)
+- generic: Ban
+- text: 25%
+- generic: (4场)
+- generic: Ancient
+- text: 25%
+- generic: (4场)
+- text: "-"
+- text: (0场)
+- generic: Ban
+- generic: Anubis
+- text: 0%
+- text: (2场)
+- generic: Ban
+- text: 50%
+- generic: (14场)
+- generic: Nuke
+- text: 50%
+- generic: (2场)
+- text: 36%
+- text: (11场)
+- generic: Ban
+- generic: 战队分析（近三个月数据）
+- generic: ex-MANA
+- generic: Misa
+- generic: 44%
+- generic: 胜率（小局）
+- generic: 44%
+- generic: "1.07"
+- generic: rating
+- generic: "1.06"
+- generic: "0.99"
+- generic: K/D
+- generic: "1.00"
+- generic: 39%
+- generic: 上半场手枪局胜率
+- generic: 41%
+- generic: 61%
+- generic: 下半场手枪局胜率
+- generic: 51%
+- generic: 近期战绩
+- generic: ex-MANA
+- generic: Misa
+- generic: 44%
+- generic: 胜率
+- generic: 44%
+- generic: 对阵战队
+- generic: 日期
+- generic: 赛事
+- generic: 赛果
+- generic: OlyBet
+- generic: 2026-07-18
+- generic: CCT 2026 欧洲系列赛 第5季封闭预选
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: benched gods
+- generic: 2026-07-17
+- generic: CCT 2026 欧洲系列赛 第5季封闭预选
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Inner Circle Academy
+- generic: 2026-07-15
+- generic: NODWIN Clutch 系列赛 第10季 封闭预选
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: BIG.A
+- generic: 2026-07-14
+- generic: NODWIN Clutch 系列赛 第10季 封闭预选
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Donstu
+- generic: 2026-07-14
+- generic: NODWIN Clutch 系列赛 第10季 封闭预选
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: WROTBERRY
+- generic: 2026-07-04
+- generic: 欧洲职业联赛 系列赛8 封闭预选赛
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Subtop De France
+- generic: 2026-06-28
+- generic: 欧洲职业联赛 系列赛8 封闭预选赛
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: Honvéd
+- generic: 2026-06-24
+- generic: 欧洲职业联赛 系列赛8 封闭预选赛
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: 对阵战队
+- generic: 日期
+- generic: 赛事
+- generic: 赛果
+- generic: benched gods
+- generic: 2026-07-19
+- generic: CCT 2026 欧洲系列赛 第5季封闭预选
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Entropy
+- generic: 2026-07-18
+- generic: NODWIN Clutch 系列赛 第10季 封闭预选
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: OlyBet
+- generic: 2026-07-18
+- generic: CCT 2026 欧洲系列赛 第5季封闭预选
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: G2 Ares
+- generic: 2026-07-17
+- generic: NODWIN Clutch 系列赛 第10季 封闭预选
+- generic: "1"
+- text: "-"
+- generic: "2"
+- generic: Entropy
+- generic: 2026-07-16
+- generic: NODWIN Clutch 系列赛 第10季 封闭预选
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: QUAZAR
+- generic: 2026-07-13
+- generic: ESL 挑战者联赛 第52赛季 欧洲杯 1
+- generic: "1"
+- text: "-"
+- generic: "2"
+- generic: FNC
+- generic: 2026-07-12
+- generic: ESL 挑战者联赛 第52赛季 欧洲杯 1
+- generic: "1"
+- text: "-"
+- generic: "2"
+- generic: WROTBERRY
+- generic: 2026-07-02
+- generic: 欧洲职业联赛 系列赛8 封闭预选赛
+- generic: "1"
+- text: "-"
+- generic: "2"
+- generic: Inner Circle Academy
+- generic: 2026-07-01
+- generic: 欧洲职业联赛 系列赛8 封闭预选赛
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Lilmix
+- generic: 2026-07-01
+- generic: CCT 2026 挑战者 欧洲 第4季
+- generic: "0"
+- text: "-"
+- generic: "1"
+- generic: Endless Journey
+- generic: 2026-06-30
+- generic: CCT 2026 挑战者 欧洲 第4季
+- generic: "0"
+- text: "-"
+- generic: "1"
+- generic: Wampirki
+- generic: 2026-06-27
+- generic: CCT 2026 挑战者 欧洲 第4季
+- generic: "1"
+- text: "-"
+- generic: "0"
+- generic: WROTBERRY
+- generic: 2026-06-27
+- generic: 欧洲职业联赛 系列赛8 封闭预选赛
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Oxuji
+- generic: 2026-06-13
+- generic: 欧洲职业联赛 系列赛 7
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Lavked
+- generic: 2026-06-09
+- generic: 欧洲职业联赛 系列赛 7
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: eternal premium
+- generic: 2026-06-09
+- generic: ESEA发展联赛 第57赛季 欧洲
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: JUMBO
+- generic: 2026-06-06
+- generic: ESEA发展联赛 第57赛季 欧洲
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Oxuji
+- generic: 2026-06-05
+- generic: 欧洲职业联赛 系列赛 7
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: Falcons Force
+- generic: 2026-06-02
+- generic: ESEA发展联赛 第57赛季 欧洲
+- generic: "1"
+- text: "-"
+- generic: "2"
+- generic: TNC
+- generic: 2026-05-31
+- generic: 欧洲职业联赛 7 封闭预选赛
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: brazylijski luz
+- generic: 2026-05-29
+- generic: CCT 2026 挑战者 欧洲 第3季
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Lilmix
+- generic: 2026-05-29
+- generic: 欧洲职业联赛 7 封闭预选赛
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: Hashiras
+- generic: 2026-05-28
+- generic: CCT 2026 挑战者 欧洲 第3季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: SAW
+- generic: 2026-05-27
+- generic: CCT 2026 挑战者 欧洲 第3季
+- generic: "2"
+- text: "-"
+- generic: "0"
+- generic: G2 Ares
+- generic: 2026-05-26
+- generic: CCT 2026 挑战者 欧洲 第3季
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: TNC
+- generic: 2026-05-25
+- generic: 欧洲职业联赛 7 封闭预选赛
+- generic: "1"
+- text: "-"
+- generic: "2"
+- generic: Bushido Wildcats
+- generic: 2026-05-24
+- generic: CCT 2026 挑战者 欧洲 第3季
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: Bebop
+- generic: 2026-05-23
+- generic: CCT 2026 欧洲系列赛 第2季封闭预选
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: Y.NIP
+- generic: 2026-05-20
+- generic: CCT 2026 欧洲系列赛 第2季封闭预选
+- generic: "2"
+- text: "-"
+- generic: "1"
+- generic: Bebop
+- generic: 2026-05-19
+- generic: CCT 2026 欧洲系列赛 第2季封闭预选
+- generic: "0"
+- text: "-"
+- generic: "2"
+- generic: 交手战绩（最近五场）
+- generic: ex-MANA
+- generic: 0%
+- generic: 胜率
+- generic: 0%
+- generic: 胜率
+- generic: Misa
+- paragraph: 暂无数据
+- contentinfo
+- region "Notifications"
+- document:
+  - button:
+  - img "Read Frog"
+  - button:
+- region "Notifications"
+- region "Notifications"
+- document:
+  - button "翻译":
+  - button "朗读":
+  - button "词典":
+- region "Notifications"

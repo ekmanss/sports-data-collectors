@@ -1,0 +1,338 @@
+[
+  {
+    "requestId": "97579.43689",
+    "url": "https://esports-data.5eplaycdn.com/v1/api/csgo/matches/csgo_mc_2395918/data",
+    "method": "GET",
+    "postData": "",
+    "hasPostData": false,
+    "initiatorType": "script",
+    "stack": [
+      {
+        "functionName": "",
+        "url": "https://event.5eplay.com/static/js/index.bundle.35573775af207e434a7d.js",
+        "lineNumber": 0,
+        "columnNumber": 82173
+      },
+      {
+        "functionName": "e.exports",
+        "url": "https://event.5eplay.com/static/js/index.bundle.35573775af207e434a7d.js",
+        "lineNumber": 0,
+        "columnNumber": 80448
+      },
+      {
+        "functionName": "e.exports",
+        "url": "https://event.5eplay.com/static/js/index.bundle.35573775af207e434a7d.js",
+        "lineNumber": 0,
+        "columnNumber": 85308
+      }
+    ]
+  },
+  {
+    "requestId": "97579.43690",
+    "url": "https://esports-data.5eplaycdn.com/v1/api/csgo/matches/csgo_mc_2395918/analysis_v1",
+    "method": "GET",
+    "postData": "",
+    "hasPostData": false,
+    "initiatorType": "script",
+    "stack": [
+      {
+        "functionName": "",
+        "url": "https://event.5eplay.com/static/js/index.bundle.35573775af207e434a7d.js",
+        "lineNumber": 0,
+        "columnNumber": 82173
+      },
+      {
+        "functionName": "e.exports",
+        "url": "https://event.5eplay.com/static/js/index.bundle.35573775af207e434a7d.js",
+        "lineNumber": 0,
+        "columnNumber": 80448
+      },
+      {
+        "functionName": "e.exports",
+        "url": "https://event.5eplay.com/static/js/index.bundle.35573775af207e434a7d.js",
+        "lineNumber": 0,
+        "columnNumber": 85308
+      }
+    ]
+  },
+  {
+    "requestId": "97579.43691",
+    "url": "https://esports-data.5eplaycdn.com/v1/api/csgo/match/csgo_mc_2395918/event/log?update_version=0&limit=500",
+    "method": "GET",
+    "postData": "",
+    "hasPostData": false,
+    "initiatorType": "script",
+    "stack": [
+      {
+        "functionName": "",
+        "url": "https://event.5eplay.com/static/js/index.bundle.35573775af207e434a7d.js",
+        "lineNumber": 0,
+        "columnNumber": 82173
+      },
+      {
+        "functionName": "e.exports",
+        "url": "https://event.5eplay.com/static/js/index.bundle.35573775af207e434a7d.js",
+        "lineNumber": 0,
+        "columnNumber": 80448
+      },
+      {
+        "functionName": "e.exports",
+        "url": "https://event.5eplay.com/static/js/index.bundle.35573775af207e434a7d.js",
+        "lineNumber": 0,
+        "columnNumber": 85308
+      }
+    ]
+  },
+  {
+    "requestId": "97579.43692",
+    "url": "https://www.5eplay.com/api/restrict/matchscore",
+    "method": "POST",
+    "postData": "{\"topic\":\"csgo/product/detail/csgo_mc_2395918\"}",
+    "hasPostData": true,
+    "initiatorType": "script",
+    "stack": [
+      {
+        "functionName": "",
+        "url": "https://event.5eplay.com/static/js/index.bundle.35573775af207e434a7d.js",
+        "lineNumber": 0,
+        "columnNumber": 82173
+      },
+      {
+        "functionName": "e.exports",
+        "url": "https://event.5eplay.com/static/js/index.bundle.35573775af207e434a7d.js",
+        "lineNumber": 0,
+        "columnNumber": 80448
+      },
+      {
+        "functionName": "e.exports",
+        "url": "https://event.5eplay.com/static/js/index.bundle.35573775af207e434a7d.js",
+        "lineNumber": 0,
+        "columnNumber": 85308
+      }
+    ]
+  },
+  {
+    "requestId": "97579.43693",
+    "url": "https://www.5eplay.com/api/restrict/matchscore",
+    "method": "POST",
+    "postData": "{\"topic\":\"csgo/product/event/log/csgo_mc_2395918\"}",
+    "hasPostData": true,
+    "initiatorType": "script",
+    "stack": [
+      {
+        "functionName": "",
+        "url": "https://event.5eplay.com/static/js/index.bundle.35573775af207e434a7d.js",
+        "lineNumber": 0,
+        "columnNumber": 82173
+      },
+      {
+        "functionName": "e.exports",
+        "url": "https://event.5eplay.com/static/js/index.bundle.35573775af207e434a7d.js",
+        "lineNumber": 0,
+        "columnNumber": 80448
+      },
+      {
+        "functionName": "e.exports",
+        "url": "https://event.5eplay.com/static/js/index.bundle.35573775af207e434a7d.js",
+        "lineNumber": 0,
+        "columnNumber": 85308
+      }
+    ]
+  },
+  {
+    "requestId": "97579.43762",
+    "url": "https://esports-data.5eplaycdn.com/v1/api/csgo/teams/hltv_team_13892/matches?page=1&limit=20",
+    "method": "GET",
+    "postData": "",
+    "hasPostData": false,
+    "initiatorType": "script",
+    "stack": [
+      {
+        "functionName": "",
+        "url": "https://event.5eplay.com/static/js/index.bundle.35573775af207e434a7d.js",
+        "lineNumber": 0,
+        "columnNumber": 82173
+      },
+      {
+        "functionName": "e.exports",
+        "url": "https://event.5eplay.com/static/js/index.bundle.35573775af207e434a7d.js",
+        "lineNumber": 0,
+        "columnNumber": 80448
+      },
+      {
+        "functionName": "e.exports",
+        "url": "https://event.5eplay.com/static/js/index.bundle.35573775af207e434a7d.js",
+        "lineNumber": 0,
+        "columnNumber": 85308
+      }
+    ]
+  },
+  {
+    "requestId": "97579.43763",
+    "url": "https://esports-data.5eplaycdn.com/v1/api/csgo/teams/hltv_team_13528/matches?page=1&limit=20",
+    "method": "GET",
+    "postData": "",
+    "hasPostData": false,
+    "initiatorType": "script",
+    "stack": [
+      {
+        "functionName": "",
+        "url": "https://event.5eplay.com/static/js/index.bundle.35573775af207e434a7d.js",
+        "lineNumber": 0,
+        "columnNumber": 82173
+      },
+      {
+        "functionName": "e.exports",
+        "url": "https://event.5eplay.com/static/js/index.bundle.35573775af207e434a7d.js",
+        "lineNumber": 0,
+        "columnNumber": 80448
+      },
+      {
+        "functionName": "e.exports",
+        "url": "https://event.5eplay.com/static/js/index.bundle.35573775af207e434a7d.js",
+        "lineNumber": 0,
+        "columnNumber": 85308
+      }
+    ]
+  },
+  {
+    "requestId": "97579.43764",
+    "url": "https://app.5eplay.com/api/score/match_score_tab?match_id=csgo_mc_2395918&game_type=1",
+    "method": "GET",
+    "postData": "",
+    "hasPostData": false,
+    "initiatorType": "script",
+    "stack": [
+      {
+        "functionName": "",
+        "url": "https://event.5eplay.com/static/js/index.bundle.35573775af207e434a7d.js",
+        "lineNumber": 0,
+        "columnNumber": 82173
+      },
+      {
+        "functionName": "e.exports",
+        "url": "https://event.5eplay.com/static/js/index.bundle.35573775af207e434a7d.js",
+        "lineNumber": 0,
+        "columnNumber": 80448
+      },
+      {
+        "functionName": "e.exports",
+        "url": "https://event.5eplay.com/static/js/index.bundle.35573775af207e434a7d.js",
+        "lineNumber": 0,
+        "columnNumber": 85308
+      }
+    ]
+  },
+  {
+    "requestId": "97579.43765",
+    "url": "https://esports-data.5eplaycdn.com/v1/api/csgo/team/matches_v1/hltv_team_13892?page=1&limit=30&status=past",
+    "method": "GET",
+    "postData": "",
+    "hasPostData": false,
+    "initiatorType": "script",
+    "stack": [
+      {
+        "functionName": "",
+        "url": "https://event.5eplay.com/static/js/index.bundle.35573775af207e434a7d.js",
+        "lineNumber": 0,
+        "columnNumber": 82173
+      },
+      {
+        "functionName": "e.exports",
+        "url": "https://event.5eplay.com/static/js/index.bundle.35573775af207e434a7d.js",
+        "lineNumber": 0,
+        "columnNumber": 80448
+      },
+      {
+        "functionName": "e.exports",
+        "url": "https://event.5eplay.com/static/js/index.bundle.35573775af207e434a7d.js",
+        "lineNumber": 0,
+        "columnNumber": 85308
+      }
+    ]
+  },
+  {
+    "requestId": "97579.43766",
+    "url": "https://esports-data.5eplaycdn.com/v1/api/csgo/team/matches_v1/hltv_team_13528?page=1&limit=30&status=past",
+    "method": "GET",
+    "postData": "",
+    "hasPostData": false,
+    "initiatorType": "script",
+    "stack": [
+      {
+        "functionName": "",
+        "url": "https://event.5eplay.com/static/js/index.bundle.35573775af207e434a7d.js",
+        "lineNumber": 0,
+        "columnNumber": 82173
+      },
+      {
+        "functionName": "e.exports",
+        "url": "https://event.5eplay.com/static/js/index.bundle.35573775af207e434a7d.js",
+        "lineNumber": 0,
+        "columnNumber": 80448
+      },
+      {
+        "functionName": "e.exports",
+        "url": "https://event.5eplay.com/static/js/index.bundle.35573775af207e434a7d.js",
+        "lineNumber": 0,
+        "columnNumber": 85308
+      }
+    ]
+  },
+  {
+    "requestId": "97579.43767",
+    "url": "https://www.5eplay.com/api/im/has_match_chatroom?game_type=csgo&match_id=csgo_mc_2395918",
+    "method": "GET",
+    "postData": "",
+    "hasPostData": false,
+    "initiatorType": "script",
+    "stack": [
+      {
+        "functionName": "",
+        "url": "https://event.5eplay.com/static/js/index.bundle.35573775af207e434a7d.js",
+        "lineNumber": 0,
+        "columnNumber": 82173
+      },
+      {
+        "functionName": "e.exports",
+        "url": "https://event.5eplay.com/static/js/index.bundle.35573775af207e434a7d.js",
+        "lineNumber": 0,
+        "columnNumber": 80448
+      },
+      {
+        "functionName": "e.exports",
+        "url": "https://event.5eplay.com/static/js/index.bundle.35573775af207e434a7d.js",
+        "lineNumber": 0,
+        "columnNumber": 85308
+      }
+    ]
+  },
+  {
+    "requestId": "97579.43812",
+    "url": "https://www.5eplay.com/api/restrict/matchscore",
+    "method": "POST",
+    "postData": "{\"topic\":\"csgo/product/detail/csgo_mc_2395918\"}",
+    "hasPostData": true,
+    "initiatorType": "script",
+    "stack": [
+      {
+        "functionName": "",
+        "url": "https://event.5eplay.com/static/js/index.bundle.35573775af207e434a7d.js",
+        "lineNumber": 0,
+        "columnNumber": 82173
+      },
+      {
+        "functionName": "e.exports",
+        "url": "https://event.5eplay.com/static/js/index.bundle.35573775af207e434a7d.js",
+        "lineNumber": 0,
+        "columnNumber": 80448
+      },
+      {
+        "functionName": "e.exports",
+        "url": "https://event.5eplay.com/static/js/index.bundle.35573775af207e434a7d.js",
+        "lineNumber": 0,
+        "columnNumber": 85308
+      }
+    ]
+  }
+]

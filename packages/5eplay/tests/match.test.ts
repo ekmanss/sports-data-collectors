@@ -419,7 +419,8 @@ test('fetches the complete current schedule across live and upcoming pages', asy
   });
   const firstPage = [
     listMatch('csgo_mc_2000', '1', '1'),
-    ...Array.from({ length: 19 }, (_, index) => listMatch(`csgo_mc_${2001 + index}`, '0')),
+    ...Array.from({ length: 18 }, (_, index) => listMatch(`csgo_mc_${2001 + index}`, '0')),
+    listMatch('cg_mc_manual_2102', '0'),
   ];
   const secondPage = [
     firstPage.at(-1),
@@ -439,11 +440,21 @@ test('fetches the complete current schedule across live and upcoming pages', asy
   });
 
   assert.equal(result.data.matches.length, 22);
+  assert.equal(result.data.complete, true);
+  assert.equal(result.data.nextPage, null);
   assert.deepEqual(result.data.matches.slice(0, 2).map((match) => match.status), [
     'live', 'upcoming',
   ]);
   assert.equal(result.data.matches.find((match) => match.id === 'csgo_mc_2020')?.status, 'upcoming');
   assert.equal(result.data.matches.find((match) => match.id === 'csgo_mc_2021')?.status, 'unknown');
+  const manual = result.data.matches.find((match) => match.id === 'cg_mc_manual_2102');
+  assert.deepEqual(
+    manual && { numericId: manual.numericId, url: manual.url },
+    {
+      numericId: null,
+      url: 'https://event.5eplay.com/csgo/matches/cg_mc_manual_2102',
+    },
+  );
   assert.equal(result.data.matches[0]?.currentMap?.name, 'Cache');
   assert.equal(result.diagnostics.operation, 'schedule');
   assert.deepEqual(result.diagnostics.requests.map((entry) => [entry.kind, entry.page]), [
@@ -453,6 +464,27 @@ test('fetches the complete current schedule across live and upcoming pages', asy
   assert.deepEqual(requests.map((request) => new URL(request).searchParams.get('page')), ['1', '2']);
   assert.ok(requests.every((request) => new URL(request).searchParams.get('limit') === '20'));
   assert.ok(requests.every((request) => new URL(request).searchParams.get('game_status') === '1'));
+
+  const limitedRequests: string[] = [];
+  const limited = await getFiveEPlaySchedule({
+    pageLimit: 1,
+    fetch: async (input) => {
+      limitedRequests.push(String(input));
+      return response({ matches: firstPage });
+    },
+  });
+  assert.equal(limited.data.matches.length, 20);
+  assert.equal(limited.data.complete, false);
+  assert.equal(limited.data.nextPage, 2);
+  assert.equal(limitedRequests.length, 1);
+
+  await assert.rejects(
+    getFiveEPlaySchedule({ pageLimit: 0, fetch: fetchImpl }),
+    (error: unknown) => error instanceof FiveEPlayError
+      && error.code === 'INVALID_INPUT'
+      && error.operation === 'schedule'
+      && error.stage === 'validating-input',
+  );
 });
 
 test('writes a complete formatted Markdown report to a file or directory', async () => {

@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import { getFiveEPlaySchedule } from '../src/index.js';
 
-const result = await getFiveEPlaySchedule({ timeoutMs: 30_000 });
+const result = await getFiveEPlaySchedule({ pageLimit: 1, timeoutMs: 30_000 });
 const ids = result.data.matches.map((match) => match.id);
 
 assert.equal(result.data.schemaVersion, '1.0.0');
-assert.ok(result.diagnostics.requests.length >= 1);
+assert.equal(result.diagnostics.requests.length, 1);
 assert.ok(result.diagnostics.requests.every((request) => request.kind === 'schedule-list'));
 assert.deepEqual(result.diagnostics.requests.map((request) => request.page),
   Array.from({ length: result.diagnostics.requests.length }, (_, index) => index + 1));
@@ -22,6 +22,8 @@ process.stdout.write(`${JSON.stringify({
   capturedAt: result.data.capturedAt,
   durationMs: result.diagnostics.durationMs,
   pages: result.diagnostics.requests.length,
+  complete: result.data.complete,
+  nextPage: result.data.nextPage,
   total: result.data.matches.length,
   live: result.data.matches.filter((match) => match.status === 'live').length,
   upcoming: result.data.matches.filter((match) => match.status === 'upcoming').length,

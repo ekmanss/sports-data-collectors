@@ -67,7 +67,9 @@ export interface GetFiveEPlayLiveMatchesOptions {
   onProgress?: (event: FiveEPlayProgressEvent) => void;
 }
 
-export interface GetFiveEPlayScheduleOptions extends GetFiveEPlayLiveMatchesOptions {}
+export interface GetFiveEPlayScheduleOptions extends GetFiveEPlayLiveMatchesOptions {
+  pageLimit?: number;
+}
 
 export interface FiveEPlayMatchIdentity {
   id: string;
@@ -542,7 +544,7 @@ export type FiveEPlayScheduleMatchMap = FiveEPlayLiveMatchMap;
 
 export interface FiveEPlayScheduleMatch {
   id: string;
-  numericId: number;
+  numericId: number | null;
   url: string;
   status: 'upcoming' | 'live' | 'unknown';
   bestOf: number | null;
@@ -564,6 +566,8 @@ export interface FiveEPlayScheduleData {
   schemaVersion: '1.0.0';
   capturedAt: string;
   source: { provider: '5eplay'; url: 'https://event.5eplay.com/csgo/matches' };
+  complete: boolean;
+  nextPage: number | null;
   matches: FiveEPlayScheduleMatch[];
 }
 

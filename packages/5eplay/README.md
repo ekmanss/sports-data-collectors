@@ -40,28 +40,34 @@ Chat messages, login state, cookies, and account-specific actions are deliberate
 `{ data, diagnostics }`. Independent HTTP sections are fetched concurrently; a normal capture does
 not open the realtime credential endpoint.
 
-## Complete current schedule
+## Current schedule
 
-Use the schedule API when you need every currently listed CS2 match, including both live and
-upcoming series:
+Use a one-page limit when you only need the first 20 currently listed CS2 matches, including both
+live and upcoming series:
 
 ```ts
 import { getFiveEPlaySchedule } from '@ekmanss/5eplay';
 
-const { data, diagnostics } = await getFiveEPlaySchedule();
+const { data, diagnostics } = await getFiveEPlaySchedule({ pageLimit: 1 });
 
 for (const match of data.matches) {
   console.log(match.status, match.id, match.scheduledAtUnixSeconds, match.teams);
 }
 
-console.log(`Fetched ${data.matches.length} matches in ${diagnostics.requests.length} pages`);
+console.log({
+  matches: data.matches.length,
+  pages: diagnostics.requests.length,
+  complete: data.complete,
+  nextPage: data.nextPage,
+});
 ```
 
-The collector follows the same public JSON pagination used by the website, preserves provider
-ordering, removes duplicate match IDs across page boundaries, and stops when the source returns a
-short page. It uses an overall 15-second timeout by default and never opens match-detail, analysis,
-log, community-rating, Markdown, browser, or realtime endpoints. Schedule rows use `live`,
-`upcoming`, or `unknown` status; unknown provider states are retained rather than silently dropped.
+Omit `pageLimit` to follow every page and return the complete current schedule. The collector uses
+the same public JSON pagination as the website, preserves provider ordering, removes duplicate match
+IDs across page boundaries, and stops when the source returns a short page. `data.complete` tells
+whether the source was exhausted; a limited response exposes the next page number in
+`data.nextPage`. The overall timeout defaults to 15 seconds. Schedule rows use `live`, `upcoming`,
+or `unknown` status; unknown provider states are retained rather than silently dropped.
 
 ## Currently live matches
 

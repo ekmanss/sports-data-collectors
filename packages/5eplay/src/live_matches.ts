@@ -143,11 +143,26 @@ function scheduleStatus(value: Record<string, unknown>): FiveEPlayScheduleMatch[
   return 'unknown';
 }
 
+function scheduleIdentity(value: unknown): Pick<
+  FiveEPlayScheduleMatch,
+  'id' | 'numericId' | 'url'
+> | null {
+  const id = text(value)?.trim();
+  if (!id) return null;
+  const canonical = matchIdentityFromInput(id);
+  if (canonical) return canonical;
+  return {
+    id,
+    numericId: null,
+    url: `${LIST_PAGE}/${encodeURIComponent(id)}`,
+  };
+}
+
 function scheduleMatch(value: unknown): FiveEPlayScheduleMatch | null {
   const source = record(value);
   const matchInfo = record(source.mc_info);
   const state = record(source.state);
-  const identity = matchIdentityFromInput(text(matchInfo.id) ?? '');
+  const identity = scheduleIdentity(matchInfo.id);
   if (!identity) return null;
   const teams = [
     listTeam(matchInfo.t1_info, state.t1_score, 't1'),
@@ -181,8 +196,9 @@ function scheduleMatch(value: unknown): FiveEPlayScheduleMatch | null {
 
 function liveMatch(value: unknown): FiveEPlayLiveMatch | null {
   const transformed = scheduleMatch(value);
-  if (transformed?.status !== 'live') return null;
-  return { ...transformed, status: 'live' };
+  const numericId = transformed?.numericId;
+  if (transformed?.status !== 'live' || numericId === null || numericId === undefined) return null;
+  return { ...transformed, numericId, status: 'live' };
 }
 
 function listContext(
@@ -300,12 +316,25 @@ export async function getFiveEPlaySchedule(
   const lifetime = requestLifetime(options, spec);
   const requests: RequestContext['diagnostics'] = [];
   try {
-    emit(options, spec, spec.stage, 'Fetching the complete current 5EPlay CS2 schedule');
+    if (options.pageLimit !== undefined && (
+      !Number.isInteger(options.pageLimit)
+      || options.pageLimit < 1
+      || options.pageLimit > MAX_SCHEDULE_PAGES
+    )) {
+      throw new FiveEPlayError(
+        `pageLimit must be an integer between 1 and ${MAX_SCHEDULE_PAGES}`, {
+          code: 'INVALID_INPUT', operation: spec.operation, stage: 'validating-input',
+          retryable: false, details: { pageLimit: options.pageLimit },
+        },
+      );
+    }
+    const pageLimit = options.pageLimit ?? MAX_SCHEDULE_PAGES;
+    emit(options, spec, spec.stage, 'Fetching the current 5EPlay CS2 schedule');
     const context = listContext(options, spec, lifetime.signal, requests);
     const matches: FiveEPlayScheduleMatch[] = [];
     const seen = new Set<string>();
     let complete = false;
-    for (let page = 1; page <= MAX_SCHEDULE_PAGES; page += 1) {
+    for (let page = 1; page <= pageLimit; page += 1) {
       const { matches: pageMatches, sourceCount } = await listPage(context, spec, page);
       let newMatches = 0;
       for (const source of pageMatches) {
@@ -326,7 +355,7 @@ export async function getFiveEPlaySchedule(
         });
       }
     }
-    if (!complete) {
+    if (!complete && options.pageLimit === undefined) {
       throw new FiveEPlayError('5EPlay schedule exceeded the pagination safety limit', {
         code: 'INVALID_RESPONSE', operation: spec.operation, stage: spec.stage, retryable: true,
         details: { maxPages: MAX_SCHEDULE_PAGES },
@@ -338,6 +367,8 @@ export async function getFiveEPlaySchedule(
         schemaVersion: '1.0.0',
         capturedAt: completedAt,
         source: { provider: '5eplay', url: LIST_PAGE },
+        complete,
+        nextPage: complete ? null : requests.length + 1,
         matches,
       },
       diagnostics: {

@@ -2,25 +2,30 @@
 
 Run these commands from the repository root after `pnpm build`.
 
-## Fetch the complete current schedule
+## Fetch the first schedule page
 
 ```ts
 import { getFiveEPlaySchedule } from '@ekmanss/5eplay';
 
-const { data, diagnostics } = await getFiveEPlaySchedule({ timeoutMs: 15_000 });
+const { data, diagnostics } = await getFiveEPlaySchedule({
+  pageLimit: 1,
+  timeoutMs: 15_000,
+});
 const live = data.matches.filter((match) => match.status === 'live');
 const upcoming = data.matches.filter((match) => match.status === 'upcoming');
 
 console.log({
   pages: diagnostics.requests.length,
+  complete: data.complete,
+  nextPage: data.nextPage,
   total: data.matches.length,
   live: live.length,
   upcoming: upcoming.length,
 });
 ```
 
-Use this for full refreshes. For frequent checks of matches that have just started, use the
-lightweight live-only recipe below so normal polling remains a single request.
+Omit `pageLimit` for a full refresh across every current schedule page. For frequent checks that
+only need matches that have already started, use the lightweight live-only recipe below.
 
 ## Poll for newly started matches
 

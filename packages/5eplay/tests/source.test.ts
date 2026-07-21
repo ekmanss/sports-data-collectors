@@ -68,13 +68,13 @@ test('snapshot confirms a real BO3 between map 2 and map 3', async (context) => 
   assert.equal(result.kind, 'confirmed');
   if (result.kind !== 'confirmed') return;
 
-  assert.equal(result.snapshot.schema, 'fiveeplay-match/v2');
+  assert.equal(result.snapshot.schema, 'fiveeplay-match/v3');
   assert.equal(result.snapshot.match.id, 'csgo_mc_2395547');
   assert.equal(result.snapshot.match.format, 'bo3');
   assert.deepEqual(result.snapshot.state.phase, {
     kind: 'between-maps',
-    previousMap: 2,
-    nextMap: 3,
+    previousMapNumber: 2,
+    nextMapNumber: 3,
   });
   assert.equal(result.snapshot.state.lifecycle, 'live');
   assert.deepEqual(
@@ -94,7 +94,13 @@ test('snapshot confirms a real BO3 between map 2 and map 3', async (context) => 
     'second-half',
     null,
   ]);
-  assert.deepEqual(result.snapshot.state.providerVector, [1, 2, 2, -1]);
+  assert.deepEqual(
+    [
+      result.snapshot.providerState.globalStatusCode,
+      ...result.snapshot.providerState.bouts.map((bout) => bout.statusCode),
+    ],
+    [1, 2, 2, -1],
+  );
   assert.equal(result.snapshot.maps[1]?.stage, 'second-half');
   assert.equal(result.snapshot.maps[1]?.regulationRoundsPerHalf, 12);
   assert.equal(result.snapshot.maps[1]?.vetoAction, 'pick');
@@ -125,8 +131,8 @@ test('replay and production use the same snapshot transport seam', async () => {
   if (result.kind !== 'confirmed') return;
   assert.deepEqual(result.snapshot.state.phase, {
     kind: 'between-maps',
-    previousMap: 2,
-    nextMap: 3,
+    previousMapNumber: 2,
+    nextMapNumber: 3,
   });
   assert.equal(result.snapshot.detailsCompleteness, 'partial');
 });
@@ -608,64 +614,55 @@ test('snapshot classifies the complete observed BO3 phase matrix', async (contex
     {
       file: 'bo3-prestart.json',
       lifecycle: 'scheduled',
-      stateCase: 'prestart',
       phase: { kind: 'prestart' },
       vector: [0, -1, -1, -1],
     },
     {
       file: 'bo3-live-map1-unopened.json',
       lifecycle: 'live',
-      stateCase: 'map1-unopened',
-      phase: { kind: 'map-unopened', map: 1 },
+      phase: { kind: 'map-unopened', mapNumber: 1 },
       vector: [1, -1, -1, -1],
     },
     {
       file: 'bo3-map1-live.json',
       lifecycle: 'live',
-      stateCase: 'map1-live',
-      phase: { kind: 'map-live', map: 1 },
+      phase: { kind: 'map-live', mapNumber: 1 },
       vector: [1, 1, -1, -1],
     },
     {
       file: 'bo3-between-map1-map2.json',
       lifecycle: 'live',
-      stateCase: 'between-map1-map2',
-      phase: { kind: 'between-maps', previousMap: 1, nextMap: 2 },
+      phase: { kind: 'between-maps', previousMapNumber: 1, nextMapNumber: 2 },
       vector: [1, 2, -1, -1],
     },
     {
       file: 'bo3-map2-live.json',
       lifecycle: 'live',
-      stateCase: 'map2-live',
-      phase: { kind: 'map-live', map: 2 },
+      phase: { kind: 'map-live', mapNumber: 2 },
       vector: [1, 2, 1, -1],
     },
     {
       file: 'bo3-between-map2-map3.json',
       lifecycle: 'live',
-      stateCase: 'between-map2-map3',
-      phase: { kind: 'between-maps', previousMap: 2, nextMap: 3 },
+      phase: { kind: 'between-maps', previousMapNumber: 2, nextMapNumber: 3 },
       vector: [1, 2, 2, -1],
     },
     {
       file: 'bo3-map3-live.json',
       lifecycle: 'live',
-      stateCase: 'map3-live',
-      phase: { kind: 'map-live', map: 3 },
+      phase: { kind: 'map-live', mapNumber: 3 },
       vector: [1, 2, 2, 1],
     },
     {
       file: 'bo3-complete-two-maps.json',
       lifecycle: 'closed',
-      stateCase: 'series-ended-map2-normal',
-      phase: { kind: 'series-ended', finalMap: 2 },
+      phase: { kind: 'series-ended', finalMapNumber: 2 },
       vector: [2, 2, 2, -1],
     },
     {
       file: 'bo3-complete-three-maps.json',
       lifecycle: 'closed',
-      stateCase: 'series-ended-map3-normal',
-      phase: { kind: 'series-ended', finalMap: 3 },
+      phase: { kind: 'series-ended', finalMapNumber: 3 },
       vector: [2, 2, 2, 2],
     },
   ] as const;
@@ -678,10 +675,314 @@ test('snapshot classifies the complete observed BO3 phase matrix', async (contex
     if (fixture.lifecycle === 'closed') {
       assert.equal(result.snapshot.state.dataFinality, 'stable', fixture.file);
     }
-    assert.equal(result.snapshot.state.stateCase, fixture.stateCase, fixture.file);
     assert.deepEqual(result.snapshot.state.phase, fixture.phase, fixture.file);
-    assert.deepEqual(result.snapshot.state.providerVector, fixture.vector, fixture.file);
+    assert.deepEqual(
+      [
+        result.snapshot.providerState.globalStatusCode,
+        ...result.snapshot.providerState.bouts.map((bout) => bout.statusCode),
+      ],
+      fixture.vector,
+      fixture.file,
+    );
   }
+});
+
+test('snapshot treats quick score as provisional telemetry during a live round', async (context) => {
+  const originalFetch = globalThis.fetch;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  const body = JSON.parse(
+    await readFile(
+      new URL('./fixtures/states/bo3-map1-live.json', import.meta.url),
+      'utf8',
+    ),
+  ) as {
+    data: {
+      match: {
+        mc_info: { id: string };
+        bouts_state: Array<{
+          t1_stats: { all_score: string; quick_score: string };
+        }>;
+      };
+    };
+  };
+  const liveMap = body.data.match.bouts_state[0];
+  assert.ok(liveMap);
+  liveMap.t1_stats.quick_score = String(Number(liveMap.t1_stats.all_score) + 1);
+  globalThis.fetch = async () => Response.json(body);
+
+  const result = await createFiveEPlayMatchSource().snapshot(body.data.match.mc_info.id);
+
+  assert.equal(result.kind, 'confirmed');
+  if (result.kind !== 'confirmed') return;
+  assert.deepEqual(result.snapshot.state.phase, { kind: 'map-live', mapNumber: 1 });
+  assert.equal(result.snapshot.maps[0]?.teams[0].quickScore, 2);
+  assert.equal(result.snapshot.maps[0]?.teams[0].score, 1);
+});
+
+test('snapshot recognizes provider overtime as a live map stage', async (context) => {
+  const originalFetch = globalThis.fetch;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  const body = JSON.parse(
+    await readFile(
+      new URL('./fixtures/states/bo3-map1-live.json', import.meta.url),
+      'utf8',
+    ),
+  ) as {
+    data: {
+      match: {
+        mc_info: { id: string };
+        bouts_state: Array<{
+          curr_bout_stage: string;
+          curr_round_num: string;
+          t1_stats: Record<string, unknown>;
+          t2_stats: Record<string, unknown>;
+        }>;
+      };
+    };
+  };
+  const liveMap = body.data.match.bouts_state[0];
+  assert.ok(liveMap);
+  liveMap.curr_bout_stage = 'ot';
+  liveMap.curr_round_num = '25';
+  Object.assign(liveMap.t1_stats, {
+    all_score: '13',
+    fh_score: '6',
+    ot_score: '1',
+    quick_score: '13',
+    sh_score: '6',
+  });
+  Object.assign(liveMap.t2_stats, {
+    all_score: '12',
+    fh_score: '6',
+    ot_score: '0',
+    quick_score: '12',
+    sh_score: '6',
+  });
+  globalThis.fetch = async () => Response.json(body);
+
+  const result = await createFiveEPlayMatchSource().snapshot(body.data.match.mc_info.id);
+
+  assert.equal(result.kind, 'confirmed');
+  if (result.kind !== 'confirmed') return;
+  assert.deepEqual(result.snapshot.state.phase, { kind: 'map-live', mapNumber: 1 });
+  assert.equal(result.snapshot.maps[0]?.stage, 'overtime');
+  assert.equal(result.snapshot.maps[0]?.teams[0].overtimeScore, 1);
+});
+
+test('snapshot derives series map order independently from provider bout numbers', async (context) => {
+  const originalFetch = globalThis.fetch;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  const body = JSON.parse(
+    await readFile(
+      new URL('./fixtures/states/bo3-map1-live.json', import.meta.url),
+      'utf8',
+    ),
+  ) as {
+    data: {
+      match: {
+        mc_info: { id: string };
+        bouts_state: Array<{ bout_num: string }>;
+      };
+    };
+  };
+  const liveBout = body.data.match.bouts_state[0];
+  const unopenedBout = body.data.match.bouts_state[1];
+  assert.ok(liveBout);
+  assert.ok(unopenedBout);
+  liveBout.bout_num = '2';
+  unopenedBout.bout_num = '1';
+  globalThis.fetch = async () => Response.json(body);
+
+  const result = await createFiveEPlayMatchSource().snapshot(body.data.match.mc_info.id);
+
+  assert.equal(result.kind, 'confirmed');
+  if (result.kind !== 'confirmed') return;
+  assert.deepEqual(result.snapshot.state.phase, { kind: 'map-live', mapNumber: 1 });
+  assert.deepEqual(
+    result.snapshot.maps.map((map) => ({
+      mapNumber: map.mapNumber,
+      orderFinality: map.orderFinality,
+      providerBoutNumber: map.providerBoutNumber,
+      status: map.status,
+    })),
+    [
+      { mapNumber: 1, orderFinality: 'confirmed', providerBoutNumber: 2, status: 'live' },
+      { mapNumber: 2, orderFinality: 'provisional', providerBoutNumber: 1, status: 'unopened' },
+      { mapNumber: 3, orderFinality: 'provisional', providerBoutNumber: 3, status: 'unopened' },
+    ],
+  );
+  assert.deepEqual(result.snapshot.providerState.bouts, [
+    { providerBoutNumber: 1, statusCode: -1 },
+    { providerBoutNumber: 2, statusCode: 1 },
+    { providerBoutNumber: 3, statusCode: -1 },
+  ]);
+});
+
+test('snapshot orders a mid-series awarded provider bout before the current live map', async (context) => {
+  const originalFetch = globalThis.fetch;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  const body = JSON.parse(
+    await readFile(
+      new URL('./fixtures/states/bo3-map2-live.json', import.meta.url),
+      'utf8',
+    ),
+  ) as {
+    data: {
+      match: {
+        mc_info: { id: string; t1_info: { id: string }; t2_info: { id: string } };
+        global_state: { t1_score: string; t2_score: string };
+        bouts_state: Array<{
+          bout_num: string;
+          t1_pr_stats: unknown;
+          t1_stats: Record<string, unknown>;
+          t2_pr_stats: unknown;
+          t2_stats: Record<string, unknown>;
+        } & Record<string, unknown>>;
+      };
+    };
+  };
+  const settledBout = body.data.match.bouts_state[0];
+  const liveBout = body.data.match.bouts_state[1];
+  const awardedBout = body.data.match.bouts_state[2];
+  assert.ok(settledBout);
+  assert.ok(liveBout);
+  assert.ok(awardedBout);
+  settledBout.bout_num = '2';
+  liveBout.bout_num = '3';
+  Object.assign(awardedBout, {
+    bout_num: '1',
+    curr_bout_stage: '',
+    curr_round_num: '',
+    end_time: '',
+    map_name: 'Ancient',
+    result: 't2',
+    start_time: '',
+    status: '2',
+    t1_pr_stats: structuredClone(liveBout.t1_pr_stats),
+    t2_pr_stats: structuredClone(liveBout.t2_pr_stats),
+  });
+  const placeholderRounds = Array.from({ length: 12 }, () => 0);
+  Object.assign(awardedBout.t1_stats, {
+    all_score: '0',
+    fh_data: placeholderRounds,
+    fh_score: '0',
+    flags: [],
+    id: body.data.match.mc_info.t1_info.id,
+    ot_data: placeholderRounds,
+    ot_score: '0',
+    quick_score: '0',
+    role: '',
+    sh_data: placeholderRounds,
+    sh_score: '0',
+  });
+  Object.assign(awardedBout.t2_stats, {
+    all_score: '1',
+    fh_data: placeholderRounds,
+    fh_score: '0',
+    flags: [],
+    id: body.data.match.mc_info.t2_info.id,
+    ot_data: placeholderRounds,
+    ot_score: '0',
+    quick_score: '1',
+    role: '',
+    sh_data: placeholderRounds,
+    sh_score: '0',
+  });
+  body.data.match.global_state.t1_score = '1';
+  body.data.match.global_state.t2_score = '1';
+  globalThis.fetch = async () => Response.json(body);
+
+  const result = await createFiveEPlayMatchSource().snapshot(body.data.match.mc_info.id);
+
+  assert.equal(result.kind, 'confirmed');
+  if (result.kind !== 'confirmed') return;
+  assert.deepEqual(result.snapshot.state.phase, { kind: 'map-live', mapNumber: 3 });
+  assert.deepEqual(
+    result.snapshot.maps.map((map) => ({
+      mapNumber: map.mapNumber,
+      orderFinality: map.orderFinality,
+      providerBoutNumber: map.providerBoutNumber,
+      status: map.status,
+      technicalDisposition: map.technicalDisposition,
+    })),
+    [
+      {
+        mapNumber: 1,
+        orderFinality: 'confirmed',
+        providerBoutNumber: 2,
+        status: 'settled',
+        technicalDisposition: null,
+      },
+      {
+        mapNumber: 2,
+        orderFinality: 'confirmed',
+        providerBoutNumber: 1,
+        status: 'closed-without-play',
+        technicalDisposition: 'awarded',
+      },
+      {
+        mapNumber: 3,
+        orderFinality: 'confirmed',
+        providerBoutNumber: 3,
+        status: 'live',
+        technicalDisposition: null,
+      },
+    ],
+  );
+  assert.equal(
+    result.snapshot.maps[1]?.playerStatistics.teams[0].overall.gap,
+    'NON_OFFICIAL_ACTIVITY',
+  );
+});
+
+test('snapshot isolates temporally impossible warmup player statistics', async (context) => {
+  const originalFetch = globalThis.fetch;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  const body = JSON.parse(
+    await readFile(
+      new URL('./fixtures/states/bo3-map1-live.json', import.meta.url),
+      'utf8',
+    ),
+  ) as {
+    data: {
+      match: {
+        mc_info: { id: string };
+        bouts_state: Array<{
+          curr_round_num: string;
+          t1_pr_stats: Array<{ death: string }>;
+        }>;
+      };
+    };
+  };
+  const liveMap = body.data.match.bouts_state[0];
+  assert.ok(liveMap);
+  liveMap.curr_round_num = '1';
+  const firstPlayer = liveMap.t1_pr_stats[0];
+  assert.ok(firstPlayer);
+  firstPlayer.death = '77';
+  globalThis.fetch = async () => Response.json(body);
+
+  const result = await createFiveEPlayMatchSource().snapshot(body.data.match.mc_info.id);
+
+  assert.equal(result.kind, 'confirmed');
+  if (result.kind !== 'confirmed') return;
+  assert.deepEqual(result.snapshot.state.phase, { kind: 'map-live', mapNumber: 1 });
+  assert.deepEqual(result.snapshot.maps[0]?.playerStatistics.teams[0].overall, {
+    gap: 'TIMELINE_INCOHERENT',
+    rows: null,
+    status: 'unavailable',
+  });
+  assert.equal(result.snapshot.maps[0]?.teams[0].score, 1);
 });
 
 test('snapshot blocks an internally contradictory terminal vector', async (context) => {
@@ -813,9 +1114,9 @@ test('missing or malformed statistics on an unopened map stay local to that slic
   const result = await createFiveEPlayMatchSource().snapshot('csgo_mc_2395547');
   assert.equal(result.kind, 'confirmed');
   if (result.kind !== 'confirmed') return;
-  assert.equal(result.snapshot.state.stateCase, 'prestart');
-  assert.equal(result.snapshot.maps[0].playerStatistics.teams[0].overall.status, 'unavailable');
-  assert.equal(result.snapshot.maps[0].playerStatistics.teams[1].overall.status, 'unavailable');
+  assert.deepEqual(result.snapshot.state.phase, { kind: 'prestart' });
+  assert.equal(result.snapshot.maps[0]?.playerStatistics.teams[0].overall.status, 'unavailable');
+  assert.equal(result.snapshot.maps[0]?.playerStatistics.teams[1].overall.status, 'unavailable');
 });
 
 test('live series score must agree with settled map winners', async (context) => {
@@ -889,7 +1190,7 @@ test('unknown map status is an inconsistent state, not a terminal schema verdict
   if (result.kind === 'blocked') assert.equal(result.reason, 'inconsistent-state');
 });
 
-test('BO3 map slots are normalized by bout_num rather than provider array order', async (context) => {
+test('provider array order does not affect evidence-derived map order', async (context) => {
   const originalFetch = globalThis.fetch;
   context.after(() => {
     globalThis.fetch = originalFetch;
@@ -909,8 +1210,8 @@ test('BO3 map slots are normalized by bout_num rather than provider array order'
     assert.deepEqual(result.snapshot.maps.map((map) => map.mapNumber), [1, 2, 3]);
     assert.deepEqual(result.snapshot.state.phase, {
       kind: 'between-maps',
-      nextMap: 3,
-      previousMap: 2,
+      nextMapNumber: 3,
+      previousMapNumber: 2,
     });
   }
 });
@@ -928,7 +1229,10 @@ test('snapshot keeps technical map closure distinct from played maps', async (co
 
   assert.equal(result.snapshot.state.lifecycle, 'closed');
   assert.equal(result.snapshot.state.dataFinality, 'stable');
-  assert.equal(result.snapshot.state.stateCase, 'series-ended-map2-administrative');
+  assert.deepEqual(result.snapshot.state.phase, {
+    finalMapNumber: 2,
+    kind: 'series-ended',
+  });
   assert.equal(result.snapshot.state.closure, 'administrative');
   assert.equal(result.snapshot.seriesWinnerTeamId, 'hltv_team_13599');
   assert.deepEqual(
@@ -983,11 +1287,11 @@ test('snapshot keeps technical map closure distinct from played maps', async (co
     null,
   ]);
   assert.equal(
-    result.snapshot.maps[1].playerStatistics.teams[0].overall.status,
+    result.snapshot.maps[1]?.playerStatistics.teams[0].overall.status,
     'empty',
   );
-  assert.deepEqual(result.snapshot.maps[1].teams.map((team) => team.score), [1, 0]);
-  assert.deepEqual(result.snapshot.maps[2].teams.map((team) => team.score), [null, null]);
+  assert.deepEqual(result.snapshot.maps[1]?.teams.map((team) => team.score), [1, 0]);
+  assert.deepEqual(result.snapshot.maps[2]?.teams.map((team) => team.score), [null, null]);
 });
 
 test('missing or malformed statistics on no-play technical maps do not block closure', async (context) => {
@@ -1018,9 +1322,12 @@ test('missing or malformed statistics on no-play technical maps do not block clo
   }).snapshot('csgo_mc_2395920');
   assert.equal(result.kind, 'confirmed');
   if (result.kind !== 'confirmed') return;
-  assert.equal(result.snapshot.state.stateCase, 'series-ended-map2-administrative');
-  assert.equal(result.snapshot.maps[1].playerStatistics.teams[0].overall.status, 'unavailable');
-  assert.equal(result.snapshot.maps[2].playerStatistics.teams[1].overall.status, 'unavailable');
+  assert.deepEqual(result.snapshot.state.phase, {
+    finalMapNumber: 2,
+    kind: 'series-ended',
+  });
+  assert.equal(result.snapshot.maps[1]?.playerStatistics.teams[0].overall.status, 'unavailable');
+  assert.equal(result.snapshot.maps[2]?.playerStatistics.teams[1].overall.status, 'unavailable');
 });
 
 test('snapshot blocks a settled map without play unless it matches an evidenced technical shape', async (context) => {
@@ -1150,7 +1457,9 @@ test('normal terminal statistics keep overall, CT, and T planes distinct', async
     upperReference: 106,
   });
 
-  const firstMap = result.snapshot.maps[0].playerStatistics;
+  const firstMapEntry = result.snapshot.maps[0];
+  assert.ok(firstMapEntry);
+  const firstMap = firstMapEntry.playerStatistics;
   assert.equal(firstMap.teams[0].overall.rows?.length, 5);
   assert.equal(firstMap.teams[0].ct.rows?.length, 5);
   assert.equal(firstMap.teams[0].t.rows?.length, 5);
@@ -1173,12 +1482,12 @@ test('normal terminal statistics keep overall, CT, and T planes distinct', async
   assert.equal(ryujin?.killsByOpponent.rows?.length, 5);
 
   assert.equal(
-    result.snapshot.maps[1].playerStatistics.teams[0].ct.status,
+    result.snapshot.maps[1]?.playerStatistics.teams[0].ct.status,
     'unavailable',
   );
-  assert.equal(result.snapshot.maps[2].playerStatistics.teams[0].overall.status, 'present');
-  assert.equal(result.snapshot.maps[2].playerStatistics.teams[0].ct.status, 'empty');
-  assert.equal(result.snapshot.maps[2].playerStatistics.highlights.rows?.length, 1);
+  assert.equal(result.snapshot.maps[2]?.playerStatistics.teams[0].overall.status, 'present');
+  assert.equal(result.snapshot.maps[2]?.playerStatistics.teams[0].ct.status, 'empty');
+  assert.equal(result.snapshot.maps[2]?.playerStatistics.highlights.rows?.length, 1);
 });
 
 test('duel rows reject duplicate and same-team opponent identities without losing other stats', async (context) => {
@@ -1237,7 +1546,7 @@ test('duel rows reject duplicate and same-team opponent identities without losin
   }).snapshot('csgo_mc_2395547');
   assert.equal(result.kind, 'confirmed');
   if (result.kind !== 'confirmed') return;
-  const decoded = result.snapshot.maps[0].playerStatistics.teams[0].overall.rows?.find(
+  const decoded = result.snapshot.maps[0]?.playerStatistics.teams[0].overall.rows?.find(
     (row) => row.id === player.id,
   );
   assert.ok(decoded);
@@ -1628,6 +1937,67 @@ test('event history bridges a growing head and verifies it is stable before comp
   );
 });
 
+test('event identity canonicalizes provider map engine aliases', async (context) => {
+  const originalFetch = globalThis.fetch;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  const [core, page] = await Promise.all(
+    ['states/bo3-between-map2-map3.json', 'events/page-1.json'].map(async (name) =>
+      JSON.parse(await readFile(new URL(`./fixtures/${name}`, import.meta.url), 'utf8')),
+    ),
+  );
+  for (const row of page.data.list) row.map_name = 'de_anubis';
+  globalThis.fetch = async (input) => {
+    const url = new URL(String(input));
+    if (url.pathname.endsWith('/matches/csgo_mc_2395547/data')) return Response.json(core);
+    if (url.pathname.endsWith('/match/csgo_mc_2395547/event/log')) {
+      return Response.json(page);
+    }
+    return new Response(null, { status: 404 });
+  };
+
+  const result = await createFiveEPlayMatchSource({
+    limits: { eventPageSize: 500 },
+  }).snapshot('csgo_mc_2395547');
+
+  assert.equal(result.kind, 'confirmed');
+  if (result.kind !== 'confirmed') return;
+  assert.equal(result.snapshot.details.events.status, 'complete');
+  assert.ok(result.snapshot.details.events.data.length > 0);
+  assert.ok(result.snapshot.details.events.data.every((event) => event.mapName === 'Anubis'));
+});
+
+test('event history excludes warmup activity while the map is unopened', async (context) => {
+  const originalFetch = globalThis.fetch;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  const [core, page] = await Promise.all(
+    ['states/bo3-live-map1-unopened.json', 'events/page-1.json'].map(async (name) =>
+      JSON.parse(await readFile(new URL(`./fixtures/${name}`, import.meta.url), 'utf8')),
+    ),
+  );
+  globalThis.fetch = async (input) => {
+    const url = new URL(String(input));
+    if (url.pathname.endsWith('/matches/csgo_mc_2395547/data')) return Response.json(core);
+    if (url.pathname.endsWith('/match/csgo_mc_2395547/event/log')) {
+      return Response.json(page);
+    }
+    return new Response(null, { status: 404 });
+  };
+
+  const result = await createFiveEPlayMatchSource({
+    limits: { eventPageSize: 500 },
+  }).snapshot('csgo_mc_2395547');
+
+  assert.equal(result.kind, 'confirmed');
+  if (result.kind !== 'confirmed') return;
+  assert.deepEqual(result.snapshot.state.phase, { kind: 'map-unopened', mapNumber: 1 });
+  assert.equal(result.snapshot.details.events.status, 'empty');
+  assert.deepEqual(result.snapshot.details.events.data, []);
+});
+
 test('event history rejects a stable head that deleted earlier head events', async (context) => {
   const originalFetch = globalThis.fetch;
   context.after(() => {
@@ -1934,7 +2304,7 @@ test('watch keeps MQTT state provisional until HTTP confirms it', async (context
   assert.equal(provisional.value?.kind, 'provisional-telemetry');
   if (provisional.value?.kind === 'provisional-telemetry') {
     assert.equal(provisional.value.telemetry.source, 'state-topic');
-    assert.deepEqual(provisional.value.telemetry.mapNumbers, [1]);
+    assert.deepEqual(provisional.value.telemetry.providerBoutNumbers, [1]);
     assert.equal(provisional.value.revision, initialRevision);
   }
   assert.equal(watch.current()?.revision, initialRevision);
@@ -1942,7 +2312,10 @@ test('watch keeps MQTT state provisional until HTTP confirms it', async (context
   const confirmed = await iterator.next();
   assert.equal(confirmed.value?.kind, 'confirmed-state');
   if (confirmed.value?.kind === 'confirmed-state') {
-    assert.deepEqual(confirmed.value.observation.state.phase, { kind: 'map-live', map: 1 });
+    assert.deepEqual(confirmed.value.observation.state.phase, {
+      kind: 'map-live',
+      mapNumber: 1,
+    });
     assert.notEqual(confirmed.value.observation.revision, initialRevision);
     assert.strictEqual(watch.current(), confirmed.value.observation);
   }
@@ -2095,7 +2468,7 @@ test('snapshot without expectedRevision retries one drifting barrier exactly onc
   const result = await createFiveEPlayMatchSource().snapshot('csgo_mc_2395547');
   assert.equal(result.kind, 'confirmed');
   if (result.kind === 'confirmed') {
-    assert.deepEqual(result.snapshot.state.phase, { kind: 'map-live', map: 3 });
+    assert.deepEqual(result.snapshot.state.phase, { kind: 'map-live', mapNumber: 3 });
   }
   assert.equal(dataRequests, 4);
 });
@@ -2357,7 +2730,7 @@ test('watch buffers MQTT received while the HTTP baseline is in flight', async (
   if (baselineUpdate.value?.kind === 'confirmed-state') {
     assert.deepEqual(baselineUpdate.value.observation.state.phase, {
       kind: 'map-unopened',
-      map: 1,
+      mapNumber: 1,
     });
   }
   const buffered = await iterator.next();
@@ -2365,7 +2738,10 @@ test('watch buffers MQTT received while the HTTP baseline is in flight', async (
   const confirmed = await iterator.next();
   assert.equal(confirmed.value?.kind, 'confirmed-state');
   if (confirmed.value?.kind === 'confirmed-state') {
-    assert.deepEqual(confirmed.value.observation.state.phase, { kind: 'map-live', map: 1 });
+    assert.deepEqual(confirmed.value.observation.state.phase, {
+      kind: 'map-live',
+      mapNumber: 1,
+    });
   }
   assert.equal(dataRequests, 2);
   await watch[Symbol.asyncDispose]();

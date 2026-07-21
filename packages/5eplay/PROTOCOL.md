@@ -52,30 +52,43 @@ data, map summaries, current map number, tournament, and stage. Provider odds, v
 engagement data, and unrelated additive fields are ignored. Consumers must call `snapshot()` with
 the returned match ID for authoritative phase and complete detail collection.
 
-## BO3 classification
+## Evidence-derived BO3 classification
 
-Only `global_state.status` followed by the three `bouts_state[].status` values determines phase.
-`plan_ts`, BP, `live_status`, page text, and logging text never do.
+`global_state.status` and each bout's lifecycle fields determine phase. `bout_num` is preserved as
+`providerBoutNumber`, a stable provider identity, but it is not chronological map order. Played
+settlements are ordered by evidenced `start_time`; awarded no-play settlements follow them; the
+current live bout follows all settlements; unopened slots come last. This ordering covers the
+observed played → awarded → live sequence even when the provider numbers are 2 → 1 → 3. Provider
+bout number is only the deterministic tie-breaker inside equally unevidenced groups. The resulting
+one-based position is `mapNumber`. Played, live, and awarded maps have
+`orderFinality: 'confirmed'`; unopened and unused slots remain `provisional`.
 
-| Vector | `stateCase` | Confirmed phase |
-| --- | --- | --- |
-| `0 / -1,-1,-1` | `prestart` | scheduled / prestart |
-| `1 / -1,-1,-1` | `map1-unopened` | live / map 1 unopened |
-| `1 / 1,-1,-1` | `map1-live` | map 1 live |
-| `1 / 2,-1,-1` | `between-map1-map2` | between maps 1 and 2 |
-| `1 / 2,1,-1` | `map2-live` | map 2 live |
-| `1 / 2,2,-1` | `between-map2-map3` | between maps 2 and 3 |
-| `1 / 2,2,1` | `map3-live` | map 3 live |
-| `2 / 2,2,-1` | `series-ended-map2-normal` | normal terminal after map 2 |
-| `2 / 2,2,2` | `series-ended-map3-normal` or `series-ended-map2-administrative` | normal terminal after map 3, or evidenced administrative terminal after map 2 |
+`plan_ts`, BP, `live_status`, page text, quick score, player counters, and logging text never promote
+the authoritative phase.
 
-Unknown vectors remain blocked. `global=2` with a live map is contradictory. A terminal series score
-must agree with map winners and reach two wins. A settled map without a start time is never treated
-as played. The only accepted administrative shape is an ordinarily played and settled map 1,
-followed by an awarded map 2 with an exact `1:0` score and no gameplay data, followed by an unused
-map 3 with no score, result, timing, rounds, or players. These maps expose
+| Core evidence | Confirmed phase |
+| --- | --- |
+| `global=0`, every map unopened | scheduled / `prestart` |
+| `global=1`, no map started | live / `map-unopened` with the next `mapNumber` |
+| `global=1`, exactly one live map and all earlier maps settled | `map-live` with its chronological `mapNumber` |
+| `global=1`, no live map, settled prefix followed by unopened maps | `between-maps` with previous and next chronological numbers |
+| `global=2`, no live map, winner counts and series score agree | `series-ended` with the final chronological map number |
+
+Contradictory evidence remains blocked: this includes multiple live maps, a live match that already
+has a series winner, chronological gaps, a terminal match with a live map, or series scores that do
+not equal accepted map winners. A settled map without a start time is never treated as played. A
+live series may contain an awarded `1:0` no-play map before the current live map; an unused no-play
+slot or nonzero official gameplay fields in that position remains contradictory. The only accepted
+terminal administrative shape is an ordinarily played and settled chronological map 1,
+followed by an awarded map 2 with an exact formal `1:0` score and no gameplay data, followed by an
+unused map 3 with no score, result, timing, rounds, or players. These maps expose
 `closedWithoutPlay: true` and `technicalDisposition: 'awarded' | 'unused'`. Any other no-play or
 technical-looking combination remains blocked until independent evidence supports it.
+
+A no-play award may contain zero-valued half/overtime scores and fixed-length zero round arrays.
+They are accepted only when every value is zero and all timing/current-round gameplay evidence is
+absent, then normalized to empty public process fields. Present player planes on a no-play map are
+isolated as `NON_OFFICIAL_ACTIVITY`; they never become official statistics for the award.
 
 Provider terminal state first becomes `closing`. It becomes `closed / stable` only after two
 consistent HTTP observations at least one live polling interval apart and after the three-minute
@@ -128,17 +141,24 @@ conflicting payloads for one event identity, cursor non-progress, a repeated ful
 event limit, or deadline produces a partial section with an explicit gap. Every request, including
 head verification and bridging, shares the same page, event, attempt, signal, and deadline budget.
 
-Deduplicate by `(matchId, boutId, updateVersion)`, compare the normalized full-event payload when
+Deduplicate by `(matchId, providerBoutId, updateVersion)`, compare the normalized full-event payload when
 identities repeat, and return numeric versions in ascending order. Every row must match the core
-match ID and tournament ID. Its map number, provider bout ID, and map name must also agree with the
-corresponding core map slot; an identity mismatch makes the event section unavailable rather than
-joining unrelated data.
+match ID and tournament ID. Its provider bout number and ID must join the corresponding core map.
+Map names are compared through one canonical identity form that accepts observed display/engine
+aliases such as `Ancient` and `de_ancient`; the public event retains the core display name. An
+identity mismatch makes the event section unavailable rather than joining unrelated data.
+
+Transport pagination completeness is not semantic match-history completeness. Events belonging to
+an `unopened` or `closed-without-play` core map are excluded, because real unopened bouts can carry
+unmarked warmup kills, joins, and quits. Consequently, a stable provider history containing only
+warmup rows is returned as an empty official event section, not as complete match activity.
 
 Default safety bounds are 200 pages, 100,000 events, and 120 seconds. Unknown event types expose a
 minimal envelope plus an evidence reference rather than leaking a provider DTO.
 
-Known events retain provider map ID, map number/name, and tournament ID so consumers can join them
-to normalized map slots without guessing. Numeric event player IDs are normalized to the same
+Known events retain `providerBoutId`, `providerBoutNumber`, chronological `mapNumber`, map name, and
+tournament ID so consumers can join them to normalized map slots without guessing. Numeric event
+player IDs are normalized to the same
 `csgo_pl_*` namespace used by core player observations. Core map observations also retain evidenced stage,
 regulation-round, display-name, artwork, and veto metadata. Tournament timestamps whose provider
 timezone is not evidenced remain labeled provider-local strings rather than being converted to UTC.
@@ -162,6 +182,13 @@ empty retains the known opponent counts as `partial` and leaves the missing prov
 IDs must be unique within a team and plane, duel identities must belong to the opposing roster, and
 ordinary duel maps must be set-equivalent to their paired arrays. Invalid statistics affect only
 that statistics slice and never change the authoritative match phase.
+
+For a played map, player kill/death counters must remain plausible for the confirmed current-round
+budget, with one round of tolerance for provider update skew. An impossible plane becomes
+`unavailable / TIMELINE_INCOHERENT`; other planes and the core phase remain available. `quickScore`
+is separately preserved as provisional provider telemetry and may lead formal `score` during an
+unsettled round. Formal score validation uses first-half, second-half, and overtime totals. Provider
+stage `ot` is exposed as `overtime`.
 
 ## Schema and secrecy
 

@@ -11,134 +11,64 @@ export type ConfirmedRevision = string & {
 
 export type MatchFormat = 'bo1' | 'bo3';
 export type MapNumber = 1 | 2 | 3;
-export type MapStage = 'first-half' | 'second-half';
+export type MapStage = 'first-half' | 'second-half' | 'overtime';
 export type MatchLifecycle = 'scheduled' | 'live' | 'closing' | 'closed';
 export type ClosureKind = 'normal' | 'administrative';
 export type VetoAction = 'ban' | 'pick' | 'left' | 'unknown';
 
-export type ConfirmedProviderVector =
-  | readonly [0, -1, -1, -1]
-  | readonly [1, -1, -1, -1]
-  | readonly [1, 1, -1, -1]
-  | readonly [1, 2, -1, -1]
-  | readonly [1, 2, 1, -1]
-  | readonly [1, 2, 2, -1]
-  | readonly [1, 2, 2, 1]
-  | readonly [2, 2, 2, -1]
-  | readonly [2, 2, 2, 2];
-
 export type MatchPhase =
   | { readonly kind: 'prestart' }
-  | { readonly kind: 'map-unopened'; readonly map: 1 }
-  | { readonly kind: 'map-live'; readonly map: MapNumber }
-  | { readonly kind: 'between-maps'; readonly previousMap: 1; readonly nextMap: 2 }
-  | { readonly kind: 'between-maps'; readonly previousMap: 2; readonly nextMap: 3 }
-  | { readonly kind: 'series-ended'; readonly finalMap: 2 | 3 };
-
-interface ConfirmedStateBase {
-  readonly certainty: 'confirmed';
-}
-
-type TerminalFinality =
-  | { readonly lifecycle: 'closing'; readonly dataFinality: 'provisional' }
-  | { readonly lifecycle: 'closed'; readonly dataFinality: 'stable' };
-
-type TerminalState<
-  Case extends string,
-  Vector extends ConfirmedProviderVector,
-  Phase extends Extract<MatchPhase, { readonly kind: 'series-ended' }>,
-  Closure extends ClosureKind,
-> = ConfirmedStateBase &
-  TerminalFinality & {
-    readonly stateCase: Case;
-    readonly closure: Closure;
-    readonly phase: Phase;
-    readonly providerVector: Vector;
-  };
+  | { readonly kind: 'map-unopened'; readonly mapNumber: MapNumber }
+  | { readonly kind: 'map-live'; readonly mapNumber: MapNumber }
+  | {
+      readonly kind: 'between-maps';
+      readonly previousMapNumber: MapNumber;
+      readonly nextMapNumber: MapNumber;
+    }
+  | { readonly kind: 'series-ended'; readonly finalMapNumber: MapNumber };
 
 export type MatchState =
-  | (ConfirmedStateBase & {
-      readonly stateCase: 'prestart';
+  | {
+      readonly certainty: 'confirmed';
       readonly lifecycle: 'scheduled';
       readonly phase: { readonly kind: 'prestart' };
       readonly closure: null;
       readonly dataFinality: 'provisional';
-      readonly providerVector: readonly [0, -1, -1, -1];
-    })
-  | (ConfirmedStateBase & {
-      readonly stateCase: 'map1-unopened';
+    }
+  | {
+      readonly certainty: 'confirmed';
       readonly lifecycle: 'live';
-      readonly phase: { readonly kind: 'map-unopened'; readonly map: 1 };
+      readonly phase: Exclude<MatchPhase, { readonly kind: 'prestart' | 'series-ended' }>;
       readonly closure: null;
       readonly dataFinality: 'provisional';
-      readonly providerVector: readonly [1, -1, -1, -1];
-    })
-  | (ConfirmedStateBase & {
-      readonly stateCase: 'map1-live';
-      readonly lifecycle: 'live';
-      readonly phase: { readonly kind: 'map-live'; readonly map: 1 };
-      readonly closure: null;
+    }
+  | {
+      readonly certainty: 'confirmed';
+      readonly lifecycle: 'closing';
+      readonly phase: Extract<MatchPhase, { readonly kind: 'series-ended' }>;
+      readonly closure: ClosureKind;
       readonly dataFinality: 'provisional';
-      readonly providerVector: readonly [1, 1, -1, -1];
-    })
-  | (ConfirmedStateBase & {
-      readonly stateCase: 'between-map1-map2';
-      readonly lifecycle: 'live';
-      readonly phase: {
-        readonly kind: 'between-maps';
-        readonly previousMap: 1;
-        readonly nextMap: 2;
-      };
-      readonly closure: null;
-      readonly dataFinality: 'provisional';
-      readonly providerVector: readonly [1, 2, -1, -1];
-    })
-  | (ConfirmedStateBase & {
-      readonly stateCase: 'map2-live';
-      readonly lifecycle: 'live';
-      readonly phase: { readonly kind: 'map-live'; readonly map: 2 };
-      readonly closure: null;
-      readonly dataFinality: 'provisional';
-      readonly providerVector: readonly [1, 2, 1, -1];
-    })
-  | (ConfirmedStateBase & {
-      readonly stateCase: 'between-map2-map3';
-      readonly lifecycle: 'live';
-      readonly phase: {
-        readonly kind: 'between-maps';
-        readonly previousMap: 2;
-        readonly nextMap: 3;
-      };
-      readonly closure: null;
-      readonly dataFinality: 'provisional';
-      readonly providerVector: readonly [1, 2, 2, -1];
-    })
-  | (ConfirmedStateBase & {
-      readonly stateCase: 'map3-live';
-      readonly lifecycle: 'live';
-      readonly phase: { readonly kind: 'map-live'; readonly map: 3 };
-      readonly closure: null;
-      readonly dataFinality: 'provisional';
-      readonly providerVector: readonly [1, 2, 2, 1];
-    })
-  | TerminalState<
-      'series-ended-map2-normal',
-      readonly [2, 2, 2, -1],
-      { readonly kind: 'series-ended'; readonly finalMap: 2 },
-      'normal'
-    >
-  | TerminalState<
-      'series-ended-map3-normal',
-      readonly [2, 2, 2, 2],
-      { readonly kind: 'series-ended'; readonly finalMap: 3 },
-      'normal'
-    >
-  | TerminalState<
-      'series-ended-map2-administrative',
-      readonly [2, 2, 2, 2],
-      { readonly kind: 'series-ended'; readonly finalMap: 2 },
-      'administrative'
-    >;
+    }
+  | {
+      readonly certainty: 'confirmed';
+      readonly lifecycle: 'closed';
+      readonly phase: Extract<MatchPhase, { readonly kind: 'series-ended' }>;
+      readonly closure: ClosureKind;
+      readonly dataFinality: 'stable';
+    };
+
+export type ProviderGlobalStatusCode = 0 | 1 | 2;
+export type ProviderBoutStatusCode = -1 | 1 | 2;
+
+export interface ProviderBoutState {
+  readonly providerBoutNumber: number;
+  readonly statusCode: ProviderBoutStatusCode;
+}
+
+export interface ProviderMatchState {
+  readonly globalStatusCode: ProviderGlobalStatusCode;
+  readonly bouts: readonly ProviderBoutState[];
+}
 
 export interface TeamIdentity {
   readonly id: string;
@@ -269,7 +199,11 @@ export type PlayerStatRows =
   | {
       readonly status: 'unavailable';
       readonly rows: null;
-      readonly gap: 'FIELD_MISSING' | 'SCHEMA_UNSUPPORTED';
+      readonly gap:
+        | 'FIELD_MISSING'
+        | 'SCHEMA_UNSUPPORTED'
+        | 'TIMELINE_INCOHERENT'
+        | 'NON_OFFICIAL_ACTIVITY';
     };
 
 export interface TeamPlayerStatistics {
@@ -308,7 +242,7 @@ export type PlayerStatHighlights =
   | {
       readonly status: 'unavailable';
       readonly rows: null;
-      readonly gap: 'FIELD_MISSING' | 'SCHEMA_UNSUPPORTED';
+      readonly gap: 'FIELD_MISSING' | 'SCHEMA_UNSUPPORTED' | 'NON_OFFICIAL_ACTIVITY';
     };
 
 export interface PlayerStatistics {
@@ -353,6 +287,8 @@ export interface SeriesPlayerStatistics extends PlayerStatistics {
 
 interface MatchMapMetadata {
   readonly mapNumber: MapNumber;
+  readonly providerBoutNumber: number;
+  readonly orderFinality: 'confirmed' | 'provisional';
   readonly name: string | null;
   readonly displayName: string | null;
   readonly iconUrl: string | null;
@@ -388,12 +324,10 @@ export type UnopenedMapTeamState = UnplayedMapTeamState & {
 
 export type AwardedWinnerMapTeamState = UnplayedMapTeamState & {
   readonly score: 1;
-  readonly quickScore: 1;
 };
 
 export type AwardedLoserMapTeamState = UnplayedMapTeamState & {
   readonly score: 0;
-  readonly quickScore: 0;
 };
 
 export type AwardedMapTeamState =
@@ -485,12 +419,6 @@ export type MatchMap =
         readonly winnerTeamId: null;
       });
 
-export type MatchMapFor<Number extends MapNumber> = MatchMap & {
-  readonly mapNumber: Number;
-};
-
-export type MatchMaps = readonly [MatchMapFor<1>, MatchMapFor<2>, MatchMapFor<3>];
-
 export interface MatchIdentity {
   readonly id: string;
   readonly format: MatchFormat;
@@ -557,7 +485,8 @@ export type DataSection<T> =
 
 export interface MatchEvent {
   readonly matchId: string;
-  readonly mapId: string | null;
+  readonly providerBoutId: string | null;
+  readonly providerBoutNumber: number | null;
   readonly mapNumber: MapNumber | null;
   readonly mapName: string | null;
   readonly tournamentId: string | null;
@@ -770,7 +699,7 @@ export interface MatchFreshness {
 }
 
 export interface ConfirmedMatchObservation {
-  readonly schema: 'fiveeplay-match/v2';
+  readonly schema: 'fiveeplay-match/v3';
   readonly revision: ConfirmedRevision;
   readonly observedAt: UnixMilliseconds;
   readonly match: MatchIdentity;
@@ -779,7 +708,8 @@ export interface ConfirmedMatchObservation {
   readonly tournament: Tournament;
   readonly seriesScore: readonly [TeamScore, TeamScore];
   readonly seriesWinnerTeamId: string | null;
-  readonly maps: MatchMaps;
+  readonly maps: readonly MatchMap[];
+  readonly providerState: ProviderMatchState;
   readonly seriesPlayerStatistics: SeriesPlayerStatistics;
   readonly veto: readonly VetoEntry[];
   readonly freshness: MatchFreshness;
@@ -861,7 +791,7 @@ export interface ProvisionalTelemetry {
   readonly eventName: string;
   readonly fromVersion: string;
   readonly toVersion: string;
-  readonly mapNumbers: readonly MapNumber[];
+  readonly providerBoutNumbers: readonly number[];
   readonly eventType: string | null;
 }
 

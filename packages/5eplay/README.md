@@ -19,7 +19,7 @@ if (schedule.kind === 'available') {
 const result = await source.snapshot('csgo_mc_2395547');
 
 if (result.kind === 'confirmed') {
-  console.log(result.snapshot.state.stateCase, result.snapshot.state.lifecycle);
+  console.log(result.snapshot.state.phase, result.snapshot.state.lifecycle);
   console.log(result.snapshot.teams, result.snapshot.maps);
   console.log(result.snapshot.details);
 }
@@ -32,6 +32,8 @@ ownership, see [INTEGRATION.md](INTEGRATION.md).
 A confirmed result certifies the core match state within an HTTP revision barrier. Optional detail
 sections report their own `complete`, `empty`, `partial`, `unavailable`, or `not-applicable` status;
 their failure never turns a valid core state into a guess.
+
+Confirmed observations use schema `fiveeplay-match/v3`.
 
 `schedule()` fetches exactly one provider page of currently live and upcoming matches. It defaults
 to page 1 and a fixed source page size of 20; pass `{ page: 2 }` explicitly for another page. Each
@@ -48,7 +50,7 @@ remain `unsupported / format-unverified` in this release.
 Every snapshot contains fixed sections for:
 
 - match identity, BO format, teams, ranks, tournament, stage, location, prize, and advisory plan time;
-- lifecycle, exact phase, provider state vector, series score, veto, three map slots, round/side data,
+- lifecycle, exact phase, raw provider state, series score, veto, evidence-ordered map slots, round/side data,
   half/stage and map artwork metadata, economy/equipment, and live or final player statistics;
 - bounded cursor-paginated event history, pre-match analysis, both distinct paginated team-history
   products, and community ratings; events retain map number/name and tournament identity, while
@@ -77,15 +79,19 @@ BO3 observations distinguish:
 - stable closed after two consistent terminal HTTP observations and the calibration interval.
 
 Map slots independently expose `settled`, `played`, and `closedWithoutPlay`, so an administrative
-1:0 map does not masquerade as a played map. A contradictory provider vector returns `blocked`
-instead of being classified heuristically.
+1:0 map does not masquerade as a played map. `mapNumber` is the evidence-derived chronological
+series position; `providerBoutNumber` is the stable upstream slot identity. They are deliberately
+separate because a provider bout numbered 2 has been observed as the actual first played map.
+`orderFinality` is `confirmed` for played, live, and awarded maps; unopened and unused slots are
+`provisional`. A `1:0` no-play award has also been observed between a played map and the current live
+map, so administrative settlement is not assumed to be terminal-only.
 
-`state.stateCase` is the exhaustive public discriminator: `prestart`, `map1-unopened`,
-`map1-live`, `between-map1-map2`, `map2-live`, `between-map2-map3`, `map3-live`,
-`series-ended-map2-normal`, `series-ended-map3-normal`, or
-`series-ended-map2-administrative`. TypeScript correlates each case with its exact provider vector,
-phase, lifecycle, closure, and finality. Terminal cases first appear as `closing / provisional` and
-are promoted to `closed / stable` only by the HTTP stability rule.
+`state.phase.kind` is the exhaustive public discriminator: `prestart`, `map-unopened`, `map-live`,
+`between-maps`, or `series-ended`. The phase carries `mapNumber`,
+`previousMapNumber`/`nextMapNumber`, or `finalMapNumber` as appropriate. Terminal phases first
+appear as `closing / provisional` and are promoted to `closed / stable` only by the HTTP stability
+rule. Raw upstream status codes remain separately available in `providerState`; consumers must not
+derive chronological order by indexing those bouts.
 
 The schema stays fixed across phases; fields that the provider has not produced yet are `null` or
 empty, never copied forward as if current:
@@ -101,12 +107,19 @@ empty, never copied forward as if current:
 Every phase still attempts all five detail sections. Their individual status says whether analysis,
 events, both history products, and community data were complete at that observation.
 
+Event rows carry both provider bout identity and chronological map number. Engine/display aliases
+are canonicalized for identity, and activity attached to an unopened or no-play map is excluded as
+non-official warmup data even when provider pagination itself is stable.
+
 Series and per-map player statistics expose each team's `overall`, `ct`, and `t` planes separately.
 Every plane is `present`, `empty`, or `unavailable`; the package never fills a missing side split
 from overall data or treats malformed data as a valid empty result. Comparison highlights, detailed
 player metrics and duel rows, series MVP, and MVP chart references are retained when evidenced.
 Duel rows have their own completeness status, so a provider list/map conflict or an unavailable
-opponent roster cannot masquerade as a trustworthy empty array.
+opponent roster cannot masquerade as a trustworthy empty array. Per-map counters that are
+impossible for the confirmed round timeline are isolated as `TIMELINE_INCOHERENT` without blocking
+the authoritative core phase. `quickScore` remains provider telemetry and may lead the formal score
+during an unsettled round; formal score consistency uses the half and overtime totals.
 
 The public schema structurally reserves BO1, but this release returns
 `unsupported / format-unverified` for BO1 because the retained evidence does not contain two

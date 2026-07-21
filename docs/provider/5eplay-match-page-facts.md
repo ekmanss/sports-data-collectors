@@ -27,6 +27,9 @@
   来源为 [`live-validation-2026-07-21.md`](../live-validation-2026-07-21.md)。原始响应和复现脚本
   当时只暂存于 `/tmp`，诊断后已清理，因此这些结论虽然经过单变量复现，但当前仓库没有可
   重新校验的原始字节；这是证据保留缺口。
+- **[OBS-22]**：2026-07-21 实现后的只读 live smoke 对 `csgo_mc_2396081` 的后续观察。
+  字段摘要和确定性单变量诊断记录在同一 live validation 文档的 LIVE-006；完整原始响应未
+  持久化，回归测试是从已留存真实 fixture 构造的最小合成反例，不能替代原始字节。
 - **[CODE]**：当前实现实际接受、拒绝或投影的行为。它只说明“程序现在怎么做”，不证明
   5EPlay 协议保证如此。主要来源为
   [`data.ts`](../../packages/5eplay/src/protocol/data.ts)、
@@ -97,16 +100,18 @@
 - 事件中的纯数字选手 ID 与核心中的 `csgo_pl_*` 可以指向同一选手命名空间；历史调查和
   当前最小 fixture 支持做显式规范化，而不是按显示名关联。[OBS-20；FIX：`events/*.json`]
 
-### 当前实现决策与已知偏差
+### 当前实现决策
 
 - 当前实现严格校验分析的比赛/两队/赛事身份、历史比赛的战队成员关系，以及事件的比赛、
   赛事、地图槽、`bout_id` 和地图名。[CODE：`details/analysis.ts`、`details/history.ts`、
   `details/events.ts`]
-- 当前事件关联要求 `map_name` 字符串与核心完全相等，没有 engine name 到 display name 的
-  canonicalization；`de_ancient` 因此会使整个事件 section 变成
-  `EVENT_IDENTITY_OR_SCHEMA_MISMATCH`。[CODE；OBS-21：LIVE-002]
-- 当前核心用“按 `bout_num` 排序后的槽号”直接充当领域 `mapNumber`。2026-07-21 已证明这个
-  等同关系不总成立，见下一节。[CODE；OBS-21：LIVE-004]
+- 事件用 `providerBoutNumber`/`providerBoutId` 关联核心槽位，地图名先移除已观察的 `de_`
+  engine 前缀并规范化大小写/分隔符，再与核心显示名比较；对外保留核心显示名。[CODE：
+  `details/events.ts`；OBS-21：LIVE-002]
+- 核心同时保留提供方 `providerBoutNumber` 和证据推导的 chronological `mapNumber`。已经开始的
+  已结算 bout 按 `start_time` 排序，award 位于已打完图之后和当前 live 图之前；未开和 unused
+  槽位的顺序标为 `provisional`。[CODE：`protocol/data.ts`、`domain/model.ts`；OBS-21：
+  LIVE-004；OBS-22：LIVE-006]
 
 ## BO 格式、bout 槽位与实际比赛顺序
 
@@ -123,6 +128,10 @@
   `bout_num` 才能让现有分类器确认，交换数组位置无效。[OBS-21：LIVE-004]
 - 因此，**提供方 bout 身份**和**证据推导的实际第几张图**是两个概念。至少存在“槽 2 实际
   先开”的真实比赛，不能仅按 `bout_num` 推断先后。[OBS-21：LIVE-004]
+- 同一比赛的后续快照为 `global=1, bouts=[2,2,1]`：provider bout 2 的 Mirage 已正常打完，
+  bout 1 的 Ancient 无开始/结束时间但以 `1:0` 判给，bout 3 的 Dust2 正在打。系列分 `1:1`，
+  因而 chronological 顺序是“打完的 Mirage → 判给的 Ancient → 进行中的 Dust2”。无 play
+  时间的 awarded bout 也可能在系列仍 LIVE 时占据已结算的中间图序。[OBS-22：LIVE-006]
 - 当前仓库的赛程模型能表示 `bestOf=1`，提供方详情格式码 `"1"` 也被识别为 BO1，但仓库
   没有两条独立、完整的真实 BO1 详情生命周期证据。[CODE：`protocol/data.ts`；FIX manifest
   中无 BO1 state trace]
@@ -192,6 +201,8 @@
   事件。[OBS-20：`csgo_mc_2395920`；FIX：`states/technical-settlement.json`]
 - 2026-07-21 还观察到前述 `1 / -1,1,-1` 非顺序正式开图。它不应被简单归类为瞬时矛盾，
   但其 chronological map number 需要跨源证据推导。[OBS-21：LIVE-004]
+- 同场后续出现 `global=1, [2,2,1]`，其中一个已结算槽是无 play 时间的 `1:0` award；技术
+  判图不是只会在 `global=2` 终局一次性出现。[OBS-22：LIVE-006]
 
 ### “比赛关闭”的事实边界
 
@@ -223,17 +234,19 @@
   必须与已结算总分相等的副本。[OBS-21：LIVE-001]
 - 该差异会持续整个回合，不只是毫秒级切换；半场切换的短暂相等窗口并不能证明严格相等规则
   正确。[OBS-21：LIVE-001]
+- LIVE-006 的无 play award 槽虽无任何时间、阶段或回合号，却返回双方 `fh/sh` 各 12 个零、
+  `ot` 各 24 个零以及 `fh/sh/ot_score="0"`。零填充数组是 no-play 占位，不是 48 个正式回合。
+  [OBS-22：LIVE-006]
 
-### 当前实现已知偏差
+### 当前实现决策
 
-- 当前实现要求每队 `quickScore === score === firstHalf + secondHalf + overtime`，导致合法的
-  进行中回合被整体返回 `blocked/inconsistent-state`。[CODE：`protocol/data.ts` 的
-  `assertActiveTeamScore`；OBS-21：LIVE-001]
-- 当前代码只把 `fh/sh` 映射为 first/second half；`curr_bout_stage=ot` 会变成 `null`，随后又
-  因 live/settled map 要求非空 stage 而被拒绝。虽然模型保存了 `ot` 比分、阵营和数组，当前
-  核心 decoder 仍不能确认真实加时阶段。这是实现与历史真实样本之间的已知缺口，不是上游
-  不支持加时。[CODE：`protocol/data.ts` 654–656、746–757、847–861；OBS-20：
+- `quickScore` 作为可空、非负的提供方临时遥测保留，不参与正式比分一致性。正式总分只校验
+  `score = firstHalf + secondHalf + overtime`。[CODE：`protocol/data.ts`；OBS-21：LIVE-001]
+- `curr_bout_stage=fh/sh/ot` 分别映射为 `first-half/second-half/overtime`；加时比分、阵营和
+  回合数组沿同一地图路径输出。[CODE：`protocol/data.ts`、`domain/model.ts`；OBS-20：
   `csgo_mc_2395755`]
+- `status=2 + 无 start_time` 的 no-play 槽只接受全零或空的半场/加时占位数据，公开结果会将其
+  规范化为空数组和空半场字段；任何非零正式 gameplay 数据仍阻断。[CODE；OBS-22：LIVE-006]
 
 ### 未知
 
@@ -260,14 +273,22 @@
   多人 12 deaths、最高 56,300 金钱和合计 77 deaths。随后 37 秒内比分和 round 不变，合计
   deaths 从 114 增至 132、kills 从 107 增至 123；十个 ID 又都与分析阵容相符。这是会重生的
   热身统计，不是身份串场。[OBS-21：LIVE-003]
+- LIVE-006 的无 play award 槽同时带有双方各 5 个 `t*_pr_stats` 行；仅凭行数和身份不能把它们
+  认作该判给地图的正式玩家统计。[OBS-22：LIVE-006]
 
-### 当前实现已知偏差
+### 当前实现决策与剩余边界
 
-- 当前实现检查数字形态、团队/选手身份唯一性和 duel 对手归属，但没有把统计与
-  `currentRound`、已结算回合数组、正式比分和 CS2 非重生规则做时间一致性校验；因此上述热身
-  数据被标为 `present`。[CODE：`protocol/data.ts`；OBS-21：LIVE-003]
+- 当前实现除 schema/identity/duel 校验外，还以 `currentRound + 1` 的宽松预算检查每名选手
+  deaths、每队合计 kills/deaths。违反非重生时间上限的单个统计 plane 变成
+  `unavailable/TIMELINE_INCOHERENT`，核心阶段和其它 plane 不受影响。[CODE：
+  `protocol/data.ts`；OBS-21：LIVE-003]
 - 公开数据必须把 `present/empty/unavailable` 分开；“字段不存在或 schema 不支持”不是合法空
   数组。这是当前模型中值得保留的防误用决策。[CODE：`domain/model.ts`]
+- 该规则有意宽松，尚未用 warmup 切换、暂停、换人和重赛的完整真实链验证；它不能证明所有
+  通过校验的 player plane 都是正式统计。[CODE；未知项]
+- no-play 地图中的 present 玩家 plane 被局部隔离为
+  `unavailable/NON_OFFICIAL_ACTIVITY`，不因上游附带 5 人行而制造正式统计。[CODE；OBS-22：
+  LIVE-006]
 
 ### 未知
 
@@ -297,16 +318,16 @@
 - MQTT 事件是低延迟追加信号，不证明 HTTP 全历史已完整；重连、地图结束和完赛时仍需 HTTP
   回填。[OBS-20]
 
-### 当前实现已知偏差
+### 当前实现决策与剩余边界
 
 - 当前事件加载器能处理并发新增的 head：回填旧尾后重读 cursor 0，必要时桥接到已收集历史，
   并对重复 identity 比较 fingerprint。这是当前一致性算法，不是 provider 保证。[CODE：
   `details/events.ts`]
-- 当前实现的“complete”只证明 transport 分页头尾稳定，却没有与核心阶段或正式 round
-  boundary 交叉验证；所以 84 条热身日志会被错误声明为完整比赛历史。[CODE；OBS-21：
-  LIVE-005]
-- 当前类型模型没有 `warmup/provisional/official` 维度。修复地图别名后仍会把 warmup kill
-  当普通 `type="8"` 输出，因此 LIVE-002 和 LIVE-005 是两个独立问题。[CODE；OBS-21]
+- 事件先按 `providerBoutNumber` 绑定核心地图，再仅保留核心状态为 `live/settled` 的地图事件；
+  `unopened/closed-without-play` 上即使分页稳定也只得到空的正式事件 section，不暴露热身
+  kill/join/quit。[CODE：`details/events.ts`；OBS-21：LIVE-005]
+- 该门槛解决了已观察的 unopened warmup 反例，但没有声称能识别地图转为 `live` 后仍残留的
+  所有 warmup 行；缺少可靠 round boundary 的情况仍是未知项。[CODE；OBS-21]
 
 ### 未知
 
@@ -401,17 +422,22 @@
 下列项目是代码现状，不能写进“提供方协议事实”：
 
 1. 只确认 BO3；BO1 返回 `unsupported/format-unverified`。[CODE]
-2. `bout_num` 被直接当 chronological `mapNumber`。[CODE；已被 LIVE-004 反例否定]
-3. 只接受固定正常 BO3 状态向量及一个技术终局形态。[CODE]
-4. `quickScore` 必须等于正式总分。[CODE；已被 LIVE-001 反例否定]
-5. 玩家 plane 只做 schema/identity 校验，不做时间合理性校验。[CODE；LIVE-003]
-6. 事件地图名严格相等，分页稳定即可 `complete`。[CODE；LIVE-002、LIVE-005]
+2. `providerBoutNumber` 只作提供方身份；played/awarded/live 的相对进度与开始证据共同推导
+   `mapNumber`，尚未开始和 unused 的未来顺序标为 `provisional`。[CODE；OBS-21：LIVE-004；
+   OBS-22：LIVE-006]
+3. 阶段使用通用 `phase.kind + mapNumber` 模型；运行时仍只确认 BO3，并只接受已有证据支持的
+   正常终局、已观察的技术终局，以及 LIVE 系列中位于当前地图之前的 `1:0` award。[CODE；
+   OBS-22：LIVE-006]
+4. `quickScore` 是非权威临时遥测；正式分由半场和加时分验证。[CODE；OBS-21：LIVE-001]
+5. 玩家 plane 在 schema/identity 之外做宽松回合时间合理性校验，异常 plane 局部隔离。[CODE；
+   OBS-21：LIVE-003]
+6. 事件地图名做 engine/display canonicalization；只输出核心已确认 `live/settled` 地图的事件，
+   分页稳定与正式时间线语义分开。[CODE；OBS-21：LIVE-002、LIVE-005]
 7. `closed/stable` 由本地三分钟 calibration 和双 HTTP 一致性推导。[CODE]
 8. 可选 detail section 独立表达 `complete/empty/partial/unavailable/not-applicable`。[CODE]
 9. odds、streams、chat、post-match editorial 被显式排除。[CODE；当前需求]
 
-重构时应逐项决定：保留为产品策略、改为证据驱动规则，还是在事实不足时继续明确返回 unknown；
-不应通过放宽所有校验来掩盖反例。
+这些决策仍应随新增一手证据逐项复核；不应通过放宽所有校验来掩盖未知情况。
 
 ## 仍待真实验证的问题
 

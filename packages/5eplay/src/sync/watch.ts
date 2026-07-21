@@ -3,7 +3,6 @@ import { revisionFor, terminalConsistencyKey } from '../domain/revision.js';
 import type {
   ConfirmedMatchObservation,
   FiveEPlayMatchSourceOptions,
-  MapNumber,
   MatchUpdate,
   MatchWatch,
   ProvisionalTelemetry,
@@ -37,12 +36,12 @@ function operationTimedOut(error: unknown): boolean {
   );
 }
 
-function mapNumbers(value: unknown): readonly MapNumber[] {
+function providerBoutNumbers(value: unknown): readonly number[] {
   if (!Array.isArray(value)) return [];
   return value.flatMap((entry) => {
     try {
       const number = nullableNumber(asRecord(entry, 'MQTT map').bout_num);
-      return number === 1 || number === 2 || number === 3 ? [number] : [];
+      return number !== null && Number.isInteger(number) && number > 0 ? [number] : [];
     } catch {
       return [];
     }
@@ -264,7 +263,7 @@ class MatchWatchImpl implements MatchWatch {
       eventName,
       eventType: null,
       fromVersion,
-      mapNumbers: mapNumbers(match.bouts_state),
+      providerBoutNumbers: providerBoutNumbers(match.bouts_state),
       source: 'state-topic',
       toVersion,
     });
@@ -306,7 +305,8 @@ class MatchWatchImpl implements MatchWatch {
         eventName,
         eventType,
         fromVersion,
-        mapNumbers: number === 1 || number === 2 || number === 3 ? [number] : [],
+        providerBoutNumbers:
+          number !== null && Number.isInteger(number) && number > 0 ? [number] : [],
         source: 'event-topic',
         toVersion,
       });

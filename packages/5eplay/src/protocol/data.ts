@@ -5,8 +5,6 @@ import type {
   MapNumber,
   MapTeamState,
   MatchMap,
-  MatchMapFor,
-  MatchMaps,
   MatchSnapshot,
   MatchState,
   MvpChartMetric,
@@ -455,6 +453,64 @@ function playerStatistics(
   };
 }
 
+function timelineCoherentPlayerStatistics(
+  statistics: PlayerStatistics,
+  observedRound: number,
+): PlayerStatistics {
+  const roundBudget = observedRound + 1;
+  const sanitize = (slice: PlayerStatRows): PlayerStatRows => {
+    if (slice.rows === null || slice.status === 'empty') return slice;
+    const kills = slice.rows.reduce((total, row) => total + (row.kills ?? 0), 0);
+    const deaths = slice.rows.reduce((total, row) => total + (row.deaths ?? 0), 0);
+    const coherent =
+      slice.rows.every(
+        (row) =>
+          (row.deaths === null || (row.deaths >= 0 && row.deaths <= roundBudget)) &&
+          (row.kills === null || (row.kills >= 0 && row.kills <= roundBudget * 5)),
+      ) &&
+      kills <= roundBudget * 5 &&
+      deaths <= roundBudget * 5;
+    return coherent
+      ? slice
+      : { gap: 'TIMELINE_INCOHERENT', rows: null, status: 'unavailable' };
+  };
+  return {
+    ...statistics,
+    teams: statistics.teams.map((team) => ({
+      ...team,
+      ct: sanitize(team.ct),
+      overall: sanitize(team.overall),
+      t: sanitize(team.t),
+    })) as [TeamPlayerStatistics, TeamPlayerStatistics],
+  };
+}
+
+function nonOfficialPlayerStatistics(
+  statistics: PlayerStatistics,
+): UnplayedPlayerStatistics {
+  const isolate = (slice: PlayerStatRows) =>
+    slice.status === 'present'
+      ? { gap: 'NON_OFFICIAL_ACTIVITY' as const, rows: null, status: 'unavailable' as const }
+      : slice;
+  const team = (value: TeamPlayerStatistics) => ({
+    ...value,
+    ct: isolate(value.ct),
+    overall: isolate(value.overall),
+    t: isolate(value.t),
+  });
+  return {
+    highlights:
+      statistics.highlights.status === 'present'
+        ? {
+            gap: 'NON_OFFICIAL_ACTIVITY',
+            rows: null,
+            status: 'unavailable',
+          }
+        : statistics.highlights,
+    teams: [team(statistics.teams[0]), team(statistics.teams[1])],
+  };
+}
+
 function assertUnplayedPlayerStatistics(
   statistics: PlayerStatistics,
 ): asserts statistics is UnplayedPlayerStatistics {
@@ -556,6 +612,27 @@ function assertInactiveTeam(team: MapTeamState): void {
   }
 }
 
+function assertNoPlayTeam(team: MapTeamState): void {
+  const zeroOrMissing = (value: number | null): boolean => value === null || value === 0;
+  if (
+    team.currentSide !== null ||
+    team.equipmentValue !== null ||
+    !zeroOrMissing(team.firstHalfScore) ||
+    team.firstHalfSide !== null ||
+    team.money !== null ||
+    !zeroOrMissing(team.overtimeScore) ||
+    team.overtimeSide !== null ||
+    !zeroOrMissing(team.secondHalfScore) ||
+    team.secondHalfSide !== null ||
+    team.firstHalfRounds.some((round) => round !== 0) ||
+    team.secondHalfRounds.some((round) => round !== 0) ||
+    team.overtimeRounds.some((round) => round !== 0) ||
+    team.flags.length > 0
+  ) {
+    throw new InconsistentProviderStateError('no-play map contains official gameplay team data');
+  }
+}
+
 function inactiveTeam(team: MapTeamState, preserveAwardScore: false): UnopenedMapTeamState;
 function inactiveTeam(team: MapTeamState, preserveAwardScore: true): UnplayedMapTeamState;
 function inactiveTeam(
@@ -583,23 +660,21 @@ function inactiveTeam(
 }
 
 function awardedWinnerTeam(team: MapTeamState): AwardedWinnerMapTeamState {
-  if (team.score !== 1 || team.quickScore !== 1) {
+  if (team.score !== 1) {
     throw new InconsistentProviderStateError('awarded map winner does not have a 1-0 score');
   }
   return {
     ...inactiveTeam(team, true),
-    quickScore: 1,
     score: 1,
   };
 }
 
 function awardedLoserTeam(team: MapTeamState): AwardedLoserMapTeamState {
-  if (team.score !== 0 || team.quickScore !== 0) {
+  if (team.score !== 0) {
     throw new InconsistentProviderStateError('awarded map loser does not have a 1-0 score');
   }
   return {
     ...inactiveTeam(team, true),
-    quickScore: 0,
     score: 0,
   };
 }
@@ -609,9 +684,15 @@ function unusedTeam(team: MapTeamState): UnusedClosedMapTeamState {
 }
 
 function assertActiveTeamScore(team: MapTeamState): void {
-  const values = [team.score, team.quickScore, team.firstHalfScore, team.secondHalfScore];
+  const values = [team.score, team.firstHalfScore, team.secondHalfScore];
   if (values.some((value) => value === null || !Number.isInteger(value) || value < 0)) {
     throw new InconsistentProviderStateError('played map has missing or invalid team scores');
+  }
+  if (
+    team.quickScore !== null &&
+    (!Number.isInteger(team.quickScore) || team.quickScore < 0)
+  ) {
+    throw new InconsistentProviderStateError('played map has an invalid quick score');
   }
   if (
     team.overtimeScore !== null &&
@@ -623,24 +704,29 @@ function assertActiveTeamScore(team: MapTeamState): void {
     (team.firstHalfScore ?? 0) +
     (team.secondHalfScore ?? 0) +
     (team.overtimeScore ?? 0);
-  if (team.score !== expected || team.quickScore !== team.score) {
+  if (team.score !== expected) {
     throw new InconsistentProviderStateError('played map score breakdown is inconsistent');
   }
 }
 
-function map<Number extends MapNumber>(
+function map(
   value: unknown,
-  expectedNumber: Number,
+  mapNumber: MapNumber,
+  providerBoutNumber: number,
+  orderFinality: 'confirmed' | 'provisional',
   teamIds: readonly [string, string],
-): MatchMapFor<Number> {
-  const bout = asRecord(value, `map ${expectedNumber}`);
-  const number = integer(bout.bout_num, `map ${expectedNumber}.bout_num`);
-  if (number !== expectedNumber) throw new TypeError('map order mismatch');
-  const statusCode = integer(bout.status, `map ${expectedNumber}.status`);
+): MatchMap {
+  const bout = asRecord(value, `provider bout ${providerBoutNumber}`);
+  const number = integer(bout.bout_num, `provider bout ${providerBoutNumber}.bout_num`);
+  if (number !== providerBoutNumber) throw new TypeError('provider bout identity changed');
+  const statusCode = integer(bout.status, `provider bout ${providerBoutNumber}.status`);
   if (statusCode !== -1 && statusCode !== 1 && statusCode !== 2) {
     throw new InconsistentProviderStateError(`unsupported map status ${statusCode}`);
   }
-  const startedAt = providerSeconds(bout.start_time, `map ${expectedNumber}.start_time`);
+  const startedAt = providerSeconds(
+    bout.start_time,
+    `provider bout ${providerBoutNumber}.start_time`,
+  );
   const closedWithoutPlay = statusCode === 2 && startedAt === null;
   const result = nullableString(bout.result);
   const winnerTeamId =
@@ -653,7 +739,13 @@ function map<Number extends MapNumber>(
         : null;
   const stage = nullableString(bout.curr_bout_stage);
   const normalizedStage: MatchMap['stage'] =
-    stage === 'fh' ? 'first-half' : stage === 'sh' ? 'second-half' : null;
+    stage === 'fh'
+      ? 'first-half'
+      : stage === 'sh'
+        ? 'second-half'
+        : stage === 'ot'
+          ? 'overtime'
+          : null;
   const providerVeto = nullableString(bout.bp_act);
   const vetoAction: MatchMap['vetoAction'] =
     providerVeto === 'left'
@@ -669,19 +761,25 @@ function map<Number extends MapNumber>(
       : providerVeto === 't2_pick'
         ? teamIds[1]
         : null;
-  const endedAt = providerSeconds(bout.end_time, `map ${expectedNumber}.end_time`);
+  const endedAt = providerSeconds(
+    bout.end_time,
+    `provider bout ${providerBoutNumber}.end_time`,
+  );
   const currentRound = providerNumber(
     bout.curr_round_num,
-    `map ${expectedNumber}.curr_round_num`,
+    `provider bout ${providerBoutNumber}.curr_round_num`,
   );
   const roundStartedAt = providerSeconds(
     bout.round_start_time,
-    `map ${expectedNumber}.round_start_time`,
+    `provider bout ${providerBoutNumber}.round_start_time`,
   );
-  const gameTimeSeconds = providerNumber(bout.game_time, `map ${expectedNumber}.game_time`);
+  const gameTimeSeconds = providerNumber(
+    bout.game_time,
+    `provider bout ${providerBoutNumber}.game_time`,
+  );
   const bombPlantedAt = providerSeconds(
     bout.bomb_planted_time,
-    `map ${expectedNumber}.bomb_planted_time`,
+    `provider bout ${providerBoutNumber}.bomb_planted_time`,
   );
   const statistics = playerStatistics(
     bout,
@@ -696,11 +794,13 @@ function map<Number extends MapNumber>(
     backgroundUrl: nullableString(bout.map_bgm),
     displayName: nullableString(bout.disp_name),
     iconUrl: nullableString(bout.map_icon),
-    mapNumber: expectedNumber,
+    mapNumber,
     name: nullableString(bout.map_name),
+    orderFinality,
+    providerBoutNumber,
     regulationRoundsPerHalf: providerNumber(
       bout.round_num,
-      `map ${expectedNumber}.round_num`,
+      `provider bout ${providerBoutNumber}.round_num`,
     ),
     vetoAction,
     vetoTeamId,
@@ -763,7 +863,7 @@ function map<Number extends MapNumber>(
       endedAt: null,
       gameTimeSeconds,
       played: true,
-      playerStatistics: statistics,
+      playerStatistics: timelineCoherentPlayerStatistics(statistics, currentRound),
       roundStartedAt,
       settled: false,
       stage: normalizedStage,
@@ -775,8 +875,8 @@ function map<Number extends MapNumber>(
     };
   }
   if (closedWithoutPlay) {
-    assertUnplayedPlayerStatistics(statistics);
-    for (const team of teams) assertInactiveTeam(team);
+    const nonOfficialStatistics = nonOfficialPlayerStatistics(statistics);
+    for (const team of teams) assertNoPlayTeam(team);
     if (
       endedAt !== null ||
       currentRound !== null ||
@@ -802,7 +902,7 @@ function map<Number extends MapNumber>(
         endedAt: null,
         gameTimeSeconds: null,
         played: false,
-        playerStatistics: statistics,
+        playerStatistics: nonOfficialStatistics,
         roundStartedAt: null,
         settled: true,
         stage: null,
@@ -817,7 +917,7 @@ function map<Number extends MapNumber>(
     if (
       teams.some(
         (team, index) =>
-          team.score !== expectedScores[index] || team.quickScore !== expectedScores[index],
+          team.score !== expectedScores[index],
       )
     ) {
       throw new InconsistentProviderStateError('awarded technical map is not a 1-0 award');
@@ -833,7 +933,7 @@ function map<Number extends MapNumber>(
       endedAt: null,
       gameTimeSeconds: null,
       played: false,
-      playerStatistics: statistics,
+      playerStatistics: nonOfficialStatistics,
       roundStartedAt: null,
       settled: true,
       stage: null,
@@ -867,7 +967,7 @@ function map<Number extends MapNumber>(
     endedAt,
     gameTimeSeconds,
     played: true,
-    playerStatistics: statistics,
+    playerStatistics: timelineCoherentPlayerStatistics(statistics, currentRound),
     roundStartedAt,
     settled: true,
     stage: normalizedStage,
@@ -879,15 +979,12 @@ function map<Number extends MapNumber>(
   };
 }
 
-function stateFromVector(
-  vector: readonly number[],
-  maps: MatchMaps,
+function stateFromEvidence(
+  globalStatusCode: 0 | 1 | 2,
+  maps: readonly MatchMap[],
   seriesScore: readonly [TeamScore, TeamScore],
+  winsRequired: number,
 ): MatchState {
-  const [global, map1, map2, map3] = vector;
-  if (global !== 2 && maps.some((entry) => entry.closedWithoutPlay)) {
-    throw new InconsistentProviderStateError('technical map closure appeared before terminal state');
-  }
   const winnerCounts = new Map<string, number>();
   for (const entry of maps) {
     if (entry.settled && entry.played) {
@@ -916,176 +1013,130 @@ function stateFromVector(
   ) {
     throw new InconsistentProviderStateError('series score does not match settled map results');
   }
-  if (global === 0 && map1 === -1 && map2 === -1 && map3 === -1) {
+
+  if (globalStatusCode === 0) {
+    if (!maps.every((entry) => entry.status === 'unopened')) {
+      throw new InconsistentProviderStateError('scheduled match contains started map evidence');
+    }
     return {
       certainty: 'confirmed',
       closure: null,
       dataFinality: 'provisional',
       lifecycle: 'scheduled',
       phase: { kind: 'prestart' },
-      providerVector: [0, -1, -1, -1],
-      stateCase: 'prestart',
     };
   }
-  if (global === 1) {
-    if (Math.max(seriesScore[0].score, seriesScore[1].score) >= 2) {
-      throw new InconsistentProviderStateError('live BO3 already has a series winner');
+
+  if (globalStatusCode === 1) {
+    if (Math.max(seriesScore[0].score, seriesScore[1].score) >= winsRequired) {
+      throw new InconsistentProviderStateError('live match already has a series winner');
     }
-    if (map1 === -1 && map2 === -1 && map3 === -1) {
-      return {
-        certainty: 'confirmed',
-        closure: null,
-        dataFinality: 'provisional',
-        lifecycle: 'live',
-        phase: { kind: 'map-unopened', map: 1 },
-        providerVector: [1, -1, -1, -1],
-        stateCase: 'map1-unopened',
-      };
-    }
-    if (map1 === 1 && map2 === -1 && map3 === -1) {
-      return {
-        certainty: 'confirmed',
-        closure: null,
-        dataFinality: 'provisional',
-        lifecycle: 'live',
-        phase: { kind: 'map-live', map: 1 },
-        providerVector: [1, 1, -1, -1],
-        stateCase: 'map1-live',
-      };
-    }
-    if (map1 === 2 && map2 === -1 && map3 === -1) {
-      return {
-        certainty: 'confirmed',
-        closure: null,
-        dataFinality: 'provisional',
-        lifecycle: 'live',
-        phase: { kind: 'between-maps', previousMap: 1, nextMap: 2 },
-        providerVector: [1, 2, -1, -1],
-        stateCase: 'between-map1-map2',
-      };
-    }
-    if (map1 === 2 && map2 === 1 && map3 === -1) {
-      return {
-        certainty: 'confirmed',
-        closure: null,
-        dataFinality: 'provisional',
-        lifecycle: 'live',
-        phase: { kind: 'map-live', map: 2 },
-        providerVector: [1, 2, 1, -1],
-        stateCase: 'map2-live',
-      };
-    }
-    if (map1 === 2 && map2 === 2 && map3 === -1) {
-      return {
-        certainty: 'confirmed',
-        closure: null,
-        dataFinality: 'provisional',
-        lifecycle: 'live',
-        phase: { kind: 'between-maps', previousMap: 2, nextMap: 3 },
-        providerVector: [1, 2, 2, -1],
-        stateCase: 'between-map2-map3',
-      };
-    }
-    if (map1 === 2 && map2 === 2 && map3 === 1) {
-      return {
-        certainty: 'confirmed',
-        closure: null,
-        dataFinality: 'provisional',
-        lifecycle: 'live',
-        phase: { kind: 'map-live', map: 3 },
-        providerVector: [1, 2, 2, 1],
-        stateCase: 'map3-live',
-      };
-    }
-    throw new InconsistentProviderStateError(
-      `unsupported live provider state vector ${vector.join('/')}`,
-    );
-  }
-  if (global === 2) {
-    const isObservedTerminalVector =
-      map1 === 2 && map2 === 2 && (map3 === -1 || map3 === 2);
-    if (!isObservedTerminalVector) {
-      throw new InconsistentProviderStateError(
-        `unsupported terminal provider state vector ${vector.join('/')}`,
-      );
-    }
-    if (maps.some((entry) => entry.status === 'live')) {
-      throw new InconsistentProviderStateError('terminal match still contains a live map');
-    }
-    const [firstMap, secondMap, thirdMap] = maps;
-    const normalTwoMapShape =
-      map3 === -1 &&
-      firstMap.status === 'settled' &&
-      secondMap.status === 'settled' &&
-      thirdMap.status === 'unopened';
-    const normalThreeMapShape =
-      map3 === 2 && maps.every((entry) => entry.status === 'settled');
-    const administrativeShape =
-      map3 === 2 &&
-      firstMap.status === 'settled' &&
-      secondMap.status === 'closed-without-play' &&
-      secondMap.technicalDisposition === 'awarded' &&
-      thirdMap.status === 'closed-without-play' &&
-      thirdMap.technicalDisposition === 'unused';
-    if (!normalTwoMapShape && !normalThreeMapShape && !administrativeShape) {
-      throw new InconsistentProviderStateError('terminal BO3 map layout is not evidence-backed');
+    const liveMaps = maps.filter((entry) => entry.status === 'live');
+    if (liveMaps.length > 1) {
+      throw new InconsistentProviderStateError('multiple maps are live simultaneously');
     }
     if (
-      Math.max(seriesScore[0].score, seriesScore[1].score) !== 2
+      maps.some(
+        (entry) =>
+          entry.status === 'closed-without-play' &&
+          entry.technicalDisposition !== 'awarded',
+      )
     ) {
-      throw new InconsistentProviderStateError('terminal series score does not match map results');
+      throw new InconsistentProviderStateError('live match contains an unused no-play map');
     }
-    const finalMap = [...maps]
-      .reverse()
-      .find((entry) => entry.played || entry.winnerTeamId !== null)?.mapNumber;
-    if (finalMap === undefined) {
-      throw new InconsistentProviderStateError('terminal match has no deciding map');
-    }
-    if (finalMap !== 2 && finalMap !== 3) {
-      throw new InconsistentProviderStateError('terminal BO3 ended before map 2');
-    }
-    const closure = maps.some((entry) => entry.closedWithoutPlay)
-      ? 'administrative' as const
-      : 'normal' as const;
-    if (map3 === -1) {
-      if (finalMap !== 2 || closure !== 'normal') {
-        throw new InconsistentProviderStateError('two-map terminal vector has wrong final map');
+    const liveMap = liveMaps[0];
+    if (liveMap !== undefined) {
+      if (
+        maps.slice(0, liveMap.mapNumber - 1).some(
+          (entry) =>
+            !entry.settled ||
+            (!entry.played && entry.technicalDisposition !== 'awarded'),
+        ) ||
+        maps.slice(liveMap.mapNumber).some((entry) => entry.status !== 'unopened')
+      ) {
+        throw new InconsistentProviderStateError('live map conflicts with chronological map order');
       }
       return {
         certainty: 'confirmed',
-        closure,
+        closure: null,
         dataFinality: 'provisional',
-        lifecycle: 'closing',
-        phase: { finalMap: 2, kind: 'series-ended' },
-        providerVector: [2, 2, 2, -1],
-        stateCase: 'series-ended-map2-normal',
+        lifecycle: 'live',
+        phase: { kind: 'map-live', mapNumber: liveMap.mapNumber },
       };
     }
-    if (closure === 'normal' && finalMap === 3) {
+    const settledMaps = maps.filter((entry) => entry.settled);
+    const nextMap = maps.find((entry) => entry.status === 'unopened');
+    if (settledMaps.length === 0 && nextMap !== undefined) {
       return {
         certainty: 'confirmed',
-        closure,
+        closure: null,
         dataFinality: 'provisional',
-        lifecycle: 'closing',
-        phase: { finalMap: 3, kind: 'series-ended' },
-        providerVector: [2, 2, 2, 2],
-        stateCase: 'series-ended-map3-normal',
+        lifecycle: 'live',
+        phase: { kind: 'map-unopened', mapNumber: nextMap.mapNumber },
       };
     }
-    if (closure === 'administrative' && finalMap === 2) {
+    const previousMap = settledMaps.at(-1);
+    if (previousMap !== undefined && nextMap !== undefined) {
+      if (nextMap.mapNumber !== previousMap.mapNumber + 1) {
+        throw new InconsistentProviderStateError('between-map order is not contiguous');
+      }
       return {
         certainty: 'confirmed',
-        closure,
+        closure: null,
         dataFinality: 'provisional',
-        lifecycle: 'closing',
-        phase: { finalMap: 2, kind: 'series-ended' },
-        providerVector: [2, 2, 2, 2],
-        stateCase: 'series-ended-map2-administrative',
+        lifecycle: 'live',
+        phase: {
+          kind: 'between-maps',
+          nextMapNumber: nextMap.mapNumber,
+          previousMapNumber: previousMap.mapNumber,
+        },
       };
     }
-    throw new InconsistentProviderStateError('terminal map shape is not evidence-backed');
+    throw new InconsistentProviderStateError('live match has no current or next map');
   }
-  throw new InconsistentProviderStateError(`unknown global status ${String(global)}`);
+
+  if (maps.some((entry) => entry.status === 'live')) {
+    throw new InconsistentProviderStateError('terminal match still contains a live map');
+  }
+  if (Math.max(seriesScore[0].score, seriesScore[1].score) !== winsRequired) {
+    throw new InconsistentProviderStateError('terminal series score has no winner');
+  }
+  const finalMap = [...maps]
+    .reverse()
+    .find((entry) => entry.played || entry.winnerTeamId !== null);
+  if (finalMap === undefined) {
+    throw new InconsistentProviderStateError('terminal match has no deciding map');
+  }
+  if (maps.slice(0, finalMap.mapNumber).some((entry) => entry.status === 'unopened')) {
+    throw new InconsistentProviderStateError('terminal match has a gap in chronological map order');
+  }
+  const closure = maps.some((entry) => entry.closedWithoutPlay)
+    ? 'administrative' as const
+    : 'normal' as const;
+  const normalShape =
+    closure === 'normal' &&
+    maps.slice(0, finalMap.mapNumber).every((entry) => entry.status === 'settled') &&
+    maps.slice(finalMap.mapNumber).every((entry) => entry.status === 'unopened');
+  const administrativeShape =
+    closure === 'administrative' &&
+    maps.length === 3 &&
+    maps[0]?.status === 'settled' &&
+    maps[0].played &&
+    maps[1]?.status === 'closed-without-play' &&
+    maps[1].technicalDisposition === 'awarded' &&
+    maps[2]?.status === 'closed-without-play' &&
+    maps[2].technicalDisposition === 'unused' &&
+    finalMap.mapNumber === 2;
+  if (!normalShape && !administrativeShape) {
+    throw new InconsistentProviderStateError('terminal map layout is not evidence-backed');
+  }
+  return {
+    certainty: 'confirmed',
+    closure,
+    dataFinality: 'provisional',
+    lifecycle: 'closing',
+    phase: { finalMapNumber: finalMap.mapNumber, kind: 'series-ended' },
+  };
 }
 
 function vetoEntries(value: unknown, teamIds: readonly [string, string]): readonly VetoEntry[] {
@@ -1156,35 +1207,80 @@ export function decodeCoreResponse(
   const teamIds = [firstTeam.id, secondTeam.id] as const;
   const globalState = asRecord(providerMatch.global_state, 'match.global_state');
   const globalStatus = integer(globalState.status, 'match.global_state.status');
+  if (globalStatus !== 0 && globalStatus !== 1 && globalStatus !== 2) {
+    throw new InconsistentProviderStateError(`unsupported global status ${globalStatus}`);
+  }
   const providerBouts = asArray(providerMatch.bouts_state, 'match.bouts_state');
   if (providerBouts.length !== 3) throw new TypeError('BO3 must contain three map slots');
-  const orderedBouts = providerBouts
+  const boutEvidence = providerBouts
     .map((bout, index) => ({
       bout,
-      number: integer(
+      providerBoutNumber: integer(
         asRecord(bout, `match.bouts_state[${index}]`).bout_num,
         `match.bouts_state[${index}].bout_num`,
       ),
-    }))
-    .sort((first, second) => first.number - second.number);
-  if (orderedBouts.some((entry, index) => entry.number !== index + 1)) {
+      result: nullableString(
+        asRecord(bout, `match.bouts_state[${index}]`).result,
+      ),
+      startedAt: providerSeconds(
+        asRecord(bout, `match.bouts_state[${index}]`).start_time,
+        `match.bouts_state[${index}].start_time`,
+      ),
+      statusCode: integer(
+        asRecord(bout, `match.bouts_state[${index}]`).status,
+        `match.bouts_state[${index}].status`,
+      ),
+    }));
+  if (
+    boutEvidence.some(
+      (entry) => entry.statusCode !== -1 && entry.statusCode !== 1 && entry.statusCode !== 2,
+    )
+  ) {
+    throw new InconsistentProviderStateError('provider bout has an unsupported status');
+  }
+  const providerOrderedBouts = [...boutEvidence].sort(
+    (first, second) => first.providerBoutNumber - second.providerBoutNumber,
+  );
+  if (
+    providerOrderedBouts.some(
+      (entry, index) => entry.providerBoutNumber !== index + 1,
+    )
+  ) {
     throw new InconsistentProviderStateError('BO3 map slots are duplicated or missing');
   }
-  const maps: MatchMaps = [
-    map(orderedBouts[0]?.bout, 1, teamIds),
-    map(orderedBouts[1]?.bout, 2, teamIds),
-    map(orderedBouts[2]?.bout, 3, teamIds),
-  ];
-  const vector: readonly [number, number, number, number] = [globalStatus, ...maps.map((entry) => {
-    if (entry.status === 'unopened') return -1;
-    if (entry.status === 'live') return 1;
-    return 2;
-  })] as [number, number, number, number];
+  const progressRank = (entry: (typeof boutEvidence)[number]): number => {
+    if (entry.statusCode === 2 && entry.startedAt !== null) return 0;
+    if (entry.statusCode === 2) return 1;
+    if (entry.statusCode === 1) return 2;
+    return 3;
+  };
+  const chronologicalBouts = [...boutEvidence].sort((first, second) => {
+    const rankDifference = progressRank(first) - progressRank(second);
+    if (rankDifference !== 0) return rankDifference;
+    if (first.startedAt !== null && second.startedAt !== null) {
+      const timeDifference = first.startedAt - second.startedAt;
+      if (timeDifference !== 0) return timeDifference;
+    }
+    return first.providerBoutNumber - second.providerBoutNumber;
+  });
+  const maps = chronologicalBouts.map((entry, index) =>
+    map(
+      entry.bout,
+      (index + 1) as MapNumber,
+      entry.providerBoutNumber,
+      entry.statusCode === 1 ||
+        entry.startedAt !== null ||
+        (entry.statusCode === 2 && (entry.result === 't1' || entry.result === 't2'))
+        ? 'confirmed'
+        : 'provisional',
+      teamIds,
+    ),
+  );
   const seriesScore = [
     { score: integer(globalState.t1_score, 'global_state.t1_score'), teamId: firstTeam.id },
     { score: integer(globalState.t2_score, 'global_state.t2_score'), teamId: secondTeam.id },
   ] as const satisfies readonly [TeamScore, TeamScore];
-  const state = stateFromVector(vector, maps, seriesScore);
+  const state = stateFromEvidence(globalStatus, maps, seriesScore, 2);
   const stateVersion = asString(data.state_ver, 'response.data.state_ver');
   const confirmedSeriesPlayerStatistics = seriesPlayerStatistics(globalState, teamIds);
   const snapshot: ConfirmedMatchObservation = {
@@ -1201,8 +1297,15 @@ export function decodeCoreResponse(
       scheduledAt: secondsToMilliseconds(matchInfo.plan_ts),
     },
     observedAt,
+    providerState: {
+      bouts: providerOrderedBouts.map((entry) => ({
+        providerBoutNumber: entry.providerBoutNumber,
+        statusCode: entry.statusCode as -1 | 1 | 2,
+      })),
+      globalStatusCode: globalStatus,
+    },
     revision: '' as MatchSnapshot['revision'],
-    schema: 'fiveeplay-match/v2',
+    schema: 'fiveeplay-match/v3',
     seriesPlayerStatistics: confirmedSeriesPlayerStatistics,
     seriesScore,
     seriesWinnerTeamId:

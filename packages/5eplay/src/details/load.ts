@@ -14,7 +14,11 @@ import {
   parseCommunityCards,
   parseCommunityTabs,
 } from './community.js';
-import { loadEvents, type EventPageLimits } from './events.js';
+import {
+  loadEvents,
+  type EventIdentityContext,
+  type EventPageLimits,
+} from './events.js';
 import {
   mergeTeamPastMatches,
   mergeTeamRecentMatches,
@@ -236,11 +240,7 @@ export async function loadMatchDetails(
   matchId: string,
   teamIds: readonly [string, string],
   tournamentId: string,
-  maps: readonly [
-    { readonly mapNumber: 1; readonly name: string | null },
-    { readonly mapNumber: 2; readonly name: string | null },
-    { readonly mapNumber: 3; readonly name: string | null },
-  ],
+  maps: EventIdentityContext['maps'],
   eventLimits: EventPageLimits,
   teamHistoryPageLimit: number,
   signals: {

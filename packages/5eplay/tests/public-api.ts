@@ -53,38 +53,27 @@ export function confirmedSnapshot(result: MatchSnapshotResult): MatchSnapshot | 
 
 export type ConsumerPhase =
   | 'not-started'
-  | 'map1-not-started'
-  | 'map1-live'
-  | 'between-map1-map2'
-  | 'map2-live'
-  | 'between-map2-map3'
-  | 'map3-live'
+  | 'map-not-started'
+  | 'map-live'
+  | 'between-maps'
   | 'series-closing'
   | 'closed';
 
 export function consumerPhase(state: MatchState): ConsumerPhase {
   if (state.lifecycle === 'closed') return 'closed';
-  switch (state.stateCase) {
+  switch (state.phase.kind) {
     case 'prestart':
       return 'not-started';
-    case 'map1-unopened':
-      return 'map1-not-started';
-    case 'map1-live':
-      return 'map1-live';
-    case 'between-map1-map2':
-      return 'between-map1-map2';
-    case 'map2-live':
-      return 'map2-live';
-    case 'between-map2-map3':
-      return 'between-map2-map3';
-    case 'map3-live':
-      return 'map3-live';
-    case 'series-ended-map2-normal':
-    case 'series-ended-map3-normal':
-    case 'series-ended-map2-administrative':
+    case 'map-unopened':
+      return 'map-not-started';
+    case 'map-live':
+      return 'map-live';
+    case 'between-maps':
+      return 'between-maps';
+    case 'series-ended':
       return 'series-closing';
     default:
-      return assertNever(state);
+      return assertNever(state.phase);
   }
 }
 
@@ -146,14 +135,13 @@ export function constructPublicError(code: FiveEPlaySourceErrorCode): FiveEPlayS
 
 export const publicSource: FiveEPlayMatchSource = createFiveEPlayMatchSource();
 
-// @ts-expect-error scheduled observations cannot claim a terminal phase or live vector
-const impossibleScheduledState: MatchState = { certainty: 'confirmed', closure: null, dataFinality: 'stable', lifecycle: 'scheduled', phase: { finalMap: 3, kind: 'series-ended' }, providerVector: [1, 2, 2, 1], stateCase: 'prestart' };
+// @ts-expect-error scheduled observations cannot claim a terminal phase or stable finality
+const impossibleScheduledState: MatchState = { certainty: 'confirmed', closure: null, dataFinality: 'stable', lifecycle: 'scheduled', phase: { finalMapNumber: 3, kind: 'series-ended' } };
 void impossibleScheduledState;
 
 declare const publicMap: MatchMap;
-// @ts-expect-error a confirmed BO3 observation always has exactly three ordered map slots
-const incompleteMapTuple: ConfirmedMatchObservation['maps'] = [publicMap, publicMap];
-void incompleteMapTuple;
+const dynamicMapList: ConfirmedMatchObservation['maps'] = [publicMap];
+void dynamicMapList;
 
 type Equal<First, Second> =
   (<Value>() => Value extends First ? 1 : 2) extends
@@ -185,16 +173,16 @@ export type AwardedMapsAlwaysHaveAWinner = Expect<
   >
 >;
 type ScorePair<Teams> = Teams extends readonly [
-  { readonly score: infer First; readonly quickScore: infer FirstQuick },
-  { readonly score: infer Second; readonly quickScore: infer SecondQuick },
+  { readonly score: infer First },
+  { readonly score: infer Second },
 ]
-  ? readonly [First, Second, FirstQuick, SecondQuick]
+  ? readonly [First, Second]
   : never;
 export type AwardedMapsHaveExactlyOneToZero = Expect<
   Equal<
     ScorePair<Extract<MatchMap, { readonly technicalDisposition: 'awarded' }>['teams']>,
-    | readonly [1, 0, 1, 0]
-    | readonly [0, 1, 0, 1]
+    | readonly [1, 0]
+    | readonly [0, 1]
   >
 >;
 export type UnusedMapsNeverHaveAWinner = Expect<

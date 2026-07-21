@@ -162,76 +162,68 @@ independent BO1 evidence. It is not equivalent to prestart or closed.
 
 ## Map the authoritative match state
 
-Use `snapshot.state.stateCase` as the exhaustive discriminator. Use `lifecycle` to distinguish a
-terminal result that is still calibrating (`closing`) from one that is stable (`closed`).
+Use `snapshot.state.phase.kind` as the exhaustive discriminator. Map numbers are carried as data,
+so the same state machine can represent BO1 or BO3 without a separate case name for every map.
+Use `lifecycle` to distinguish a terminal result that is still calibrating (`closing`) from one
+that is stable (`closed`).
 
 ```ts
 import type { MatchState } from '@ekmanss/5eplay';
 
 type ConsumerPhase =
-  | 'not-started'
-  | 'map1-not-started'
-  | 'map1-live'
-  | 'between-map1-map2'
-  | 'map2-live'
-  | 'between-map2-map3'
-  | 'map3-live'
-  | 'series-closing'
-  | 'closed';
+  | { kind: 'not-started' }
+  | { kind: 'map-not-started'; mapNumber: number }
+  | { kind: 'map-live'; mapNumber: number }
+  | { kind: 'between-maps'; previousMapNumber: number; nextMapNumber: number }
+  | { kind: 'series-closing'; finalMapNumber: number }
+  | { kind: 'closed'; finalMapNumber: number };
 
 function assertNever(value: never): never {
   throw new Error(`unhandled state: ${String(value)}`);
 }
 
 export function consumerPhase(state: MatchState): ConsumerPhase {
-  if (state.lifecycle === 'closed') return 'closed';
-
-  switch (state.stateCase) {
+  switch (state.phase.kind) {
     case 'prestart':
-      return 'not-started';
-    case 'map1-unopened':
-      return 'map1-not-started';
-    case 'map1-live':
-      return 'map1-live';
-    case 'between-map1-map2':
-      return 'between-map1-map2';
-    case 'map2-live':
-      return 'map2-live';
-    case 'between-map2-map3':
-      return 'between-map2-map3';
-    case 'map3-live':
-      return 'map3-live';
-    case 'series-ended-map2-normal':
-    case 'series-ended-map3-normal':
-    case 'series-ended-map2-administrative':
-      return 'series-closing';
+      return { kind: 'not-started' };
+    case 'map-unopened':
+      return { kind: 'map-not-started', mapNumber: state.phase.mapNumber };
+    case 'map-live':
+      return { kind: 'map-live', mapNumber: state.phase.mapNumber };
+    case 'between-maps':
+      return {
+        kind: 'between-maps',
+        previousMapNumber: state.phase.previousMapNumber,
+        nextMapNumber: state.phase.nextMapNumber,
+      };
+    case 'series-ended':
+      return state.lifecycle === 'closed'
+        ? { kind: 'closed', finalMapNumber: state.phase.finalMapNumber }
+        : { kind: 'series-closing', finalMapNumber: state.phase.finalMapNumber };
     default:
-      return assertNever(state);
+      return assertNever(state.phase);
   }
 }
 ```
 
-The exact cases are:
+The exact phases are:
 
-| `stateCase` | Meaning |
-| --- | --- |
-| `prestart` | The match has not started |
-| `map1-unopened` | The series is live, but map 1 has not started |
-| `map1-live` | Map 1 is running |
-| `between-map1-map2` | Map 1 settled; map 2 has not started |
-| `map2-live` | Map 2 is running |
-| `between-map2-map3` | Map 2 settled; map 3 has not started |
-| `map3-live` | Map 3 is running |
-| `series-ended-map2-normal` | A normal BO3 ended after two played maps |
-| `series-ended-map3-normal` | A normal BO3 ended after three played maps |
-| `series-ended-map2-administrative` | The series ended through the evidenced administrative shape |
+| `phase.kind` | Additional field | Meaning |
+| --- | --- | --- |
+| `prestart` | — | The match has not started |
+| `map-unopened` | `mapNumber` | The series is live, but this chronological map has not started |
+| `map-live` | `mapNumber` | This chronological map is running |
+| `between-maps` | `previousMapNumber`, `nextMapNumber` | The previous map settled and the next has not started |
+| `series-ended` | `finalMapNumber` | The series ended after the indicated chronological map |
 
 Terminal cases first arrive with `lifecycle: 'closing'` and `dataFinality: 'provisional'`. They
 become `lifecycle: 'closed'` and `dataFinality: 'stable'` only after consistent terminal HTTP
 observations and the closure calibration interval. Applications that settle irreversible actions
 should wait for `closed` unless their own policy explicitly accepts provisional closure.
 
-Never use these fields as a replacement for `snapshot.state`:
+`snapshot.providerState` preserves raw `globalStatusCode` and each
+`providerBoutNumber`/`statusCode` pair for audit. It is evidence, not a second state machine. Never
+index it as chronological map order or use these fields as a replacement for `snapshot.state`:
 
 - `tournament.status`: describes the tournament, not this match;
 - `match.scheduledAt`: advisory schedule time, not proof that play started;
@@ -240,7 +232,8 @@ Never use these fields as a replacement for `snapshot.state`:
 
 ## Read map data without inventing play
 
-Each BO3 snapshot always has three ordered map slots. Interpret each slot by `status`:
+Each currently supported BO3 snapshot has three evidence-ordered map slots. Interpret each slot by
+`status`:
 
 | Map status | `played` | Meaning |
 | --- | --- | --- |
@@ -248,6 +241,14 @@ Each BO3 snapshot always has three ordered map slots. Interpret each slot by `st
 | `live` | `true` | The map is running; round, side, score and live player fields may be present |
 | `settled` | `true` | The map was played and has a final score and winner |
 | `closed-without-play` | `false` | Administrative award or unused slot; do not count it as a played map |
+
+Join provider-side data through `providerBoutNumber`, not through array position. `mapNumber` is the
+chronological series position derived from start/end evidence. `orderFinality: 'confirmed'` means
+the map was played, is live, or is an evidenced award whose position is constrained by surrounding
+settlements. Unopened and unused slots remain `provisional` and can move when later evidence arrives.
+Use `quickScore` only as unsettled provider telemetry; `score` plus half/overtime fields are the
+formal score model. A no-play map can carry upstream zero-filled round placeholders and player rows;
+the package normalizes the former away and reports the latter as `NON_OFFICIAL_ACTIVITY`.
 
 Use `settled`, `played`, `closedWithoutPlay`, `technicalDisposition`, and `winnerTeamId` rather than
 deriving map semantics from a score. An administrative 1:0 result is deliberately different from a
@@ -293,7 +294,13 @@ section-level status remains authoritative for each detail product.
 
 Series and per-map player statistics independently expose `overall`, `ct`, and `t` planes. Each
 plane is `present`, `empty`, or `unavailable`; never synthesize a missing side split from overall
-statistics. Opponent duel rows have their own completeness status.
+statistics. `TIMELINE_INCOHERENT` means its counters cannot fit the confirmed round budget;
+`NON_OFFICIAL_ACTIVITY` means rows were attached to a no-play map. Opponent duel rows have their own
+completeness status.
+
+Event rows expose `providerBoutId`/`providerBoutNumber` for upstream identity and `mapNumber` for
+chronological series order. Activity attached to an unopened or no-play map is excluded even when
+the provider's pagination is stable; do not reconstruct those warmup rows from raw provider slots.
 
 ## Consistent compare-and-read
 
@@ -397,7 +404,8 @@ history limits rather than removing safety caps.
 - `tournament.providerLocalStartTime` and `providerLocalEndTime` remain provider-local strings
   because the provider timezone is not evidenced; do not append `Z` or convert them as UTC.
 - `match.scheduledAt` is advisory. Match progression comes only from confirmed state.
-- Persist `schema`, `revision`, `observedAt`, `state`, `maps`, `details`, and section statuses when an
+- Persist `schema`, `revision`, `observedAt`, `state`, `providerState`, `maps`, `details`, and section
+  statuses when an
   audit trail is needed.
 - Keep the complete discriminated unions in stored JSON. Flattening them too early can erase the
   difference between unavailable, empty, unplayed, played, and administratively closed data.
@@ -417,7 +425,7 @@ Before enabling automated decisions:
 - [ ] Treat schedule status as discovery data and call `snapshot()` for authoritative match state.
 - [ ] Fetch additional schedule pages explicitly; never read `mayHaveNextPage` as proof of data.
 - [ ] Exhaustively handle every snapshot result and watch update kind.
-- [ ] Derive application phase from `stateCase` plus `lifecycle`.
+- [ ] Derive application phase from `state.phase` plus `lifecycle`.
 - [ ] Require `closed / stable` for irreversible settlement unless policy says otherwise.
 - [ ] Treat MQTT telemetry as provisional and HTTP observations as authoritative.
 - [ ] Preserve `empty`, `partial`, `unavailable`, and `not-applicable` as distinct values.

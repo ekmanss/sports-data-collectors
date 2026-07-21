@@ -29,11 +29,16 @@ export interface EventPageLimits {
 export interface EventIdentityContext {
   readonly matchId: string;
   readonly tournamentId: string;
-  readonly maps: readonly [
-    { readonly mapNumber: 1; readonly name: string | null },
-    { readonly mapNumber: 2; readonly name: string | null },
-    { readonly mapNumber: 3; readonly name: string | null },
-  ];
+  readonly maps: readonly {
+    readonly mapNumber: MapNumber;
+    readonly providerBoutNumber: number;
+    readonly name: string | null;
+    readonly status: 'unopened' | 'live' | 'settled' | 'closed-without-play';
+  }[];
+}
+
+function canonicalMapName(value: string): string {
+  return value.trim().toLowerCase().replace(/^de_/, '').replace(/[^a-z0-9]/g, '');
 }
 
 function primitiveAttributes(
@@ -80,30 +85,28 @@ function eventFromRow(
     throw new TypeError('event match identity mismatch');
   }
   const updateVersion = asString(row.update_version, `${label}.update_version`);
-  const providerMapNumber = integer(row.bout_num, `${label}.bout_num`);
-  if (providerMapNumber !== 1 && providerMapNumber !== 2 && providerMapNumber !== 3) {
-    throw new TypeError('event map number is outside BO3 slots');
-  }
-  const mapNumber = providerMapNumber as MapNumber;
-  const confirmedMap = context.maps[mapNumber - 1];
-  const mapId = asString(row.bout_id, `${label}.bout_id`);
-  const mapName = asString(row.map_name, `${label}.map_name`);
+  const providerBoutNumber = integer(row.bout_num, `${label}.bout_num`);
+  const confirmedMap = context.maps.find(
+    (map) => map.providerBoutNumber === providerBoutNumber,
+  );
+  const providerBoutId = asString(row.bout_id, `${label}.bout_id`);
+  const providerMapName = asString(row.map_name, `${label}.map_name`);
   const tournamentId = asString(row.tt_id, `${label}.tt_id`);
   if (
     confirmedMap === undefined ||
-    confirmedMap.mapNumber !== mapNumber ||
     tournamentId !== context.tournamentId ||
-    mapId !== `${context.matchId}_${mapNumber}` ||
+    providerBoutId !== `${context.matchId}_${providerBoutNumber}` ||
     confirmedMap.name === null ||
-    mapName !== confirmedMap.name
+    canonicalMapName(providerMapName) !== canonicalMapName(confirmedMap.name)
   ) {
     throw new TypeError('event tournament or map identity mismatch');
   }
   const eventIdentity = {
-    mapId,
-    mapName,
-    mapNumber,
+    mapName: confirmedMap.name,
+    mapNumber: confirmedMap.mapNumber,
     matchId: context.matchId,
+    providerBoutId,
+    providerBoutNumber,
     tournamentId,
   };
   const encoded = asString(row.log_info, `${label}.log_info`);
@@ -211,7 +214,7 @@ type PageRead =
   | { readonly kind: 'failure'; readonly gap: string; readonly observedAt: UnixMilliseconds };
 
 function eventKey(event: MatchEvent): string {
-  return `${event.matchId}:${event.mapId ?? ''}:${event.updateVersion}`;
+  return `${event.matchId}:${event.providerBoutId ?? ''}:${event.updateVersion}`;
 }
 
 function eventFingerprint(event: MatchEvent): string {
@@ -469,9 +472,15 @@ export async function loadEvents(
   }
 
   if (!complete && gap === null) gap = 'UNKNOWN_GAP';
-  const data = [...events.values()].map((stored) => stored.event).sort((a, b) =>
-    compareVersions(a.updateVersion, b.updateVersion),
-  );
+  const data = [...events.values()]
+    .map((stored) => stored.event)
+    .filter((event) => {
+      const map = context.maps.find(
+        (entry) => entry.providerBoutNumber === event.providerBoutNumber,
+      );
+      return map?.status === 'live' || map?.status === 'settled';
+    })
+    .sort((a, b) => compareVersions(a.updateVersion, b.updateVersion));
   const metadata = { attempts, observedAt: headObservedAt };
   if (complete) {
     return {

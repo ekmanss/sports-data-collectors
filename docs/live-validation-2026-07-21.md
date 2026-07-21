@@ -36,7 +36,7 @@ calls for each match returned `confirmed / map1-unopened`; all five detail secti
 - First observed: `2026-07-21T08:07:50Z`
 - Match: `csgo_mc_2395548`
 - Severity: high
-- Status: root cause reproduced; no fix applied
+- Status: fixed in the current `fiveeplay-match/v3` tree; deterministic regression covered
 
 The provider core vector changed from `[1,-1,-1,-1]` to `[1,1,-1,-1]`, which is the documented
 `map1-live` vector. Immediately afterward, two consecutive public calls returned:
@@ -49,7 +49,8 @@ The provider core vector changed from `[1,-1,-1,-1]` to `[1,1,-1,-1]`, which is 
 }
 ```
 
-Expected: `confirmed` with `state.stateCase === "map1-live"` and the available live map data.
+Expected: `confirmed` with `state.phase = { kind: "map-live", mapNumber: 1 }` and the available live
+map data.
 
 Observed impact: a consumer cannot obtain authoritative state or detailed data during this real
 map-live transition and must freeze automated decisions.
@@ -97,7 +98,7 @@ cleanly. No independent realtime defect was observed in that baseline.
 - First observed: `2026-07-21T08:10:53Z`
 - Match: `csgo_mc_2395923`
 - Severity: medium
-- Status: root cause reproduced; no fix applied
+- Status: fixed in the current `fiveeplay-match/v3` tree; deterministic regression covered
 
 The same match previously returned a `confirmed / map1-unopened` snapshot with 17 complete event
 rows. While its authoritative core vector remained `[1,-1,-1,-1]`, a later confirmed snapshot
@@ -141,7 +142,7 @@ the core/event map join.
 - First observed: `2026-07-21T08:22:15Z`
 - Match: `csgo_mc_2395923`
 - Severity: high
-- Status: root cause reproduced; no fix applied
+- Status: fixed in the current `fiveeplay-match/v3` tree; deterministic regression covered
 
 The authoritative vector had just become `[1,1,-1,-1]`. Two consecutive snapshots confirmed
 `map1-live` with map 1 at round 1 and score `0:0`, but exposed `overall / present` player rows with
@@ -185,7 +186,7 @@ be isolated behind an explicit gap rather than marked present.
 - First observed: `2026-07-21T08:26:34Z`
 - Match: `csgo_mc_2396081`
 - Severity: high if confirmed as official play
-- Status: root cause reproduced; no fix applied
+- Status: fixed in the current `fiveeplay-match/v3` tree; deterministic regression covered
 
 The provider core vector changed from `[1,-1,-1,-1]` to `[1,-1,1,-1]`: bout 1 (`Ancient`) stayed
 unopened while bout 2 (`Mirage`) became live. Two public snapshots correctly refused the unknown
@@ -222,7 +223,7 @@ joins translated through that mapping.
 - First observed: `2026-07-21T08:10:53Z` in the LIVE-002 capture
 - Match: `csgo_mc_2395923`
 - Severity: high
-- Status: root cause reproduced; no fix applied
+- Status: fixed in the current `fiveeplay-match/v3` tree; deterministic regression covered
 
 The captured authoritative core still said `map1-unopened`, but the event endpoint already
 contained many respawning warmup kills and player join/quit events. Isolating LIVE-002 by changing
@@ -264,10 +265,53 @@ This needs a cross-source timeline gate: event rows before evidence-backed offic
 provisional/unavailable, be excluded, or be explicitly modeled as warmup. Transport completeness
 must not imply semantic completeness.
 
+## LIVE-006 — a no-play award can occur while the series is still live
+
+- First observed: `2026-07-21T10:12:46Z` during the post-implementation live smoke
+- Match: `csgo_mc_2396081`
+- Severity: high
+- Status: fixed in the current `fiveeplay-match/v3` tree; deterministic regression covered
+
+The follow-up core response was still `global_state.status="1"` with series score `1:1`, but its
+provider bouts were:
+
+| Provider bout | Map | Status | Evidence |
+| --- | --- | --- | --- |
+| 1 | Ancient | settled/no-play | result `t1`, formal `1:0`, no start/end/round/stage |
+| 2 | Mirage | settled/played | `13:16`, overtime, start/end present |
+| 3 | Dust2 | live | second half, round 20, `10:9` |
+
+The evidence-backed chronological state is therefore Mirage as map 1, the awarded Ancient as map 2,
+and live Dust2 as map 3. This disproves the previous implementation rule that any
+`closedWithoutPlay` map before `global=2` is inconsistent.
+
+The awarded bout also contained zero-valued placeholder data: both teams had 12-entry first- and
+second-half arrays, 24-entry overtime arrays, and zero half/overtime scores despite having no play
+time. Both `t*_pr_stats` lists had five rows. These values cannot be interpreted as official rounds
+or official player statistics for the no-play map.
+
+### Deterministic reproduction and diagnosis
+
+The live `snapshot()` smoke returned `blocked / inconsistent-state`. A tight direct-core loop first
+failed with `unplayed map contains gameplay team data`. Changing only the zero placeholder half and
+overtime fields to empty values advanced the same payload to
+`technical map closure appeared before terminal state`. This isolated two independent obsolete
+assumptions: no-play placeholders had to be empty, and an award was allowed only after terminal
+global status.
+
+The regression test constructs the minimal public `snapshot()` shape from retained real fixtures;
+it is explicitly synthetic because the LIVE-006 raw response was not persisted. The current
+implementation accepts only zero/empty no-play placeholders, isolates present no-play player planes
+as `NON_OFFICIAL_ACTIVITY`, orders played settlements before awards and awards before the current
+live map, and still rejects unused no-play slots or nonzero gameplay evidence during a live series.
+
 ## Result and remaining risk
 
-The stopping threshold was reached with five independent reproducible defects, so live monitoring
-stopped as specified. No product code, fixture, API contract, or package version was changed.
+The original stopping threshold was reached with five independent reproducible defects, so the
+initial monitoring pass stopped as specified. A later post-implementation smoke exposed LIVE-006.
+At initial capture time no product code, fixture, API contract, or package version was changed. The
+current tree now covers all six defects through deterministic public-seam regressions and uses the
+clean-break `fiveeplay-match/v3` model.
 
 | ID | Failure mode | Consumer risk |
 | --- | --- | --- |
@@ -276,9 +320,20 @@ stopped as specified. No product code, fixture, API contract, or package version
 | LIVE-003 | Warmup player counters are marked present | Confirmed snapshots contain false player statistics |
 | LIVE-004 | Provider bout number is assumed to be chronological | Real map play is rejected as an impossible vector |
 | LIVE-005 | Warmup events are marked complete | False kills and participation enter official history |
+| LIVE-006 | Mid-series no-play award is treated as terminal-only | A real live map 3 is blocked |
+
+Current implementation mapping:
+
+- LIVE-001: quick score is preserved as provisional telemetry and excluded from formal score equality;
+- LIVE-002: event/core map names use canonical engine/display identity;
+- LIVE-003: temporally impossible player planes are isolated as `TIMELINE_INCOHERENT`;
+- LIVE-004: provider bout identity and chronological map number are separate fields;
+- LIVE-005: unopened and no-play map activity is excluded from the official event section.
+- LIVE-006: zero no-play placeholders are normalized, non-official player rows are isolated, and a
+  mid-series award can precede the current live map.
 
 The observations cover one real schedule page, all three live matches visible at the start, the
 map-1 unopened-to-live transition, first-half live rounds, a half switch, realtime initialization,
-and a non-chronological provider bout. They do not prove correctness for BO1 closing, map-end and
-between-map transitions, overtime, match cancellation, or final closure. Those paths remain
-unverified rather than known-good.
+and a non-chronological provider bout through a played/awarded/live three-map state. They do not
+prove correctness for BO1 closing, match cancellation, repeated awards, multiple unused slots, or
+all final-closure revisions. Those paths remain unverified rather than known-good.

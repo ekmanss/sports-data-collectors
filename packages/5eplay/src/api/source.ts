@@ -311,7 +311,7 @@ async function snapshot(
           observedAt: details.events.observedAt,
           payload: {
             attributes: event.attributes,
-            mapId: event.mapId,
+            providerBoutId: event.providerBoutId,
             type: event.type,
             updateVersion: event.updateVersion,
           },

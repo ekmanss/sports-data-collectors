@@ -14,6 +14,7 @@ interface RevisionObservation {
   readonly teams: readonly [TeamIdentity, TeamIdentity];
   readonly seriesScore: readonly [TeamScore, TeamScore];
   readonly maps: readonly MatchMap[];
+  readonly providerState: ConfirmedMatchObservation['providerState'];
   readonly tournament: Pick<MatchSnapshot['tournament'], 'id'>;
   readonly veto: MatchSnapshot['veto'];
 }
@@ -24,14 +25,15 @@ export function revisionFor(observation: RevisionObservation) {
     dataFinality: observation.state.dataFinality,
     format: observation.match.format,
     lifecycle: observation.state.lifecycle,
-    stateCase: observation.state.stateCase,
     maps: observation.maps.map((map) => ({
       closedWithoutPlay: map.closedWithoutPlay,
       currentRound: map.currentRound,
       endedAt: map.endedAt,
       mapNumber: map.mapNumber,
       name: map.name,
+      orderFinality: map.orderFinality,
       played: map.played,
+      providerBoutNumber: map.providerBoutNumber,
       settled: map.settled,
       startedAt: map.startedAt,
       status: map.status,
@@ -45,6 +47,7 @@ export function revisionFor(observation: RevisionObservation) {
       winnerTeamId: map.winnerTeamId,
     })),
     phase: observation.state.phase,
+    providerState: observation.providerState,
     scheduledAt: observation.match.scheduledAt,
     seriesScore: observation.seriesScore,
     teamIds: observation.teams.map((team) => team.id),

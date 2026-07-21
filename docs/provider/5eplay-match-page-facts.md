@@ -30,6 +30,10 @@
 - **[OBS-22]**：2026-07-21 实现后的只读 live smoke 对 `csgo_mc_2396081` 的后续观察。
   字段摘要和确定性单变量诊断记录在同一 live validation 文档的 LIVE-006；完整原始响应未
   持久化，回归测试是从已留存真实 fixture 构造的最小合成反例，不能替代原始字节。
+- **[OBS-23]**：2026-07-21 对 clean-break 提交 `b241f3e` 的 Chrome DOM、Chrome 网络响应和
+  公共 `schedule()` / `snapshot()` 交叉验证。观察窗口、比赛 ID、状态向量和结果记录在
+  [`live-validation-2026-07-21.md`](../live-validation-2026-07-21.md) 的
+  “Clean-break follow-up verification”章节；完整原始响应未持久化。
 - **[CODE]**：当前实现实际接受、拒绝或投影的行为。它只说明“程序现在怎么做”，不证明
   5EPlay 协议保证如此。主要来源为
   [`data.ts`](../../packages/5eplay/src/protocol/data.ts)、
@@ -48,7 +52,7 @@
   WebGL、WebGPU、视频、iframe 或 SVG 特效目标；`web-shader-extractor` 对页面渲染本身在
   target-lock 阶段判定不适用。[OBS-20：`scout-card.json`、`known-gaps.md`]
 - 详情 URL 的比赛标识形如 `csgo_mc_<正整数>`。详情页的主要权威快照来自
-  `GET https://esports-data.5eplaycdn.com/v1/api/csgo/matches/{matchId}/data`。[OBS-20]
+  `GET https://esports-data.5eplaycdn.com/v1/api/csgo/matches/{matchId}/data`。[OBS-20；OBS-23]
 - `/data` 响应同时包含 `mc_info`、`tt_info`、`global_state`、`bouts_state` 和
   `state_ver`。已观察的 CS2 比赛在 `mc_info.match_version` 中使用 `cs2`。[OBS-20；FIX：
   `states/*.json`]
@@ -177,6 +181,10 @@
 | `1 / 2,2,1` | 图 3 进行中 |
 | `2 / 2,2,2` | 三图打满后系列赛结束 |
 
+2026-07-21 的另一条独立链在 `10:30:42Z` 仍为 `0 / -1,-1,-1`，到 `10:30:48Z` 变为
+`1 / -1,-1,-1`；页面同时从倒计时切换到 LIVE，但三张图仍无名称、比分或正式回合。该样本再次
+证明计划时间和页面 LIVE 文案不能代替 bout 证据。[OBS-23：`csgo_mc_2395549`]
+
 - `global=2, [2,2,-1]` 是已观察的正常 2:0 结束形态；未使用的图 3 仍保持 `-1`，不能伪造
   图 3 结束时间。[OBS-20：`csgo_mc_2396047`、`csgo_mc_2395755`]
 - `global=1, [2,2,-1]` 与上述 2:0 形态不同：前者确实曾持续约 14 分 26 秒，表示 1:1 后
@@ -232,6 +240,9 @@
 - 2026-07-21 证明 `quick_score` 在未结算回合中可以领先 `all_score`：正式分从 `2:1` 到
   `3:1` 时，quick 分依次出现 `3:1`、`4:1`、`5:1`。它是回合内的临时/前瞻比分，不是
   必须与已结算总分相等的副本。[OBS-21：LIVE-001]
+- clean-break 后的独立 live 样本再次出现页面 `4:6`、正式 `all_score=2:6`、
+  `quick_score=4:6`；当前实现仍确认图 1 进行中并同时保留正式分与 quick 分。[OBS-23：
+  `csgo_mc_2395996`]
 - 该差异会持续整个回合，不只是毫秒级切换；半场切换的短暂相等窗口并不能证明严格相等规则
   正确。[OBS-21：LIVE-001]
 - LIVE-006 的无 play award 槽虽无任何时间、阶段或回合号，却返回双方 `fh/sh` 各 12 个零、

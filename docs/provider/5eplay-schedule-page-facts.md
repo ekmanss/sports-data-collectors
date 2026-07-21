@@ -96,6 +96,12 @@
 来源：[公开列表接口](https://app.5eplay.com/api/tournament/session_list?game_status=1&game_type=1&grades=&page=1&limit=20)、
 [真实环境验证](../live-validation-2026-07-21.md)。
 
+同日 `10:24:22Z` 至 `10:39:25Z` 的 clean-break 复验中，页面从三场进行中变为四场：
+`csgo_mc_2395549` 到达计划时间后先切换为列表 `进行中`，但详情仍是图 1 未开。两次
+`schedule()` 都返回 20 条并与页面顺序、粗状态、系列分和可见地图分一致。该链直接说明
+`schedule.status=live` 可以早于任何正式地图证据，不能把它映射为 `map-live`。来源：
+[clean-break live verification](../live-validation-2026-07-21.md#clean-break-follow-up-verification)。
+
 ### 地图摘要 `state.bout_states[]`
 
 真实响应中出现 `bout_num`、`map_name`、`status`、`result`、双方正式/快速比分、回合数组、击杀、

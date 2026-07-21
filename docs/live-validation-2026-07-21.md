@@ -337,3 +337,42 @@ map-1 unopened-to-live transition, first-half live rounds, a half switch, realti
 and a non-chronological provider bout through a played/awarded/live three-map state. They do not
 prove correctness for BO1 closing, match cancellation, repeated awards, multiple unused slots, or
 all final-closure revisions. Those paths remain unverified rather than known-good.
+
+## Clean-break follow-up verification
+
+- Window: `2026-07-21T10:24:22Z` through `2026-07-21T10:39:25Z`
+- Commit under test: `b241f3e`
+- Runtime: Node.js `v24.15.0`
+- Method: visible Chrome DOM, Chrome-observed `/data` responses, and independent public
+  `schedule()` / `snapshot()` calls
+- Result: no new collector defect found in the exercised states
+
+The first schedule page initially showed three live matches and later showed four when
+`csgo_mc_2395549` crossed its planned start boundary. In both observations `schedule()` returned
+20 source rows in the same provider order. Its live/upcoming labels, series scores, visible map
+scores, and current-map summaries agreed with the page. As designed, the list remained discovery
+data: the between-map row had no current map, while the newly live unopened row identified map 1
+without inventing a map result.
+
+The following detail observations were cross-checked:
+
+| Match | Visible/raw evidence | Confirmed result | Detail outcome |
+| --- | --- | --- | --- |
+| `csgo_mc_2395923` | page `1:1`; Ancient `13:8`; Dust2 `13:16`; raw vector `[1,2,2,-1]` | `live / between-maps`, previous 2, next 3 | all five sections complete or validly empty; 820 official events |
+| `csgo_mc_2395996` | map 1 Inferno live; page advanced to `4:6` while formal score was `2:6` and quick score `4:6` | `live / map-live(1)` | complete snapshot; ten current-map player rows; quick score stayed provisional |
+| `csgo_mc_2396057` | map 1 Ancient live at round 6 and `2:3` | `live / map-live(1)` | complete snapshot; ten current-map player rows and 332 official events |
+| `csgo_mc_2395549` | raw vector changed from `[0,-1,-1,-1]` to `[1,-1,-1,-1]`; page changed from countdown to LIVE with unnamed, scoreless maps | `scheduled / prestart` through `10:30:42Z`, then `live / map-unopened(1)` at `10:30:48Z` | analysis and both history planes complete; community/events validly empty; no official player rows |
+
+Chrome also observed the page requesting the same public core, analysis, event-log, recent-match,
+and past-match endpoints documented by the provider facts. The raw unopened response contained
+`global_state.status="1"`, three `bout status="-1"` values, no BP entries, and no map names. This
+directly corroborates that the planned time and page LIVE label are insufficient to call map 1
+live; the public state machine correctly required bout evidence.
+
+Twelve additional paired snapshots from `10:36:29Z` through `10:39:25Z` consistently returned
+`between-maps(2,3)` and `map-unopened(1)` for the two transition candidates. None returned a
+transient wrong phase, an inconsistent-state block, or a regressed detail section.
+
+This follow-up did not reach the next transition for `csgo_mc_2395923` or `csgo_mc_2395549` during
+the window, and no live BO1 was present on the first schedule page. BO1 closing, the map-3 start,
+and stable terminal closure therefore remain unverified rather than implicitly accepted.

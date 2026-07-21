@@ -305,13 +305,33 @@ implementation accepts only zero/empty no-play placeholders, isolates present no
 as `NON_OFFICIAL_ACTIVITY`, orders played settlements before awards and awards before the current
 live map, and still rejects unused no-play slots or nonzero gameplay evidence during a live series.
 
+## LIVE-007 — empty redundant event map labels invalidate valid history
+
+- First observed: `2026-07-21T17:06:19Z`
+- Match: `csgo_mc_2396002`
+- Severity: medium
+- Status: fixed in the current tree; deterministic regression and real-network snapshot verified
+
+The production consumer received a confirmed v3 snapshot whose `events` section was unavailable
+with `EVENT_IDENTITY_OR_SCHEMA_MISMATCH`. A new public capture contained 381 event rows. Every row
+agreed on `match_id=csgo_mc_2396002` and `tt_id=csgo_tt_9154`, and every `bout_id` matched
+`{match_id}_{bout_num}`. Map 1 rows nevertheless mixed an empty `map_name` with `Ancient`; map 2
+mixed `Nuke` with the already supported engine alias `de_nuke`.
+
+The map label is redundant once match, tournament, bout number and bout ID all bind the event to one
+confirmed core map. Treating an empty label as a conflicting identity therefore discarded valid
+history. The fix accepts only the empty-label case and continues to reject any non-empty label that
+canonicalizes to a different map. A regression proves both sides of that boundary. A subsequent
+real `snapshot(csgo_mc_2396002)` returned `confirmed`, `detailsCompleteness=complete`, and
+`events=complete` with 386 rows and no gap.
+
 ## Result and remaining risk
 
 The original stopping threshold was reached with five independent reproducible defects, so the
-initial monitoring pass stopped as specified. A later post-implementation smoke exposed LIVE-006.
-At initial capture time no product code, fixture, API contract, or package version was changed. The
-current tree now covers all six defects through deterministic public-seam regressions and uses the
-clean-break `fiveeplay-match/v3` model.
+initial monitoring pass stopped as specified. Later production validation exposed LIVE-006 and
+LIVE-007. At initial capture time no product code, fixture, API contract, or package version was
+changed. The current tree now covers all seven defects through deterministic public-seam
+regressions and uses the clean-break `fiveeplay-match/v3` model.
 
 | ID | Failure mode | Consumer risk |
 | --- | --- | --- |
@@ -321,6 +341,7 @@ clean-break `fiveeplay-match/v3` model.
 | LIVE-004 | Provider bout number is assumed to be chronological | Real map play is rejected as an impossible vector |
 | LIVE-005 | Warmup events are marked complete | False kills and participation enter official history |
 | LIVE-006 | Mid-series no-play award is treated as terminal-only | A real live map 3 is blocked |
+| LIVE-007 | Empty redundant event map label is treated as an identity conflict | Valid event history becomes unavailable |
 
 Current implementation mapping:
 
@@ -331,6 +352,8 @@ Current implementation mapping:
 - LIVE-005: unopened and no-play map activity is excluded from the official event section.
 - LIVE-006: zero no-play placeholders are normalized, non-official player rows are isolated, and a
   mid-series award can precede the current live map.
+- LIVE-007: event rows with an empty `map_name` inherit the map confirmed by match, tournament and
+  bout identity; a non-empty conflicting map label remains rejected.
 
 The observations cover one real schedule page, all three live matches visible at the start, the
 map-1 unopened-to-live transition, first-half live rounds, a half switch, realtime initialization,

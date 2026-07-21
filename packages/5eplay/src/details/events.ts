@@ -96,10 +96,15 @@ function eventFromRow(
     confirmedMap === undefined ||
     tournamentId !== context.tournamentId ||
     providerBoutId !== `${context.matchId}_${providerBoutNumber}` ||
-    confirmedMap.name === null ||
-    canonicalMapName(providerMapName) !== canonicalMapName(confirmedMap.name)
+    confirmedMap.name === null
   ) {
     throw new TypeError('event tournament or map identity mismatch');
+  }
+  if (
+    providerMapName.trim() !== '' &&
+    canonicalMapName(providerMapName) !== canonicalMapName(confirmedMap.name)
+  ) {
+    throw new TypeError('event map label mismatch');
   }
   const eventIdentity = {
     mapName: confirmedMap.name,

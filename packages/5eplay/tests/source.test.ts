@@ -1968,6 +1968,37 @@ test('event identity canonicalizes provider map engine aliases', async (context)
   assert.ok(result.snapshot.details.events.data.every((event) => event.mapName === 'Anubis'));
 });
 
+test('event identity accepts an omitted provider map label when strong identities agree', async (context) => {
+  const originalFetch = globalThis.fetch;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  const [core, page] = await Promise.all(
+    ['states/bo3-between-map2-map3.json', 'events/page-1.json'].map(async (name) =>
+      JSON.parse(await readFile(new URL(`./fixtures/${name}`, import.meta.url), 'utf8')),
+    ),
+  );
+  page.data.list[0].map_name = '';
+  globalThis.fetch = async (input) => {
+    const url = new URL(String(input));
+    if (url.pathname.endsWith('/matches/csgo_mc_2395547/data')) return Response.json(core);
+    if (url.pathname.endsWith('/match/csgo_mc_2395547/event/log')) {
+      return Response.json(page);
+    }
+    return new Response(null, { status: 404 });
+  };
+
+  const result = await createFiveEPlayMatchSource({
+    limits: { eventPageSize: 500 },
+  }).snapshot('csgo_mc_2395547');
+
+  assert.equal(result.kind, 'confirmed');
+  if (result.kind !== 'confirmed') return;
+  assert.equal(result.snapshot.details.events.status, 'complete');
+  assert.ok(result.snapshot.details.events.data.length > 0);
+  assert.ok(result.snapshot.details.events.data.every((event) => event.mapName === 'Anubis'));
+});
+
 test('event history excludes warmup activity while the map is unopened', async (context) => {
   const originalFetch = globalThis.fetch;
   context.after(() => {

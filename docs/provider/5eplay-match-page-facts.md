@@ -101,14 +101,18 @@
 - 同一地图的提供方名称并不唯一。2026-07-21 的一场 Ancient 在核心和普通事件中使用
   `Ancient`，但 `type=10` 的 match-started 事件使用 `de_ancient`；二者实际指向同一地图。
   [OBS-21：LIVE-002]
+- 已结算地图的部分历史事件会保留正确的 `match_id`、`tt_id`、`bout_num` 与 `bout_id`，但把
+  冗余 `map_name` 留空；`csgo_mc_2396002` 的 381 条 head event 同时出现空字符串、`Ancient`、
+  `Nuke` 与 `de_nuke`。[OBS-22：LIVE-007]
 - 事件中的纯数字选手 ID 与核心中的 `csgo_pl_*` 可以指向同一选手命名空间；历史调查和
   当前最小 fixture 支持做显式规范化，而不是按显示名关联。[OBS-20；FIX：`events/*.json`]
 
 ### 当前实现决策
 
 - 当前实现严格校验分析的比赛/两队/赛事身份、历史比赛的战队成员关系，以及事件的比赛、
-  赛事、地图槽、`bout_id` 和地图名。[CODE：`details/analysis.ts`、`details/history.ts`、
-  `details/events.ts`]
+  赛事、地图槽与 `bout_id`。事件 `map_name` 非空时仍必须与核心地图一致；为空时只作为缺少
+  冗余标签处理，不覆盖由其余强身份字段确认的核心地图名。[CODE：`details/analysis.ts`、
+  `details/history.ts`、`details/events.ts`；OBS-22：LIVE-007]
 - 事件用 `providerBoutNumber`/`providerBoutId` 关联核心槽位，地图名先移除已观察的 `de_`
   engine 前缀并规范化大小写/分隔符，再与核心显示名比较；对外保留核心显示名。[CODE：
   `details/events.ts`；OBS-21：LIVE-002]

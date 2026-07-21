@@ -8,8 +8,8 @@ const REPOSITORY = 'ekmanss/sports-data-collectors';
 const WORKFLOW = 'publish.yml';
 const PACKAGE_NAME = '@ekmanss/5eplay';
 const PACKAGE_DIRECTORY = 'packages/5eplay';
-const REQUIRED_ENVIRONMENT = ['FIVEEPLAY_MATCH_URL'];
-const LIVE_TEST_SCRIPTS = ['test:live', 'test:live:list'];
+const REQUIRED_ENVIRONMENT = ['FIVEEPLAY_MATCH_ID'];
+const LIVE_TEST_SCRIPTS = ['test:live'];
 
 function run(command: string, args: string[], capture = false): string {
   const result = spawnSync(command, args, {
@@ -26,11 +26,21 @@ function run(command: string, args: string[], capture = false): string {
 }
 
 function registryVersions(): string[] {
-  const result = spawnSync('npm', ['view', PACKAGE_NAME, 'versions', '--json'], {
-    cwd: ROOT,
-    encoding: 'utf8',
-    stdio: 'pipe',
-  });
+  const result = spawnSync(
+    'npm',
+    [
+      'view',
+      PACKAGE_NAME,
+      'versions',
+      '--json',
+      '--registry=https://registry.npmjs.org',
+    ],
+    {
+      cwd: ROOT,
+      encoding: 'utf8',
+      stdio: 'pipe',
+    },
+  );
   if (result.status !== 0) {
     const detail = `${result.stdout ?? ''}${result.stderr ?? ''}`;
     if (detail.includes('E404')) {
@@ -61,7 +71,7 @@ const delay = async (milliseconds: number): Promise<void> => await new Promise(
 );
 
 async function workflowRunId(tag: string, headSha: string): Promise<number> {
-  for (let attempt = 0; attempt < 30; attempt += 1) {
+  for (let attempt = 0; attempt < 150; attempt += 1) {
     const output = run('gh', [
       'run', 'list', '--repo', REPOSITORY, '--workflow', WORKFLOW,
       '--branch', tag, '--event', 'push', '--limit', '5',
@@ -72,12 +82,18 @@ async function workflowRunId(tag: string, headSha: string): Promise<number> {
     if (typeof match?.databaseId === 'number') return match.databaseId;
     await delay(2_000);
   }
-  throw new Error(`GitHub Actions run for ${tag} did not appear within 60 seconds`);
+  throw new Error(`GitHub Actions run for ${tag} did not appear within 5 minutes`);
 }
 
 async function waitForRegistry(version: string): Promise<void> {
-  for (let attempt = 0; attempt < 30; attempt += 1) {
-    const result = spawnSync('npm', ['view', `${PACKAGE_NAME}@${version}`, 'version', '--json'], {
+  for (let attempt = 0; attempt < 150; attempt += 1) {
+    const result = spawnSync('npm', [
+      'view',
+      `${PACKAGE_NAME}@${version}`,
+      'version',
+      '--json',
+      '--registry=https://registry.npmjs.org',
+    ], {
       cwd: ROOT,
       encoding: 'utf8',
       stdio: 'pipe',
@@ -86,7 +102,7 @@ async function waitForRegistry(version: string): Promise<void> {
     if (result.status === 0 && JSON.parse(String(result.stdout).trim()) === version) return;
     await delay(2_000);
   }
-  throw new Error(`${PACKAGE_NAME}@${version} was not visible on npm within 60 seconds`);
+  throw new Error(`${PACKAGE_NAME}@${version} was not visible on npm within 5 minutes`);
 }
 
 function usage(): string {
@@ -94,7 +110,7 @@ function usage(): string {
     'Usage:',
     '  pnpm release',
     '',
-    'The command verifies locally, commits the version, pushes main and the release tag,',
+    'The command verifies locally, commits the version, atomically pushes main and the release tag,',
     'then waits for GitHub Actions to publish with npm Trusted Publishing (OIDC).',
     'It never runs npm login or npm publish locally.',
   ].join('\n');
@@ -159,8 +175,7 @@ async function main(): Promise<void> {
   run('git', ['commit', '-m', `release(${PACKAGE_NAME}): ${version}`]);
   run('git', ['tag', tag]);
   const releaseSha = run('git', ['rev-parse', 'HEAD'], true);
-  run('git', ['push', 'origin', 'main']);
-  run('git', ['push', 'origin', tag]);
+  run('git', ['push', '--atomic', 'origin', 'main', tag]);
 
   const runId = await workflowRunId(tag, releaseSha);
   run('gh', ['run', 'watch', String(runId), '--repo', REPOSITORY, '--exit-status']);

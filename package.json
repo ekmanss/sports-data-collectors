@@ -8,9 +8,7 @@
     "check": "tsc --noEmit -p tsconfig.json && pnpm --filter @ekmanss/5eplay check",
     "test": "tsx --test scripts/release.test.ts && pnpm --filter @ekmanss/5eplay test",
     "test:live": "pnpm --filter @ekmanss/5eplay test:live",
-    "test:live:list": "pnpm --filter @ekmanss/5eplay test:live:list",
-    "test:live:schedule": "pnpm --filter @ekmanss/5eplay test:live:schedule",
-    "5eplay:md": "tsx packages/5eplay/src/cli.ts",
+    "record:5eplay": "pnpm --filter @ekmanss/5eplay record",
     "build": "pnpm --filter @ekmanss/5eplay build",
     "verify": "pnpm check && pnpm test && pnpm build",
     "release": "tsx scripts/release.ts"

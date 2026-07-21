@@ -9,7 +9,7 @@ Publishing and GitHub Actions OIDC. Do not run `npm login` or `npm publish` loca
 Run the release command from a clean, up-to-date `main` branch:
 
 ```bash
-FIVEEPLAY_MATCH_URL='https://event.5eplay.com/csgo/matches/<match-id>' \
+FIVEEPLAY_MATCH_ID='csgo_mc_<id>' \
 pnpm release
 ```
 
@@ -20,7 +20,10 @@ The command:
 3. Runs deterministic verification and the package's real-network smoke tests.
 4. Computes the next UTC `YYYYMMDD.REVISION.0` version and verifies the package tarball.
 5. Creates the release commit and immutable `@ekmanss/5eplay@<version>` tag.
-6. Pushes `main` and the tag, waits for the GitHub Actions publish job, and verifies npm visibility.
+6. Atomically pushes `main` and the tag, waits for the GitHub Actions publish job, and verifies npm
+   visibility. The workflow verifies that the tag commit belongs to published `main` history before
+   publishing. An unpublished tag must also be strictly newer than npm's current `latest`; historical
+   or out-of-order tags fail instead of moving the default install version backwards.
 
 The local command never authenticates to npm and never publishes directly. The workflow has only
 `contents: read` and `id-token: write`; npm exchanges the job's OIDC identity for a short-lived,
@@ -65,4 +68,5 @@ allowed:
   token. Fix the cause and create a new version if registry publication already occurred.
 - A failed registry check does not authorize a local publish. Confirm package visibility and the
   Trusted Publisher's repository/workflow fields first. The workflow publishes only after an
-  explicit npm `E404`; other registry errors stop the job.
+  explicit npm `E404`; other registry errors stop the job. It also refuses to publish any candidate
+  that is not newer than the registry's current `latest`.

@@ -1,0 +1,66 @@
+{
+  "success": true,
+  "errcode": 0,
+  "message": "",
+  "data": {
+    "from_ver": "1784543714790",
+    "list": [
+      {
+        "match_id": "csgo_mc_2395547",
+        "tt_id": "csgo_tt_9246",
+        "bout_id": "csgo_mc_2395547_1",
+        "bout_num": "1",
+        "map_name": "Anubis",
+        "log_info": "{\"type\":\"8\",\"round_start\":{},\"round_end\":{},\"player_join\":{},\"player_quit\":{},\"match_started\":{},\"suicide\":{},\"kill\":{\"killer_name\":\"reyoz\",\"killer_nick\":\"reyoz\",\"killer_side\":\"T\",\"victim_nick\":\"shg\",\"victim_name\":\"shg-\",\"victim_side\":\"CT\",\"weapon\":\"galilar\",\"event_id\":\"3912944268\",\"victim_x\":\"-838\",\"victim_y\":\"795\",\"killer_x\":\"-943\",\"killer_y\":\"370\",\"killer_id\":\"23477\",\"victim_id\":\"21363\",\"weapon_logo\":\"https://fixtures.invalid/assets/f28488b0f7dfdd48\"},\"bomb_planted\":{},\"bomb_defused\":{},\"assist\":{\"assister_name\":\"Qikert\",\"assister_nick\":\"Qikert\",\"assister_side\":\"T\",\"victim_nick\":\"shg\",\"victim_name\":\"shg-\",\"victim_side\":\"CT\",\"kill_event_id\":\"3912944268\"}}",
+        "update_version": "1784543736818"
+      },
+      {
+        "match_id": "csgo_mc_2395547",
+        "tt_id": "csgo_tt_9246",
+        "bout_id": "csgo_mc_2395547_1",
+        "bout_num": "1",
+        "map_name": "Anubis",
+        "log_info": "{\"type\":\"8\",\"round_start\":{},\"round_end\":{},\"player_join\":{},\"player_quit\":{},\"match_started\":{},\"suicide\":{},\"kill\":{\"killer_name\":\"shg-\",\"killer_nick\":\"shg\",\"killer_side\":\"CT\",\"victim_nick\":\"cronuss\",\"victim_name\":\"cronuss\",\"victim_side\":\"T\",\"weapon\":\"mp7\",\"event_id\":\"3912944222\",\"victim_x\":\"-882\",\"victim_y\":\"606\",\"killer_x\":\"-642\",\"killer_y\":\"564\",\"killer_id\":\"21363\",\"victim_id\":\"23770\",\"weapon_logo\":\"https://fixtures.invalid/assets/230c2d3eebcd7fda\"},\"bomb_planted\":{},\"bomb_defused\":{},\"assist\":{\"assister_name\":\"Ryujin\",\"assister_nick\":\"Ryujin\",\"assister_side\":\"CT\",\"victim_nick\":\"cronuss\",\"victim_name\":\"cronuss\",\"victim_side\":\"T\",\"kill_event_id\":\"3912944222\"}}",
+        "update_version": "1784543730754"
+      },
+      {
+        "match_id": "csgo_mc_2395547",
+        "tt_id": "csgo_tt_9246",
+        "bout_id": "csgo_mc_2395547_1",
+        "bout_num": "1",
+        "map_name": "Anubis",
+        "log_info": "{\"type\":\"8\",\"round_start\":{},\"round_end\":{},\"player_join\":{},\"player_quit\":{},\"match_started\":{},\"suicide\":{},\"kill\":{\"killer_name\":\"shg-\",\"killer_nick\":\"shg\",\"killer_side\":\"CT\",\"victim_nick\":\"oz1k\",\"victim_name\":\"oz1k\",\"victim_side\":\"T\",\"weapon\":\"mp7\",\"event_id\":\"3912944218\",\"victim_x\":\"-1568\",\"victim_y\":\"678\",\"killer_x\":\"-637\",\"killer_y\":\"545\",\"killer_id\":\"21363\",\"victim_id\":\"23771\",\"weapon_logo\":\"https://fixtures.invalid/assets/230c2d3eebcd7fda\"},\"bomb_planted\":{},\"bomb_defused\":{},\"assist\":{}}",
+        "update_version": "1784543729859"
+      },
+      {
+        "match_id": "csgo_mc_2395547",
+        "tt_id": "csgo_tt_9246",
+        "bout_id": "csgo_mc_2395547_1",
+        "bout_num": "1",
+        "map_name": "Anubis",
+        "log_info": "{\"type\":\"8\",\"round_start\":{},\"round_end\":{},\"player_join\":{},\"player_quit\":{},\"match_started\":{},\"suicide\":{},\"kill\":{\"killer_name\":\"shg-\",\"killer_nick\":\"shg\",\"killer_side\":\"CT\",\"victim_nick\":\"Qikert\",\"victim_name\":\"Qikert\",\"victim_side\":\"T\",\"weapon\":\"mp7\",\"event_id\":\"3912944206\",\"victim_x\":\"-1885\",\"victim_y\":\"297\",\"killer_x\":\"-612\",\"killer_y\":\"593\",\"killer_id\":\"21363\",\"victim_id\":\"13239\",\"weapon_logo\":\"https://fixtures.invalid/assets/230c2d3eebcd7fda\"},\"bomb_planted\":{},\"bomb_defused\":{},\"assist\":{}}",
+        "update_version": "1784543727728"
+      },
+      {
+        "match_id": "csgo_mc_2395547",
+        "tt_id": "csgo_tt_9246",
+        "bout_id": "csgo_mc_2395547_1",
+        "bout_num": "1",
+        "map_name": "Anubis",
+        "log_info": "{\"type\":\"8\",\"round_start\":{},\"round_end\":{},\"player_join\":{},\"player_quit\":{},\"match_started\":{},\"suicide\":{},\"kill\":{\"killer_name\":\"cronuss\",\"killer_nick\":\"cronuss\",\"killer_side\":\"T\",\"victim_nick\":\"Ryujin\",\"victim_name\":\"Ryujin\",\"victim_side\":\"CT\",\"weapon\":\"ak47\",\"head_shot\":true,\"event_id\":\"3912944162\",\"victim_x\":\"1196\",\"victim_y\":\"292\",\"killer_x\":\"-586\",\"killer_y\":\"83\",\"killer_id\":\"23770\",\"victim_id\":\"19703\",\"weapon_logo\":\"https://fixtures.invalid/assets/606ff5de8c415d18\"},\"bomb_planted\":{},\"bomb_defused\":{},\"assist\":{}}",
+        "update_version": "1784543717675"
+      },
+      {
+        "match_id": "csgo_mc_2395547",
+        "tt_id": "csgo_tt_9246",
+        "bout_id": "csgo_mc_2395547_1",
+        "bout_num": "1",
+        "map_name": "Anubis",
+        "log_info": "{\"type\":\"8\",\"round_start\":{},\"round_end\":{},\"player_join\":{},\"player_quit\":{},\"match_started\":{},\"suicide\":{},\"kill\":{\"killer_name\":\"reyoz\",\"killer_nick\":\"reyoz\",\"killer_side\":\"T\",\"victim_nick\":\"synyx\",\"victim_name\":\"synyx\",\"victim_side\":\"CT\",\"weapon\":\"galilar\",\"event_id\":\"3912944152\",\"victim_x\":\"807\",\"victim_y\":\"126\",\"killer_x\":\"199\",\"killer_y\":\"317\",\"killer_id\":\"23477\",\"victim_id\":\"20402\",\"weapon_logo\":\"https://fixtures.invalid/assets/f28488b0f7dfdd48\"},\"bomb_planted\":{},\"bomb_defused\":{},\"assist\":{}}",
+        "update_version": "1784543714790"
+      }
+    ],
+    "not_more": "1",
+    "to_ver": "1784543736818"
+  }
+}

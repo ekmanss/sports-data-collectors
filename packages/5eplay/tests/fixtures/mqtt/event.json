@@ -1,0 +1,22 @@
+{
+  "sequence": 40,
+  "capturedAt": "2026-07-20T10:33:44.321Z",
+  "source": "mqtt",
+  "topic": "csgo/product/event/log/csgo_mc_2395547",
+  "payload": {
+    "event_name": "csgo-event-log",
+    "data": {
+      "from_ver": "1784543616415359704",
+      "to_ver": "1784543624451548508",
+      "info": {
+        "match_id": "csgo_mc_2395547",
+        "tt_id": "csgo_tt_9246",
+        "bout_id": "csgo_mc_2395547_1",
+        "bout_num": "1",
+        "map_name": "Anubis",
+        "log_info": "{\"type\":\"8\",\"round_start\":{},\"round_end\":{},\"player_join\":{},\"player_quit\":{},\"match_started\":{},\"suicide\":{},\"kill\":{\"killer_name\":\"cronuss\",\"killer_nick\":\"cronuss\",\"killer_side\":\"T\",\"victim_nick\":\"synyx\",\"victim_name\":\"synyx\",\"victim_side\":\"CT\",\"weapon\":\"glock\",\"head_shot\":true,\"event_id\":\"3912943411\",\"victim_x\":\"511\",\"victim_y\":\"1967\",\"killer_x\":\"855\",\"killer_y\":\"1980\",\"killer_id\":\"23770\",\"victim_id\":\"20402\",\"weapon_logo\":\"https://fixtures.invalid/assets/f5fdafb286a3433f\"},\"bomb_planted\":{},\"bomb_defused\":{},\"assist\":{}}",
+        "update_version": "1784543623654"
+      }
+    }
+  }
+}

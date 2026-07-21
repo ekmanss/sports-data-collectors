@@ -1,7 +1,7 @@
 {
   "name": "@ekmanss/5eplay",
   "version": "20260718.1.0",
-  "description": "Typed 5EPlay CS2 schedules, live-match discovery, match-detail snapshots, and MQTT updates without a browser.",
+  "description": "Reliable 5EPlay CS2 match-state observations, detailed snapshots, and realtime updates.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -11,13 +11,11 @@
       "import": "./dist/index.js"
     }
   },
-  "bin": {
-    "5eplay-match-md": "dist/cli.js"
-  },
+  "sideEffects": false,
   "files": [
     "dist",
-    "docs",
     "README.md",
+    "PROTOCOL.md",
     "LICENSE"
   ],
   "engines": {
@@ -26,11 +24,9 @@
   "scripts": {
     "check": "tsc --noEmit",
     "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.build.json",
-    "match:md": "tsx src/cli.ts",
-    "test": "tsx --test tests/match.test.ts",
-    "test:live": "tsx tests/live.ts",
-    "test:live:list": "tsx tests/live_list.ts",
-    "test:live:schedule": "tsx tests/schedule.ts",
+    "test": "tsx --test tests/source.test.ts",
+    "test:live": "tsx tests/live-smoke.ts",
+    "record": "tsx tools/record.ts",
     "verify": "pnpm check && pnpm test && pnpm build",
     "prepack": "pnpm verify"
   },

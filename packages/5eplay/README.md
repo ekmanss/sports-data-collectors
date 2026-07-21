@@ -1,215 +1,179 @@
 # @ekmanss/5eplay
 
-Typed 5EPlay CS2 schedules, match details, and live updates for Node.js 22+. The collector uses
-5EPlay's JSON endpoints and MQTT-over-WebSocket feed directly; it does not launch a browser,
-execute page JavaScript, scrape rendered DOM, or require a logged-in account.
+Reliable, immutable 5EPlay CS2 match observations for Node.js 22+. The package is ESM-only and
+talks directly to 5EPlay JSON and MQTT-over-WebSocket services; it does not launch a browser or
+require an account.
 
-## Install
-
-```bash
-pnpm add @ekmanss/5eplay
-```
-
-## Complete match snapshot
+The public API is intentionally small:
 
 ```ts
-import { getFiveEPlayMatch } from '@ekmanss/5eplay';
+import { createFiveEPlayMatchSource } from '@ekmanss/5eplay';
 
-const result = await getFiveEPlayMatch(
-  'https://event.5eplay.com/csgo/matches/csgo_mc_2395709',
-);
+const source = createFiveEPlayMatchSource();
+const result = await source.snapshot('csgo_mc_2395547');
 
-console.log(result.data.match);
-console.log(result.data.maps);
-console.log(result.data.current);
-```
-
-The default snapshot includes every public match-data section used by the page:
-
-- match, tournament, teams, ranks, odds, best-of, stage, and series score;
-- complete map veto and every picked/decider map, including temporarily omitted upcoming maps;
-- per-map scores, halves, round-result codes, live timer/bomb state, and player equipment;
-- completed-map Data Overview metrics and the 5-by-5 Player Comparison kill matrix;
-- complete historical logs and the current map's available log history;
-- pre-match team/player/map analysis, recent matches, and head-to-head history;
-- public player and big-event community rating cards.
-
-Chat messages, login state, cookies, and account-specific actions are deliberately excluded.
-
-`getFiveEPlayMatch()` accepts either the canonical URL or a `csgo_mc_<id>` identifier. It returns
-`{ data, diagnostics }`. Independent HTTP sections are fetched concurrently; a normal capture does
-not open the realtime credential endpoint.
-
-## Current schedule
-
-Use a one-page limit when you only need the first 20 currently listed CS2 matches, including both
-live and upcoming series:
-
-```ts
-import { getFiveEPlaySchedule } from '@ekmanss/5eplay';
-
-const { data, diagnostics } = await getFiveEPlaySchedule({ pageLimit: 1 });
-
-for (const match of data.matches) {
-  console.log(match.status, match.id, match.scheduledAtUnixSeconds, match.teams);
+if (result.kind === 'confirmed') {
+  console.log(result.snapshot.state.stateCase, result.snapshot.state.lifecycle);
+  console.log(result.snapshot.teams, result.snapshot.maps);
+  console.log(result.snapshot.details);
 }
-
-console.log({
-  matches: data.matches.length,
-  pages: diagnostics.requests.length,
-  complete: data.complete,
-  nextPage: data.nextPage,
-});
 ```
 
-Omit `pageLimit` to follow every page and return the complete current schedule. The collector uses
-the same public JSON pagination as the website, preserves provider ordering, removes duplicate match
-IDs across page boundaries, and stops when the source returns a short page. `data.complete` tells
-whether the source was exhausted; a limited response exposes the next page number in
-`data.nextPage`. The overall timeout defaults to 15 seconds. Schedule rows use `live`, `upcoming`,
-or `unknown` status; unknown provider states are retained rather than silently dropped.
+`snapshot()` returns one of `confirmed`, `blocked`, `not-found`, `unsupported`, or `superseded`.
+A confirmed result certifies the core match state within an HTTP revision barrier. Optional detail
+sections report their own `complete`, `empty`, `partial`, `unavailable`, or `not-applicable` status;
+their failure never turns a valid core state into a guess.
 
-## Currently live matches
+Every snapshot contains fixed sections for:
 
-Use the list API for frequent checks that only need to know whether a CS2 match has started:
+- match identity, BO format, teams, ranks, tournament, stage, location, prize, and advisory plan time;
+- lifecycle, exact phase, provider state vector, series score, veto, three map slots, round/side data,
+  half/stage and map artwork metadata, economy/equipment, and live or final player statistics;
+- bounded cursor-paginated event history, pre-match analysis, both distinct paginated team-history
+  products, and community ratings; events retain map number/name and tournament identity, while
+  analysis retains full pick/ban/left actions and player-stat sampling context;
+- per-section observation time, attempts, completeness or explicit gap, and one opaque confirmed
+  core revision.
+
+For `complete` and `empty` sections, `data` is present and `gap` is `null`. A `partial` section keeps
+the data obtained so far and names its gap. An `unavailable` section has `data: null`; consumers
+never have to mistake an empty collection for a failed request. Page, row, event, and deadline
+limits prevent unbounded collection.
+
+5EPlay odds, streams, chat, post-match editorial content, discovery/list APIs, schedules, rendered
+Markdown, browser data, and account state are deliberately excluded.
+
+## Match states
+
+BO3 observations distinguish:
+
+- scheduled / prestart;
+- live / map 1 unopened;
+- map 1, 2, or 3 live;
+- between maps 1–2 or 2–3;
+- series ended / closing after the final played map;
+- stable closed after two consistent terminal HTTP observations and the calibration interval.
+
+Map slots independently expose `settled`, `played`, and `closedWithoutPlay`, so an administrative
+1:0 map does not masquerade as a played map. A contradictory provider vector returns `blocked`
+instead of being classified heuristically.
+
+`state.stateCase` is the exhaustive public discriminator: `prestart`, `map1-unopened`,
+`map1-live`, `between-map1-map2`, `map2-live`, `between-map2-map3`, `map3-live`,
+`series-ended-map2-normal`, `series-ended-map3-normal`, or
+`series-ended-map2-administrative`. TypeScript correlates each case with its exact provider vector,
+phase, lifecycle, closure, and finality. Terminal cases first appear as `closing / provisional` and
+are promoted to `closed / stable` only by the HTTP stability rule.
+
+The schema stays fixed across phases; fields that the provider has not produced yet are `null` or
+empty, never copied forward as if current:
+
+| Phase | Core data that becomes meaningful |
+| --- | --- |
+| prestart / map 1 unopened | identities, schedule, tournament, ranks, veto and selected maps |
+| map live | current round/half, sides, score, economy, equipment and live player state |
+| between maps | settled map result and statistics plus the next unopened slot |
+| series ended / closing | deciding map, series winner, final map scores and closure kind |
+| closed | the same terminal result after strict HTTP-version stability and calibration |
+
+Every phase still attempts all five detail sections. Their individual status says whether analysis,
+events, both history products, and community data were complete at that observation.
+
+Series and per-map player statistics expose each team's `overall`, `ct`, and `t` planes separately.
+Every plane is `present`, `empty`, or `unavailable`; the package never fills a missing side split
+from overall data or treats malformed data as a valid empty result. Comparison highlights, detailed
+player metrics and duel rows, series MVP, and MVP chart references are retained when evidenced.
+Duel rows have their own completeness status, so a provider list/map conflict or an unavailable
+opponent roster cannot masquerade as a trustworthy empty array.
+
+The public schema structurally reserves BO1, but this release returns
+`unsupported / format-unverified` for BO1 because the retained evidence does not contain two
+complete independent BO1 traces. Other formats return `format-not-supported`.
+
+## Realtime watch
 
 ```ts
-import { getFiveEPlayLiveMatches } from '@ekmanss/5eplay';
+await using watch = source.watch('csgo_mc_2395547');
 
-const result = await getFiveEPlayLiveMatches();
-
-if (result.data.hasLiveMatches) {
-  for (const match of result.data.matches) {
-    console.log(match.id, match.url, match.teams, match.currentMap);
+for await (const update of watch) {
+  if (update.kind === 'confirmed-state') {
+    console.log(update.observation.revision, update.observation.state);
+  } else if (update.kind === 'blocked') {
+    console.log(update.reason, update.lastConfirmed?.revision ?? null);
   }
 }
 ```
 
-This method normally makes one small public list request and never fetches match details, analysis,
-logs, community ratings, Markdown, or realtime credentials. The source list also contains upcoming
-matches, so the collector strictly keeps series with live state (including the interval between two
-maps, when `currentMap` is `null`). If the first 20 source rows are all live, it continues paging
-until every live match is collected.
+`watch()` returns synchronously. `current()` is initially `null`; the first event is always
+`blocked / initializing`. The watcher waits for the state topic's SUBACK before obtaining the HTTP
+baseline and buffers state-topic messages during that baseline. The event topic starts concurrently,
+but is not part of the confirmation barrier. Its messages are
+best-effort provisional telemetry, including before the baseline; event-history completeness is
+reported by the independently bounded `snapshot()` section. MQTT never confirms state: HTTP remains the
+authority. Periodic HTTP checks continue while MQTT is connected, allowing silent provider
+rollbacks to be observed.
 
-For serialized five-second polling without overlapping requests:
+The state-topic disconnects into `blocked / realtime-unavailable`; reconnect uses fresh credentials,
+waits for SUBACK, then performs HTTP resynchronization. Event-topic failure does not invalidate core
+state. Successful HTTP recovery always emits `confirmed-state`, even when the confirmed revision is
+unchanged, so callers can leave their blocked state deterministically. Telemetry is coalesced for
+slow consumers while phase and blocked transitions remain ordered.
+Breaking the iterator or calling `Symbol.asyncDispose` closes both connections. A stable closed
+observation is final and completes the iterator automatically.
 
-```ts
-import { setTimeout as delay } from 'node:timers/promises';
-import { getFiveEPlayLiveMatches } from '@ekmanss/5eplay';
+## Consistent reads
 
-while (true) {
-  const { data } = await getFiveEPlayLiveMatches({ timeoutMs: 5_000 });
-  console.log(data.hasLiveMatches, data.matches.map((match) => match.url));
-  await delay(5_000);
-}
-```
-
-## Generate a formatted Markdown report
-
-From this repository, pass a match URL/ID and either an exact `.md` filename or a directory:
-
-```bash
-pnpm 5eplay:md -- \
-  'https://event.5eplay.com/csgo/matches/csgo_mc_2395709' \
-  './outputs/5eplay-report.md'
-```
-
-```bash
-pnpm 5eplay:md -- 'csgo_mc_2395709' './outputs'
-```
-
-The directory form writes `./outputs/csgo_mc_2395709.md`. Parent directories are created
-automatically, and the completed report atomically replaces the destination file. The report
-contains match/map details, analysis, complete event logs, and sanitized request diagnostics.
-Community ratings are intentionally omitted and are not requested by the Markdown writer.
-
-The human-readable report is deliberately more compact than the typed snapshot:
-
-- the overview keeps only match status/identity/version/format, capture time, and source URL;
-- completed and live maps show scores, clear half/round results, player tables, duels, highlights,
-  milestones, and readable logs; upcoming maps use one short placeholder;
-- head-to-head and recent matches show only time, canonical match link, teams/opponent, score, and result;
-- player power is reduced to Rating plus firepower, entry, opening, utility, sniping, clutch, and
-  trading scores;
-- transport versions, coordinates, raw round codes, provider JSON, odds, logos, and community
-  ratings stay out of the Markdown report.
-
-These presentation choices do not remove fields from `getFiveEPlayMatch()` or realtime snapshots.
-
-Installed packages expose the same command as `5eplay-match-md` and a programmatic API:
+Pass `expectedRevision` when a caller needs compare-and-read semantics:
 
 ```ts
-import { writeFiveEPlayMatchMarkdown } from '@ekmanss/5eplay';
-
-const written = await writeFiveEPlayMatchMarkdown(
-  'csgo_mc_2395709',
-  '/absolute/path/to/report.md',
-);
-
-console.log(written.outputPath, written.bytes);
-```
-
-Use `renderFiveEPlayMatchMarkdown(result)` instead when the match has already been fetched and the
-caller wants the Markdown string without writing it.
-
-## Realtime session
-
-```ts
-import { createFiveEPlayMatchSession } from '@ekmanss/5eplay';
-
-await using session = await createFiveEPlayMatchSession('csgo_mc_2395709');
-
-for await (const update of session) {
-  if (update.type === 'state') {
-    console.log(update.snapshot.current?.teams);
-  } else if (update.type === 'log') {
-    console.log(update.event.kind, update.event.kill);
-  }
-}
-```
-
-The first yielded item is the complete HTTP snapshot. Later `state` updates contain the latest
-scoreboard snapshot and `log` updates contain one typed event. `session.snapshot()` returns the
-latest merged state at any time. The session uses one authorized MQTT connection for match state
-and one for event logs, sends keepalives, suppresses already-seen log `updateVersion` replays, and
-reconnects with a bounded backoff after an unexpected disconnect. Distinct log versions remain
-lossless even when their payloads match. Provider restart/replay frames that regress a started map
-are withheld until an HTTP resync confirms the rollback or MQTT catches up.
-
-Always close a session, either with `await using`, `await session.close()`, or a `finally` block.
-
-## Options
-
-```ts
-const result = await getFiveEPlayMatch(match, {
-  timeoutMs: 15_000,
-  signal: abortController.signal,
-  includeAnalysis: true,
-  includeLogs: true,
-  includeCommunityRatings: true,
-  onProgress: (event) => console.error(event.stage, event.message),
+const result = await source.snapshot('csgo_mc_2395547', {
+  expectedRevision: priorRevision,
+  deadlineMs: 120_000,
+  eventLimits: { maxPages: 200, maxEvents: 100_000 },
+  signal,
 });
 ```
 
-The three `include*` flags default to `true`. Disable optional sections when only a compact live
-scoreboard is required.
+The revision is an equality token, not a sortable provider version. It changes when trading-relevant
+state changes, including phase, lifecycle, series score, current round, per-half/map score,
+map settlement/result, teams, closure, or finality. High-frequency player, economy, equipment, and
+bomb telemetry reflects the final HTTP read but is deliberately not part of this semantic token. A mismatch before or after detail
+collection returns `superseded`. Without an expected revision, one unstable barrier is retried once.
 
-## Errors
+## Diagnostics and evidence
 
-Failures throw `FiveEPlayError` with stable `code`, `operation`, `stage`, and `retryable` fields.
-Realtime credentials are kept inside the MQTT connection and never appear in data, diagnostics,
-progress events, or errors.
+`onDiagnostic` receives structured, redacted diagnostics; there is no default console or file
+output. `evidenceSink` receives best-effort event evidence records. Sink failure is reported as a
+diagnostic and never blocks data collection. Realtime credentials stay in memory and are never
+included in results, errors, diagnostics, fixtures, or evidence records.
 
-## Documentation
+See [PROTOCOL.md](PROTOCOL.md) for the current protocol invariants. The deterministic test evidence
+and provenance manifest live under `tests/fixtures/` in the repository.
 
-- [Data contracts](docs/data-contracts.md)
-- [Manual recipes](docs/recipes.md)
+## Development
 
-## Disclaimer
+```bash
+pnpm install
+pnpm verify
+```
 
-This is an unofficial project and is not affiliated with or endorsed by 5EPlay. Consumers are
-responsible for complying with applicable terms and using reasonable request rates.
+TypeScript consumers need TypeScript 5.2+ with disposable-library types available when using
+`await using`; callers may always dispose explicitly through `watch[Symbol.asyncDispose]()`.
 
-## License
+An explicit live smoke test is never run by deterministic CI:
 
-[MIT](LICENSE) © 2026 ekmanss
+```bash
+FIVEEPLAY_MATCH_ID=csgo_mc_2395547 pnpm test:live
+```
+
+The development-only recorder requires an explicit match ID and an absolute output directory
+outside the repository:
+
+```bash
+pnpm record -- --match-id csgo_mc_2395547 --out-dir /absolute/evidence/path
+```
+
+This project is unofficial and is not affiliated with or endorsed by 5EPlay. Consumers are
+responsible for applicable terms and reasonable request rates.
+
+MIT © 2026 ekmanss

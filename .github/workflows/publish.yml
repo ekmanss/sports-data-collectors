@@ -9,11 +9,17 @@ permissions:
   contents: read
   id-token: write
 
+concurrency:
+  group: publish-ekmanss-5eplay
+  cancel-in-progress: false
+
 jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v6
         with:
           node-version: '24'
@@ -23,6 +29,11 @@ jobs:
       - run: npm install --global npm@11.18.0
       - run: pnpm install --frozen-lockfile
       - run: pnpm verify
+      - name: Verify tag belongs to published main history
+        shell: bash
+        run: |
+          git fetch --no-tags origin main
+          git merge-base --is-ancestor HEAD origin/main
       - name: Select and verify package
         id: package
         shell: bash
@@ -41,7 +52,7 @@ jobs:
           PACKAGE_NAME: ${{ steps.package.outputs.name }}
           PACKAGE_VERSION: ${{ steps.package.outputs.version }}
         run: |
-          if npm view "${PACKAGE_NAME}@${PACKAGE_VERSION}" version >/dev/null 2>registry-error.log; then
+          if npm view "${PACKAGE_NAME}@${PACKAGE_VERSION}" version --registry=https://registry.npmjs.org >/dev/null 2>registry-error.log; then
             echo "published=true" >> "${GITHUB_OUTPUT}"
           elif grep -q 'E404' registry-error.log; then
             echo "published=false" >> "${GITHUB_OUTPUT}"
@@ -49,7 +60,16 @@ jobs:
             cat registry-error.log >&2
             exit 1
           fi
+      - name: Prevent npm latest rollback
+        if: steps.registry.outputs.published != 'true'
+        shell: bash
+        env:
+          PACKAGE_NAME: ${{ steps.package.outputs.name }}
+          PACKAGE_VERSION: ${{ steps.package.outputs.version }}
+        run: |
+          latest="$(npm view "${PACKAGE_NAME}" dist-tags.latest --registry=https://registry.npmjs.org)"
+          pnpm exec tsx scripts/publish-version-policy.ts "${PACKAGE_VERSION}" "${latest}"
       - name: Publish package
         if: steps.registry.outputs.published != 'true'
         working-directory: ${{ steps.package.outputs.directory }}
-        run: npm publish --access public
+        run: npm publish --access public --tag latest --registry=https://registry.npmjs.org

@@ -1,0 +1,511 @@
+{
+  "schemaVersion": "1.0.0",
+  "description": "Deterministic, redacted 5EPlay protocol fixtures curated from provider captures whose raw files are intentionally not retained.",
+  "policy": {
+    "scope": "Provider JSON payloads and minimal transport metadata only.",
+    "excluded": [
+      "HTTP request headers and cookies",
+      "Authentication material and session identifiers",
+      "DOM snapshots, screenshots, JavaScript bundles, and browser profiles",
+      "Realtime topic entropy and unrelated betting streams"
+    ],
+    "integrity": "originalSha256 is the external source-capture attestation and can be checked when that capture is supplied; curatedSha256 hashes the exact self-contained fixture bytes.",
+    "classification": "kind=real means provider values are projections of an attested source capture. kind=synthetic means at least one envelope, partition, or state value was constructed and is described in derivation."
+  },
+  "entries": [
+    {
+      "file": "statistics/normal-terminal.json",
+      "scenario": "normal_terminal_player_statistics",
+      "kind": "real",
+      "sourceCaptureLabel": "observations/csgo_mc_2395547/http-2026-07-20T13-21-18-428Z-86da4b27a658.json",
+      "capturedAt": "2026-07-20T13:21:18.428Z",
+      "originalSha256": "86da4b27a658ceaaa074b7c5e6595afd656ba79610c3e19125d96bde60eeb1f0",
+      "curatedSha256": "3283be7158a161d690b54ebd0c2af686eb8b2f6fce8b61569a1b9e143807dd9f",
+      "redactionNotes": [
+        "Preserved independent overall, CT, and T player-stat planes, player comparisons, and MVP chart inputs from a normal three-map terminal response.",
+        "Retained only modeled public player-stat fields and normalized public asset URLs to deterministic fixtures.invalid placeholders.",
+        "Excluded odds and unrelated provider presentation fields."
+      ]
+    },
+    {
+      "file": "statistics/technical-terminal.json",
+      "scenario": "technical_terminal_player_statistics",
+      "kind": "real",
+      "sourceCaptureLabel": "observations/csgo_mc_2395920/http-2026-07-20T12-17-20-023Z-48c95ac060c1.json",
+      "capturedAt": "2026-07-20T12:17:20.023Z",
+      "originalSha256": "48c95ac060c14273ab90d278fa9c42ff0547b1d30232854630de0185f42b187d",
+      "curatedSha256": "b0273c996a5ffe80dc538f031cf9dcbe909c5bc9914422d55be11dc6acfd82a6",
+      "redactionNotes": [
+        "Preserved the observed empty overall plane, non-empty CT and T planes, comparisons, and per-map player-stat planes from a technical terminal response.",
+        "Retained only modeled public player-stat fields and normalized public asset URLs to deterministic fixtures.invalid placeholders.",
+        "Excluded odds and unrelated provider presentation fields."
+      ]
+    },
+    {
+      "file": "analysis/full.json",
+      "scenario": "complete_prematch_analysis_response",
+      "kind": "real",
+      "sourceCaptureLabel": "network/02-matches_csgo_mc_2395918_analysis_v1.json",
+      "capturedAt": "2026-07-19T17:03:22.000Z",
+      "originalSha256": "4f12a03bb55057a74191efcaab67df21e65f515b2b44c938c060ffda61d40010",
+      "curatedSha256": "1b9ec5efec441b1b946b4cfd2cf8b055147a296559287802fe2a33beb1063e2c",
+      "redactionNotes": [
+        "Preserved the complete provider response and all non-sensitive public data fields.",
+        "Removed credential-shaped keys if present and normalized public asset URLs to deterministic fixtures.invalid placeholders.",
+        "Capture time is the UTC conversion of the attested source-capture label timestamp because the response body has no embedded capture clock."
+      ]
+    },
+    {
+      "file": "community/tabs-empty.json",
+      "scenario": "community_tabs_empty",
+      "kind": "real",
+      "sourceCaptureLabel": "network/09-api_score_match_score_tab.json",
+      "capturedAt": "2026-07-19T17:03:22.000Z",
+      "originalSha256": "a5210042ed58b4ceb8f6618c171261a6988cc84da4ab09df17637f6d564db6fd",
+      "curatedSha256": "61d34e28cfa7040825c43153fcc04608140ccb4580842b07d612ff3b1c0ad331",
+      "redactionNotes": [
+        "Preserved the complete provider response and all non-sensitive public data fields.",
+        "Removed credential-shaped keys if present and normalized public asset URLs to deterministic fixtures.invalid placeholders.",
+        "Capture time is the UTC conversion of the attested source-capture label timestamp because the response body has no embedded capture clock."
+      ]
+    },
+    {
+      "file": "events/page-1.json",
+      "scenario": "paginated_event_history_page_1",
+      "kind": "synthetic",
+      "sourceCaptureLabel": "observations/csgo_mc_2395547/mqtt.jsonl",
+      "capturedAt": "2026-07-20T10:35:36.761Z",
+      "originalSha256": "7e1285a5c0f4085065c56d9500476fd2818b40013f08e8852acaf42fd94dd181",
+      "curatedSha256": "c424547ae12fb85bd65f2724ec115ece9bfc74f400eb286b6ce9d4147019c001",
+      "redactionNotes": [
+        "Event records are real MQTT observations; embedded public asset URLs were normalized.",
+        "Only the HTTP page envelope and six-item page partition are synthetic because non-empty paginated HTTP bodies were not retained."
+      ],
+      "derivation": "Six newest records from the first twelve retained real event observations, ordered newest-to-oldest.",
+      "pagination": {
+        "requestCursor": "0",
+        "limit": 6,
+        "nextCursor": "1784543714790",
+        "shortPage": false
+      }
+    },
+    {
+      "file": "events/page-2.json",
+      "scenario": "paginated_event_history_page_2",
+      "kind": "synthetic",
+      "sourceCaptureLabel": "observations/csgo_mc_2395547/mqtt.jsonl",
+      "capturedAt": "2026-07-20T10:35:14.685Z",
+      "originalSha256": "7e1285a5c0f4085065c56d9500476fd2818b40013f08e8852acaf42fd94dd181",
+      "curatedSha256": "0af82c64be7f572bab84021d070c835a77eaf174265d58539cf1bfb2f8656986",
+      "redactionNotes": [
+        "Event records are real MQTT observations; embedded public asset URLs were normalized.",
+        "Only the HTTP page envelope and six-item page partition are synthetic because non-empty paginated HTTP bodies were not retained."
+      ],
+      "derivation": "Next five older records from the same retained observations, ordered newest-to-oldest with no repeated cursor row; intentionally short to terminate pagination.",
+      "pagination": {
+        "requestCursor": "1784543714790",
+        "limit": 6,
+        "nextCursor": "1784543624446",
+        "shortPage": true
+      }
+    },
+    {
+      "file": "mqtt/detail-bp.json",
+      "scenario": "mqtt_detail_bp_resync_signal",
+      "kind": "real",
+      "sourceCaptureLabel": "observations/csgo_mc_2395547/mqtt.jsonl",
+      "capturedAt": "2026-07-20T10:28:42.394Z",
+      "originalSha256": "7e1285a5c0f4085065c56d9500476fd2818b40013f08e8852acaf42fd94dd181",
+      "curatedSha256": "9afbd8373b6c2701cb67d49e2e4827039eaf762d7b7206b41661f28b40c43660",
+      "redactionNotes": [
+        "Retained the MQTT transport envelope, version cursors, event identity, and match/player fields consumed by merge and decode logic.",
+        "Removed realtime topic entropy and normalized every retained public asset URL."
+      ],
+      "derivation": "Projection of JSONL row with sequence=30."
+    },
+    {
+      "file": "mqtt/detail-gap.json",
+      "scenario": "mqtt_ordinary_cursor_gap_after_zero_version_branch",
+      "kind": "real",
+      "sourceCaptureLabel": "observations/csgo_mc_2395920/mqtt.jsonl",
+      "capturedAt": "2026-07-20T12:16:34.339Z",
+      "originalSha256": "0d49be353da8a351e6d80da98876f61be78924ece6c2464f4551297c5f9d72a5",
+      "curatedSha256": "c8d13f179d7c3150d1fb0f258aa737a349381ad567bedd487523dc70dd038200",
+      "redactionNotes": [
+        "Grouped three real MQTT observations to make the independent zero-version branch and subsequent ordinary-chain gap deterministic.",
+        "Projected player objects to domain-consumed fields and normalized every retained public asset URL."
+      ],
+      "derivation": "Projection of JSONL sequences 346, 376, and 377; no state or cursor value was synthesized."
+    },
+    {
+      "file": "mqtt/detail-normal.json",
+      "scenario": "mqtt_detail_ordinary_increment",
+      "kind": "real",
+      "sourceCaptureLabel": "observations/csgo_mc_2395547/mqtt.jsonl",
+      "capturedAt": "2026-07-20T10:34:34.255Z",
+      "originalSha256": "7e1285a5c0f4085065c56d9500476fd2818b40013f08e8852acaf42fd94dd181",
+      "curatedSha256": "48339a6cef2a6f61ab952219d514c02715b92c7930360e3f64408453a2d37e32",
+      "redactionNotes": [
+        "Retained the MQTT transport envelope, version cursors, event identity, and match/player fields consumed by merge and decode logic.",
+        "Removed realtime topic entropy and normalized every retained public asset URL."
+      ],
+      "derivation": "Projection of JSONL row with sequence=48."
+    },
+    {
+      "file": "mqtt/detail-zero.json",
+      "scenario": "mqtt_detail_zero_from_version_baseline_branch",
+      "kind": "real",
+      "sourceCaptureLabel": "observations/csgo_mc_2395547/mqtt.jsonl",
+      "capturedAt": "2026-07-20T10:34:10.899Z",
+      "originalSha256": "7e1285a5c0f4085065c56d9500476fd2818b40013f08e8852acaf42fd94dd181",
+      "curatedSha256": "3afbf4c35337be8cd40b901045a70fe5c284a893936502d4a13c3550a9ef8d93",
+      "redactionNotes": [
+        "Retained the MQTT transport envelope, version cursors, event identity, and match/player fields consumed by merge and decode logic.",
+        "Removed realtime topic entropy and normalized every retained public asset URL."
+      ],
+      "derivation": "Projection of JSONL row with sequence=46."
+    },
+    {
+      "file": "mqtt/event.json",
+      "scenario": "mqtt_realtime_event_log",
+      "kind": "real",
+      "sourceCaptureLabel": "observations/csgo_mc_2395547/mqtt.jsonl",
+      "capturedAt": "2026-07-20T10:33:44.321Z",
+      "originalSha256": "7e1285a5c0f4085065c56d9500476fd2818b40013f08e8852acaf42fd94dd181",
+      "curatedSha256": "65ad06e2355b8480c5c0465f96c80f024f54dd6a2afbf43938e26c20bc824e3c",
+      "redactionNotes": [
+        "Retained the MQTT transport envelope, version cursors, event identity, and state/event payload needed by merge logic.",
+        "Excluded realtime topic entropy and high-volume per-player live arrays; normalized embedded public asset URLs."
+      ],
+      "derivation": "Projection of JSONL row with sequence=40."
+    },
+    {
+      "file": "states/bo3-between-map1-map2.json",
+      "scenario": "bo3_between_map1_and_map2",
+      "kind": "real",
+      "sourceCaptureLabel": "observations/csgo_mc_2395547/http-2026-07-20T11-25-35-792Z-0f35a0719ff8.json",
+      "capturedAt": "2026-07-20T11:25:35.792Z",
+      "originalSha256": "0f35a0719ff875b98246a055c6d0612f5d1aceac2be6230cbc6df3fe85ea1cf2",
+      "curatedSha256": "f809327b671695d9a0b33e0bcb9e3e00bd260810300c18058d817a7d2fb6cdbc",
+      "redactionNotes": [
+        "Retained the provider envelope, match identity, series/map states, scores, timing, map veto, team/tournament identity, and domain-consumed player state.",
+        "Removed realtime topic entropy and projected high-volume player objects to stable identity, score, health, economy, and equipment fields.",
+        "Normalized every retained public asset URL to a deterministic fixtures.invalid placeholder."
+      ],
+      "expectedStateVector": {
+        "globalStatus": "1",
+        "boutStatuses": [
+          "2",
+          "-1",
+          "-1"
+        ]
+      }
+    },
+    {
+      "file": "states/bo3-between-map2-map3.json",
+      "scenario": "bo3_between_map2_and_map3",
+      "kind": "real",
+      "sourceCaptureLabel": "observations/csgo_mc_2395547/http-2026-07-20T12-20-27-171Z-5b93a4fd2586.json",
+      "capturedAt": "2026-07-20T12:20:27.171Z",
+      "originalSha256": "5b93a4fd25869a5802a39915c7e1a21fad2712d55f8424b99b75eee4e0045c6c",
+      "curatedSha256": "afff0ea8e9f5260fa79e67bd284ee390b403d37e809ee62440b396264815f538",
+      "redactionNotes": [
+        "Retained the provider envelope, match identity, series/map states, scores, timing, map veto, team/tournament identity, and domain-consumed player state.",
+        "Removed realtime topic entropy and projected high-volume player objects to stable identity, score, health, economy, and equipment fields.",
+        "Normalized every retained public asset URL to a deterministic fixtures.invalid placeholder."
+      ],
+      "expectedStateVector": {
+        "globalStatus": "1",
+        "boutStatuses": [
+          "2",
+          "2",
+          "-1"
+        ]
+      }
+    },
+    {
+      "file": "states/bo3-complete-three-maps.json",
+      "scenario": "bo3_complete_after_three_maps",
+      "kind": "real",
+      "sourceCaptureLabel": "observations/csgo_mc_2395547/http-2026-07-20T13-21-18-428Z-86da4b27a658.json",
+      "capturedAt": "2026-07-20T13:21:18.428Z",
+      "originalSha256": "86da4b27a658ceaaa074b7c5e6595afd656ba79610c3e19125d96bde60eeb1f0",
+      "curatedSha256": "392b6f74e6c339d6b52c3d3290930773b1d2670387034e1fadd45e0a6bafd998",
+      "redactionNotes": [
+        "Retained the provider envelope, match identity, series/map states, scores, timing, map veto, team/tournament identity, and domain-consumed player state.",
+        "Removed realtime topic entropy and projected high-volume player objects to stable identity, score, health, economy, and equipment fields.",
+        "Normalized every retained public asset URL to a deterministic fixtures.invalid placeholder."
+      ],
+      "expectedStateVector": {
+        "globalStatus": "2",
+        "boutStatuses": [
+          "2",
+          "2",
+          "2"
+        ]
+      }
+    },
+    {
+      "file": "states/bo3-complete-two-maps.json",
+      "scenario": "bo3_complete_after_two_maps",
+      "kind": "real",
+      "sourceCaptureLabel": "observations/csgo_mc_2396047/http-2026-07-19T20-07-21-995Z-e702858ac747.json",
+      "capturedAt": "2026-07-19T20:07:21.995Z",
+      "originalSha256": "e702858ac74701402ee6c666f06586a72c07fee38565b47b4e0bda6774a767f7",
+      "curatedSha256": "c5211d8b5bd9e48dd76b9f23fd44d312602ade62245e68c0efc4e18c2ac3953b",
+      "redactionNotes": [
+        "Retained the provider envelope, match identity, series/map states, scores, timing, map veto, team/tournament identity, and domain-consumed player state.",
+        "Removed realtime topic entropy and projected high-volume player objects to stable identity, score, health, economy, and equipment fields.",
+        "Normalized every retained public asset URL to a deterministic fixtures.invalid placeholder."
+      ],
+      "expectedStateVector": {
+        "globalStatus": "2",
+        "boutStatuses": [
+          "2",
+          "2",
+          "-1"
+        ]
+      }
+    },
+    {
+      "file": "states/bo3-detail-map1-unopened.json",
+      "scenario": "bo3_detail_map1_unopened_with_analysis_identity",
+      "kind": "real",
+      "sourceCaptureLabel": "network/03-matches_csgo_mc_2395918_data.json",
+      "capturedAt": "2026-07-19T17:03:22.000Z",
+      "originalSha256": "2b9380cd67654977d444a6a0aa6543a41634fd79fb2bc1dec1fd25f2ab2b4b4b",
+      "curatedSha256": "334309f96ef1757c1d854fb67c3d2ecfe8109f261d406a1c4f1e2c6ea1ca8d38",
+      "redactionNotes": [
+        "Preserved the complete provider core response so normalized projections can be extended without reconstructing evidence.",
+        "Removed realtime topic entropy and credential-shaped keys if present; normalized public asset URLs to deterministic fixtures.invalid placeholders.",
+        "Capture time is the UTC conversion of the attested source-capture label timestamp because the response body has no embedded capture clock."
+      ],
+      "expectedStateVector": {
+        "globalStatus": "1",
+        "boutStatuses": [
+          "-1",
+          "-1",
+          "-1"
+        ]
+      },
+      "integrationIdentity": {
+        "matchId": "csgo_mc_2395918",
+        "teamIds": [
+          "hltv_team_13892",
+          "hltv_team_13528"
+        ],
+        "analysisFixture": "analysis/full.json"
+      }
+    },
+    {
+      "file": "states/bo3-live-map1-unopened.json",
+      "scenario": "bo3_live_map1_unopened",
+      "kind": "real",
+      "sourceCaptureLabel": "observations/csgo_mc_2395547/http-2026-07-20T10-31-49-546Z-16e4c16f8358.json",
+      "capturedAt": "2026-07-20T10:31:49.546Z",
+      "originalSha256": "16e4c16f835808db71b859118b6387b3b440e56c936628910e88479361676929",
+      "curatedSha256": "2380287c281201569e8b2ee7770c0327338faeab5825dacdeed34333febd5f24",
+      "redactionNotes": [
+        "Retained the provider envelope, match identity, series/map states, scores, timing, map veto, team/tournament identity, and domain-consumed player state.",
+        "Removed realtime topic entropy and projected high-volume player objects to stable identity, score, health, economy, and equipment fields.",
+        "Normalized every retained public asset URL to a deterministic fixtures.invalid placeholder."
+      ],
+      "expectedStateVector": {
+        "globalStatus": "1",
+        "boutStatuses": [
+          "-1",
+          "-1",
+          "-1"
+        ]
+      }
+    },
+    {
+      "file": "states/bo3-map1-live.json",
+      "scenario": "bo3_map1_live",
+      "kind": "real",
+      "sourceCaptureLabel": "observations/csgo_mc_2395547/http-2026-07-20T10-46-25-075Z-5fc973e201e9.json",
+      "capturedAt": "2026-07-20T10:46:25.075Z",
+      "originalSha256": "5fc973e201e99323486fdcfa71a3f08f8f433381786e834697be80c9c1f16775",
+      "curatedSha256": "017b861fb815b01a15d9399757b2714fe658386470446e77c80a50d0f123ed89",
+      "redactionNotes": [
+        "Retained the provider envelope, match identity, series/map states, scores, timing, map veto, team/tournament identity, and domain-consumed player state.",
+        "Removed realtime topic entropy and projected high-volume player objects to stable identity, score, health, economy, and equipment fields.",
+        "Normalized every retained public asset URL to a deterministic fixtures.invalid placeholder."
+      ],
+      "expectedStateVector": {
+        "globalStatus": "1",
+        "boutStatuses": [
+          "1",
+          "-1",
+          "-1"
+        ]
+      }
+    },
+    {
+      "file": "states/bo3-map2-live.json",
+      "scenario": "bo3_map2_live",
+      "kind": "real",
+      "sourceCaptureLabel": "observations/csgo_mc_2395547/http-2026-07-20T11-28-45-929Z-73391d601fab.json",
+      "capturedAt": "2026-07-20T11:28:45.929Z",
+      "originalSha256": "73391d601fab8c7ceadd8500a166bf19cd15278d64b75aeda335facc178b3b50",
+      "curatedSha256": "cb9b5ce1f2b5e1229798fc840d5431631a0af1f95964cbb2e38455a8e553a392",
+      "redactionNotes": [
+        "Retained the provider envelope, match identity, series/map states, scores, timing, map veto, team/tournament identity, and domain-consumed player state.",
+        "Removed realtime topic entropy and projected high-volume player objects to stable identity, score, health, economy, and equipment fields.",
+        "Normalized every retained public asset URL to a deterministic fixtures.invalid placeholder."
+      ],
+      "expectedStateVector": {
+        "globalStatus": "1",
+        "boutStatuses": [
+          "2",
+          "1",
+          "-1"
+        ]
+      }
+    },
+    {
+      "file": "states/bo3-map3-live.json",
+      "scenario": "bo3_map3_live",
+      "kind": "real",
+      "sourceCaptureLabel": "observations/csgo_mc_2395547/http-2026-07-20T12-58-32-884Z-1e7c6d351969.json",
+      "capturedAt": "2026-07-20T12:58:32.884Z",
+      "originalSha256": "1e7c6d35196914d53e7453a6a287f1fb25961ff986fbacb6266b03f6bc7354d2",
+      "curatedSha256": "13a282e2068370b75b66810dbf5676c19ace0df249c9137649725d418cfb2f00",
+      "redactionNotes": [
+        "Retained the provider envelope, match identity, series/map states, scores, timing, map veto, team/tournament identity, and domain-consumed player state.",
+        "Removed realtime topic entropy and projected high-volume player objects to stable identity, score, health, economy, and equipment fields.",
+        "Normalized every retained public asset URL to a deterministic fixtures.invalid placeholder."
+      ],
+      "expectedStateVector": {
+        "globalStatus": "1",
+        "boutStatuses": [
+          "2",
+          "2",
+          "1"
+        ]
+      }
+    },
+    {
+      "file": "states/bo3-prestart.json",
+      "scenario": "bo3_prestart",
+      "kind": "real",
+      "sourceCaptureLabel": "observations/csgo_mc_2395547/http-2026-07-20T10-29-44-679Z-e98e7077f24f.json",
+      "capturedAt": "2026-07-20T10:29:44.679Z",
+      "originalSha256": "e98e7077f24f2d061d1da14cd6e9841ac03cca9782a2f0d38f8c388d66d3e1cc",
+      "curatedSha256": "23eaf4675a511a038dea75d34e550101859983e07caf3dfc796ef9ff603f7c5d",
+      "redactionNotes": [
+        "Retained the provider envelope, match identity, series/map states, scores, timing, map veto, team/tournament identity, and domain-consumed player state.",
+        "Removed realtime topic entropy and projected high-volume player objects to stable identity, score, health, economy, and equipment fields.",
+        "Normalized every retained public asset URL to a deterministic fixtures.invalid placeholder."
+      ],
+      "expectedStateVector": {
+        "globalStatus": "0",
+        "boutStatuses": [
+          "-1",
+          "-1",
+          "-1"
+        ]
+      }
+    },
+    {
+      "file": "states/inconsistent-global-complete-map-live.json",
+      "scenario": "inconsistent_global_complete_while_map2_live",
+      "kind": "real",
+      "sourceCaptureLabel": "observations/csgo_mc_2396047/http-2026-07-19T20-05-16-815Z-84ab1aa0874e.json",
+      "capturedAt": "2026-07-19T20:05:16.815Z",
+      "originalSha256": "84ab1aa0874e38036beb914aa9ec892313a552137268ee7d442c0801ea95b4c2",
+      "curatedSha256": "fd7f11739f7343082dd8a37be7713bc267e746379f19fa49361a569641055382",
+      "redactionNotes": [
+        "Retained the provider envelope, match identity, series/map states, scores, timing, map veto, team/tournament identity, and domain-consumed player state.",
+        "Removed realtime topic entropy and projected high-volume player objects to stable identity, score, health, economy, and equipment fields.",
+        "Normalized every retained public asset URL to a deterministic fixtures.invalid placeholder."
+      ],
+      "expectedStateVector": {
+        "globalStatus": "2",
+        "boutStatuses": [
+          "2",
+          "1",
+          "-1"
+        ]
+      }
+    },
+    {
+      "file": "states/technical-settlement.json",
+      "scenario": "technical_settlement_with_partial_and_scoreless_maps",
+      "kind": "real",
+      "sourceCaptureLabel": "observations/csgo_mc_2395920/http-2026-07-20T12-17-20-023Z-48c95ac060c1.json",
+      "capturedAt": "2026-07-20T12:17:20.023Z",
+      "originalSha256": "48c95ac060c14273ab90d278fa9c42ff0547b1d30232854630de0185f42b187d",
+      "curatedSha256": "eadc4bd146e4e88f9c4032729c55748bcf8ff1a5ce00f1680621fc3af4633fcb",
+      "redactionNotes": [
+        "Retained the provider envelope, match identity, series/map states, scores, timing, map veto, team/tournament identity, and domain-consumed player state.",
+        "Removed realtime topic entropy and projected high-volume player objects to stable identity, score, health, economy, and equipment fields.",
+        "Normalized every retained public asset URL to a deterministic fixtures.invalid placeholder."
+      ],
+      "expectedStateVector": {
+        "globalStatus": "2",
+        "boutStatuses": [
+          "2",
+          "2",
+          "2"
+        ]
+      }
+    },
+    {
+      "file": "team-history/analysis-recent-team2.json",
+      "scenario": "team_history_analysis_recent_matches_team_2",
+      "sourceCaptureLabel": "network/07-team_matches_v1_hltv_team_13528.json",
+      "kind": "real",
+      "capturedAt": "2026-07-19T17:03:22.000Z",
+      "originalSha256": "452467047f879fe0d6dada5db9a819dd6781d8c92419e753fd8c8200d76ffb4a",
+      "curatedSha256": "ece050019fbd1d3907b32b99f118bae9895063e3b2c3bb80108c2460b3d9b0cc",
+      "redactionNotes": [
+        "Preserved the complete provider response and all non-sensitive public data fields.",
+        "Removed credential-shaped keys if present and normalized public asset URLs to deterministic fixtures.invalid placeholders.",
+        "Capture time is the UTC conversion of the attested source-capture label timestamp because the response body has no embedded capture clock."
+      ]
+    },
+    {
+      "file": "team-history/analysis-recent.json",
+      "scenario": "team_history_analysis_recent_matches_team_1",
+      "kind": "real",
+      "sourceCaptureLabel": "network/06-team_matches_v1_hltv_team_13892.json",
+      "capturedAt": "2026-07-19T17:03:22.000Z",
+      "originalSha256": "833f8113093590d7fc61299d7d81ce55c8b7738364952a0f25c969c5f41af34c",
+      "curatedSha256": "0e18be238ba7c66ad9a697c6b78b3f18b109f475d286568ab4cfec7251bdc25a",
+      "redactionNotes": [
+        "Preserved the complete provider response and all non-sensitive public data fields.",
+        "Removed credential-shaped keys if present and normalized public asset URLs to deterministic fixtures.invalid placeholders.",
+        "Capture time is the UTC conversion of the attested source-capture label timestamp because the response body has no embedded capture clock."
+      ]
+    },
+    {
+      "file": "team-history/header-recent-team2.json",
+      "scenario": "team_history_header_recent_matches_team_2",
+      "sourceCaptureLabel": "network/05-teams_hltv_team_13528_matches.json",
+      "kind": "real",
+      "capturedAt": "2026-07-19T17:03:22.000Z",
+      "originalSha256": "261b1a3aaca73db7df180bd8dfeca6960601bfa04e31999ef0f30fb543e6f2ed",
+      "curatedSha256": "f4f071453fbb55fae0ba76eafc64adf3e53e622b8688e59b37a2bfe315575f62",
+      "redactionNotes": [
+        "Preserved the complete provider response and all non-sensitive public data fields.",
+        "Removed credential-shaped keys if present and normalized public asset URLs to deterministic fixtures.invalid placeholders.",
+        "Capture time is the UTC conversion of the attested source-capture label timestamp because the response body has no embedded capture clock."
+      ]
+    },
+    {
+      "file": "team-history/header-recent.json",
+      "scenario": "team_history_header_recent_matches_team_1",
+      "kind": "real",
+      "sourceCaptureLabel": "network/04-teams_hltv_team_13892_matches.json",
+      "capturedAt": "2026-07-19T17:03:22.000Z",
+      "originalSha256": "e42a6e95e1e0e8a84b3fe2522c2ff284970601f140562024ea84f00be34fd8a8",
+      "curatedSha256": "cad90369b5ba607866ecaf1de46e39d6e998bbcf9e5cff0d5656a10df8bebdb3",
+      "redactionNotes": [
+        "Preserved the complete provider response and all non-sensitive public data fields.",
+        "Removed credential-shaped keys if present and normalized public asset URLs to deterministic fixtures.invalid placeholders.",
+        "Capture time is the UTC conversion of the attested source-capture label timestamp because the response body has no embedded capture clock."
+      ]
+    }
+  ]
+}

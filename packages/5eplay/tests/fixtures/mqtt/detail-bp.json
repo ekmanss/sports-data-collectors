@@ -1,0 +1,120 @@
+{
+  "sequence": 30,
+  "capturedAt": "2026-07-20T10:28:42.394Z",
+  "source": "mqtt",
+  "topic": "csgo/product/detail/csgo_mc_2395547",
+  "payload": {
+    "event_name": "csgo-detail-bp",
+    "data": {
+      "from_ver": "0",
+      "this_ver": "1784543322",
+      "match": {
+        "mc_info": {
+          "id": "csgo_mc_2395547",
+          "format": "3",
+          "game_type": "csgo",
+          "plan_ts": "1784543400",
+          "grade": "4",
+          "group_id": 5060,
+          "tt_stage": "淘汰赛",
+          "tt_stage_desc": "淘汰赛 八强",
+          "field_conf": {
+            "bp_info": "1"
+          },
+          "t1_info": {
+            "id": "csgo_tm_10459",
+            "disp_name": "ARCRED",
+            "country": "",
+            "rank": "0",
+            "logo": "https://fixtures.invalid/assets/80fa2e6f60175914",
+            "bonus": ""
+          },
+          "t2_info": {
+            "id": "csgo_tm_10621",
+            "disp_name": "1win",
+            "country": "",
+            "rank": "0",
+            "logo": "https://fixtures.invalid/assets/5fdb5041db68f772",
+            "bonus": ""
+          }
+        },
+        "tt_info": {
+          "id": "csgo_tt_9246",
+          "disp_name": "欧洲职业联赛 系列赛8",
+          "status": "live",
+          "grade": "4",
+          "grade_label": "B级赛事",
+          "addr": "Europe-Europe (Online)",
+          "start_time": "2026-07-06 18:00:00",
+          "end_time": "",
+          "bonus": "$20,000",
+          "logo": "https://fixtures.invalid/assets/ed862b672a92b240",
+          "color": "7983a2"
+        },
+        "global_state": {
+          "status": "0",
+          "live_status": "0",
+          "t1_score": "0",
+          "t2_score": "0",
+          "t1_odds": "",
+          "t2_odds": "",
+          "t1_odds_percent": "",
+          "t2_odds_percent": "",
+          "dark_horse": "",
+          "bp_map_item": [
+            {
+              "bp_type": "ban",
+              "map_icon": "https://fixtures.invalid/assets/4ea300f392a30cef",
+              "map_logo": "https://fixtures.invalid/assets/b1d7299af4665f55",
+              "map_name": "Ancient",
+              "team_side": "t1"
+            },
+            {
+              "bp_type": "ban",
+              "map_icon": "https://fixtures.invalid/assets/d64046b97496da6b",
+              "map_logo": "https://fixtures.invalid/assets/b86c3253c4eceb98",
+              "map_name": "Nuke",
+              "team_side": "t2"
+            },
+            {
+              "bp_type": "pick",
+              "map_icon": "https://fixtures.invalid/assets/f005800efe067ddb",
+              "map_logo": "https://fixtures.invalid/assets/132caf881f7246d4",
+              "map_name": "Anubis",
+              "team_side": "t1"
+            },
+            {
+              "bp_type": "pick",
+              "map_icon": "https://fixtures.invalid/assets/f395ce5c4102b101",
+              "map_logo": "https://fixtures.invalid/assets/059838cd37b2be4c",
+              "map_name": "Cache",
+              "team_side": "t2"
+            },
+            {
+              "bp_type": "ban",
+              "map_icon": "https://fixtures.invalid/assets/7b8cdfdf9f804074",
+              "map_logo": "https://fixtures.invalid/assets/69a2fe0b0d788f68",
+              "map_name": "Dust2",
+              "team_side": "t1"
+            },
+            {
+              "bp_type": "ban",
+              "map_icon": "https://fixtures.invalid/assets/45ffa08863cf4d9c",
+              "map_logo": "https://fixtures.invalid/assets/0a338ff3d230f037",
+              "map_name": "Inferno",
+              "team_side": "t2"
+            },
+            {
+              "bp_type": "left",
+              "map_icon": "https://fixtures.invalid/assets/4c5d170d8a262b5c",
+              "map_logo": "https://fixtures.invalid/assets/d848bfecb6081fd2",
+              "map_name": "Mirage",
+              "team_side": ""
+            }
+          ]
+        },
+        "bouts_state": []
+      }
+    }
+  }
+}

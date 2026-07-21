@@ -12,6 +12,8 @@ import {
   type MatchState,
   type MatchUpdate,
   type ProvisionalTelemetry,
+  type ScheduleMatch,
+  type SchedulePageResult,
 } from '../src/index.js';
 
 function assertNever(value: never): never {
@@ -119,6 +121,23 @@ export function consumeUpdate(update: MatchUpdate): ProvisionalTelemetry | null 
 export async function consumeWatch(source: FiveEPlayMatchSource): Promise<void> {
   await using watch = source.watch('csgo_mc_1');
   for await (const update of watch) consumeUpdate(update);
+}
+
+export function consumeSchedule(result: SchedulePageResult): readonly ScheduleMatch[] | null {
+  switch (result.kind) {
+    case 'available':
+      return result.schedule.matches;
+    case 'blocked':
+      return null;
+    default:
+      return assertNever(result);
+  }
+}
+
+export async function fetchSecondSchedulePage(
+  source: FiveEPlayMatchSource,
+): Promise<readonly ScheduleMatch[] | null> {
+  return consumeSchedule(await source.schedule({ page: 2 }));
 }
 
 export function constructPublicError(code: FiveEPlaySourceErrorCode): FiveEPlaySourceError {

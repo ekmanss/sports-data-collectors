@@ -6,6 +6,8 @@ import type {
   FiveEPlayMatchSourceOptions,
   MatchSnapshot,
   MatchSnapshotResult,
+  ScheduleOptions,
+  SchedulePageResult,
   SnapshotOptions,
   WatchOptions,
 } from '../domain/model.js';
@@ -20,12 +22,14 @@ import {
   UnsupportedFormatError,
 } from '../protocol/data.js';
 import { createMatchWatch } from '../sync/watch.js';
+import { loadSchedulePage } from '../schedule/load.js';
 import type { MatchTransport } from '../transport/port.js';
 import { productionTransport } from '../transport/production.js';
 
 const DEFAULT_CORE_DEADLINE_MS = 30_000;
 const DEFAULT_DETAIL_DEADLINE_MS = 60_000;
 const DEFAULT_EVENT_DEADLINE_MS = 120_000;
+const DEFAULT_SCHEDULE_DEADLINE_MS = 15_000;
 const MATCH_ID = /^csgo_mc_[1-9]\d*$/;
 
 function positiveFinite(name: string, value: number, maximum: number): number {
@@ -421,12 +425,34 @@ async function snapshot(
   }
 }
 
+async function schedule(
+  options: ScheduleOptions,
+  transport: MatchTransport,
+): Promise<SchedulePageResult> {
+  const page = options.page ?? 1;
+  if (!Number.isSafeInteger(page) || page <= 0) {
+    throw new FiveEPlaySourceError('INVALID_ARGUMENT', 'page must be a positive safe integer');
+  }
+  const deadline = deadlineSignal(options.deadlineMs ?? DEFAULT_SCHEDULE_DEADLINE_MS, options.signal);
+  try {
+    return await loadSchedulePage(transport, page, deadline.signal);
+  } catch (error) {
+    if (deadline.signal.aborted) {
+      throw new FiveEPlaySourceError('ABORTED', 'schedule was aborted', { cause: error });
+    }
+    throw error;
+  } finally {
+    deadline.dispose();
+  }
+}
+
 export function createFiveEPlayMatchSourceWithTransport(
   options: FiveEPlayMatchSourceOptions,
   transport: MatchTransport,
 ): FiveEPlayMatchSource {
   const configured = normalizedOptions(options);
   return Object.freeze({
+    schedule: (callOptions: ScheduleOptions = {}) => schedule(callOptions, transport),
     snapshot: (matchId: string, callOptions: SnapshotOptions = {}) =>
       snapshot(matchId, callOptions, configured, transport),
     watch: (matchId: string, watchOptions: WatchOptions = {}) => {

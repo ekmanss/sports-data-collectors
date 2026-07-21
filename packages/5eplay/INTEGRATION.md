@@ -31,8 +31,66 @@ const result = await source.snapshot('csgo_mc_2395923', {
 });
 ```
 
-Create one source per process or subsystem and reuse it. A source is immutable; each returned
-snapshot is deeply frozen.
+Create one source per process or subsystem and reuse it. A source is immutable; each confirmed
+snapshot and available schedule page is deeply frozen.
+
+## Discover live and upcoming matches
+
+Call `schedule()` without arguments for the first provider page. A call always fetches exactly one
+page and never follows pagination automatically.
+
+```ts
+import {
+  FiveEPlaySourceError,
+  type SchedulePageResult,
+} from '@ekmanss/5eplay';
+
+function acceptSchedule(result: SchedulePageResult) {
+  switch (result.kind) {
+    case 'available':
+      return result.schedule.matches;
+    case 'blocked':
+      // provider-unavailable is retryable; provider-schema-unsupported needs inspection.
+      return null;
+  }
+}
+
+try {
+  const firstPage = await source.schedule({
+    // page defaults to 1
+    deadlineMs: 15_000,
+    signal,
+  });
+  const matches = acceptSchedule(firstPage);
+
+  if (firstPage.kind === 'available' && firstPage.schedule.mayHaveNextPage) {
+    const secondPage = await source.schedule({ page: 2, deadlineMs: 15_000, signal });
+    // Decide explicitly whether and when your application wants another page.
+  }
+} catch (error) {
+  if (error instanceof FiveEPlaySourceError && error.code === 'ABORTED') {
+    // The caller or operation deadline cancelled the request.
+  } else {
+    throw error;
+  }
+}
+```
+
+An available page has schema `fiveeplay-schedule/v1`, fixed `pageSize: 20`, `sourceCount`,
+`providerStateVersion`, and matches in provider order. `sourceCount` is measured before completed
+rows are excluded. `mayHaveNextPage` means only that the source page was full; it does not assert
+that a following page exists. Invalid pages (zero, fractional, negative, or unsafe integers) throw
+`FiveEPlaySourceError / INVALID_ARGUMENT`.
+
+Each returned match includes `id`, canonical 5EPlay `url`, `scheduledAt`, `bestOf`, `status`, teams,
+ranks, series scores, available map summaries, `currentMapNumber`, tournament, and stage. Empty or
+not-yet-published provider fields are `null`; this includes team IDs while a future bracket slot is
+still TBD. Odds and video fields are not exposed.
+
+Treat schedule `live` and `upcoming` as discovery status only. For any decision that depends on the
+exact match phase or complete data, pass the row's `id` to `snapshot()` and handle its authoritative
+result. In particular, schedule does not return closed matches, and a BO1 schedule row does not
+override the current `snapshot()` result `unsupported / format-unverified` for BO1.
 
 ## Handle every snapshot result
 
@@ -318,6 +376,8 @@ A reasonable consumer policy is:
 
 | Condition | Recommended action |
 | --- | --- |
+| schedule `blocked / provider-unavailable` | Retry the same page with exponential backoff and jitter |
+| schedule `blocked / provider-schema-unsupported` | Stop consuming that page and surface the provider change |
 | `blocked / initializing` or `resyncing` | Wait for the watcher; do not start a second watcher |
 | `blocked / provider-unavailable` | Exponential backoff with jitter; retain last confirmed data as stale |
 | `blocked / stale-http` or `version-gap` | Freeze decisions until a confirmed resync |
@@ -344,10 +404,9 @@ history limits rather than removing safety caps.
 
 ## Deliberate exclusions
 
-The package does not return 5EPlay odds, streams, chat, post-match editorial content, discovery or
-schedule lists, rendered Markdown, browser state, or account state. A consuming application must
-source any separate product independently and must not treat it as part of this package's confirmed
-match observation.
+The package does not return 5EPlay odds, streams, chat, post-match editorial content, general
+discovery/list products beyond the single-page CS2 schedule, rendered Markdown, browser state, or
+account state. Schedule rows are deliberately separate from confirmed match observations.
 
 ## Production checklist
 
@@ -355,6 +414,8 @@ Before enabling automated decisions:
 
 - [ ] Run Node.js 22 or newer in ESM mode.
 - [ ] Validate and store the `csgo_mc_*` match ID separately from the page URL.
+- [ ] Treat schedule status as discovery data and call `snapshot()` for authoritative match state.
+- [ ] Fetch additional schedule pages explicitly; never read `mayHaveNextPage` as proof of data.
 - [ ] Exhaustively handle every snapshot result and watch update kind.
 - [ ] Derive application phase from `stateCase` plus `lifecycle`.
 - [ ] Require `closed / stable` for irreversible settlement unless policy says otherwise.

@@ -1,8 +1,9 @@
 # 5EPlay match source
 
 Workspace for the public [`@ekmanss/5eplay`](packages/5eplay) TypeScript package. It provides
-reliable 5EPlay CS2 match-state observations, fixed detail sections with explicit completeness, and
-provisional MQTT updates confirmed by periodic HTTP reconciliation.
+single-page live/upcoming schedule discovery, reliable 5EPlay CS2 match-state observations, fixed
+detail sections with explicit completeness, and provisional MQTT updates confirmed by periodic
+HTTP reconciliation.
 
 ```bash
 pnpm install

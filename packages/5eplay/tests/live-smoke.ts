@@ -9,7 +9,11 @@ assert.match(
   'FIVEEPLAY_MATCH_ID must be an explicit csgo_mc_<positive integer>',
 );
 
-const result = await createFiveEPlayMatchSource().snapshot(matchId as string, {
+const source = createFiveEPlayMatchSource();
+const schedule = await source.schedule({ deadlineMs: 30_000 });
+assert.equal(schedule.kind, 'available', JSON.stringify(schedule));
+
+const result = await source.snapshot(matchId as string, {
   deadlineMs: 120_000,
 });
 assert.equal(result.kind, 'confirmed', JSON.stringify(result));
@@ -21,6 +25,13 @@ if (result.kind === 'confirmed') {
       matchId: result.snapshot.match.id,
       phase: result.snapshot.state.phase,
       revision: result.snapshot.revision,
+      schedule: schedule.kind === 'available'
+        ? {
+            matches: schedule.schedule.matches.length,
+            page: schedule.schedule.page,
+            sourceCount: schedule.schedule.sourceCount,
+          }
+        : null,
     })}\n`,
   );
 }

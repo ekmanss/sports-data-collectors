@@ -10,6 +10,9 @@ state authority. MQTT is provisional telemetry and invalidation. A snapshot read
 details, then reads `/data` again; only an unchanged semantic confirmed revision crosses the
 barrier. Terminal closure additionally requires an unchanged provider state version.
 
+`GET https://app.5eplay.com/api/tournament/session_list?game_status=1&game_type=1&grades=&page={page}&limit=20`
+is a discovery source only. It cannot confirm the detailed phase of a match.
+
 Fixed detail sources are:
 
 - `/matches/{matchId}/analysis_v1`;
@@ -23,6 +26,25 @@ through the advertised `total_page`, subject to the configured page limit; page-
 identity mismatch, row-count mismatch, timeout, or truncation is surfaced as an explicit gap.
 Scores and results are always rebound to explicit team IDs; `home/opponent` and `t1/t2` coordinates
 are never assumed interchangeable.
+
+## Schedule discovery
+
+One `schedule()` call reads exactly one positive safe-integer page with the fixed limit 20 and
+preserves provider order. It never follows another page. `sourceCount` is the raw number of source
+rows; a full source page sets `mayHaveNextPage: true`, which is not evidence that the next page has
+rows.
+
+Global match state `0` or `-1` maps to `upcoming`, `1` maps to `live`, and `2` is validated and then
+excluded. A live map may promote a lagging upcoming global state to `live`. Map state `-1` or `0`
+is unopened, `1` is live, and `2` is settled. More than one live map, a completed match with a live
+map, an upcoming match with settled maps but no live map, duplicate match or map identities, or an
+unknown required status blocks the entire page as `provider-schema-unsupported`; the package does
+not guess around contradictory list data. HTTP failure blocks the page as `provider-unavailable`.
+
+Schedule rows expose normalized identity, URL, plan time, BO number, team/rank and series-score
+data, map summaries, current map number, tournament, and stage. Provider odds, video/stream flags,
+engagement data, and unrelated additive fields are ignored. Consumers must call `snapshot()` with
+the returned match ID for authoritative phase and complete detail collection.
 
 ## BO3 classification
 
@@ -142,6 +164,6 @@ Unknown additive fields are ignored. Missing or invalid core fields return
 Every HTTP and MQTT identity is checked. Public numeric fields are finite numbers or `null`; time is
 Unix milliseconds; confirmed data is deeply frozen.
 
-5EPlay odds, streams, chat, post-match content, discovery/list and schedule APIs, DOM, browser
-artifacts, cookies, and credentials are out of scope. Credentials are memory-only and must never be
-logged or persisted.
+5EPlay odds, streams, chat, post-match content, discovery/list APIs beyond the normalized single-page
+CS2 schedule, DOM, browser artifacts, cookies, and credentials are out of scope. Credentials are
+memory-only and must never be logged or persisted.

@@ -10,6 +10,12 @@ The public API is intentionally small:
 import { createFiveEPlayMatchSource } from '@ekmanss/5eplay';
 
 const source = createFiveEPlayMatchSource();
+const schedule = await source.schedule(); // first page, 20 source rows at most
+
+if (schedule.kind === 'available') {
+  console.log(schedule.schedule.matches);
+}
+
 const result = await source.snapshot('csgo_mc_2395547');
 
 if (result.kind === 'confirmed') {
@@ -27,6 +33,18 @@ A confirmed result certifies the core match state within an HTTP revision barrie
 sections report their own `complete`, `empty`, `partial`, `unavailable`, or `not-applicable` status;
 their failure never turns a valid core state into a guess.
 
+`schedule()` fetches exactly one provider page of currently live and upcoming matches. It defaults
+to page 1 and a fixed source page size of 20; pass `{ page: 2 }` explicitly for another page. Each
+row includes the provider match ID and URL, scheduled time, BO number, both teams and ranks, series
+score, available map summaries, current map number, tournament, and stage. `sourceCount` counts
+provider rows before completed matches are excluded. `mayHaveNextPage` is true only when the source
+page was full; it is permission to try the next page, not proof that one exists.
+
+Schedule status is discovery data (`live` or `upcoming`), not a confirmed detailed match phase. Use
+the row's `id` with `snapshot()` to distinguish map 1 unopened/live, between-map states, terminal
+closing, and stable closed. A BO1 can appear in schedule results even though detailed BO1 snapshots
+remain `unsupported / format-unverified` in this release.
+
 Every snapshot contains fixed sections for:
 
 - match identity, BO format, teams, ranks, tournament, stage, location, prize, and advisory plan time;
@@ -43,8 +61,9 @@ the data obtained so far and names its gap. An `unavailable` section has `data: 
 never have to mistake an empty collection for a failed request. Page, row, event, and deadline
 limits prevent unbounded collection.
 
-5EPlay odds, streams, chat, post-match editorial content, discovery/list APIs, schedules, rendered
-Markdown, browser data, and account state are deliberately excluded.
+5EPlay odds, streams, chat, post-match editorial content, general discovery/list APIs beyond the
+single-page CS2 schedule, rendered Markdown, browser data, and account state are deliberately
+excluded.
 
 ## Match states
 

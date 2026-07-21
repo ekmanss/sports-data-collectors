@@ -131,6 +131,430 @@ test('replay and production use the same snapshot transport seam', async () => {
   assert.equal(result.snapshot.detailsCompleteness, 'partial');
 });
 
+test('schedule returns live and upcoming matches from the first page only', async () => {
+  const schedulePayload = {
+    data: {
+      matches: [
+        {
+          mc_info: {
+            format: '3',
+            id: 'csgo_mc_3001',
+            plan_ts: '1784620800',
+            t1_info: {
+              country: 'cn',
+              disp_name: 'Alpha',
+              id: 'hltv_team_101',
+              logo: 'https://fixtures.invalid/alpha.png',
+              rank: '7',
+              v_rank: { rank: '8' },
+            },
+            t2_info: {
+              country: 'de',
+              disp_name: 'Bravo',
+              id: 'hltv_team_102',
+              logo: 'https://fixtures.invalid/bravo.png',
+              rank: '9',
+              v_rank: { rank: '10' },
+            },
+            tt_stage: 'Swiss round',
+            tt_stage_desc: 'Round 1',
+          },
+          state: {
+            bout_states: [
+              {
+                bout_num: '1',
+                map_name: 'Ancient',
+                result: '',
+                status: '1',
+                t1_score: '6',
+                t2_score: '4',
+              },
+            ],
+            status: '1',
+            t1_score: '0',
+            t2_score: '0',
+          },
+          tt_info: {
+            disp_name: 'Example Cup',
+            grade: '3',
+            grade_label: 'A级赛事',
+            id: 'csgo_tt_1',
+            logo: 'https://fixtures.invalid/cup.png',
+          },
+        },
+        {
+          mc_info: {
+            format: '1',
+            id: 'csgo_mc_3002',
+            plan_ts: '1784624400',
+            t1_info: { disp_name: 'Charlie', id: 'hltv_team_103' },
+            t2_info: { disp_name: 'Delta', id: 'hltv_team_104' },
+            tt_stage: 'Group A',
+            tt_stage_desc: 'Opening match',
+          },
+          state: { bout_states: [], status: '0', t1_score: '0', t2_score: '0' },
+          tt_info: { disp_name: 'Second Cup', id: 'csgo_tt_2' },
+        },
+        {
+          mc_info: {
+            format: '3',
+            id: 'csgo_mc_3003',
+            plan_ts: '1784610000',
+            t1_info: { disp_name: 'Echo', id: 'hltv_team_105' },
+            t2_info: { disp_name: 'Foxtrot', id: 'hltv_team_106' },
+          },
+          state: { bout_states: [], status: '2', t1_score: '2', t2_score: '0' },
+          tt_info: { disp_name: 'Completed Cup', id: 'csgo_tt_3' },
+        },
+      ],
+      state_ver: '0001784609292',
+    },
+    errcode: 0,
+    message: 'success',
+    success: true,
+  };
+  const source = createFiveEPlayMatchSourceWithTransport(
+    {},
+    new ReplayTransport([
+      {
+        kind: 'ok',
+        payload: schedulePayload,
+        status: 200,
+        urlIncludes: 'session_list?game_status=1&game_type=1&grades=&page=1&limit=20',
+      },
+    ]),
+  );
+
+  const result = await source.schedule();
+
+  assert.equal(result.kind, 'available');
+  if (result.kind !== 'available') return;
+  assert.deepEqual(
+    {
+      matches: result.schedule.matches.map((match) => ({
+        bestOf: match.bestOf,
+        currentMapNumber: match.currentMapNumber,
+        id: match.id,
+        scheduledAt: match.scheduledAt,
+        status: match.status,
+        teamNames: match.teams.map((team) => team.name),
+      })),
+      mayHaveNextPage: result.schedule.mayHaveNextPage,
+      page: result.schedule.page,
+      pageSize: result.schedule.pageSize,
+      providerStateVersion: result.schedule.providerStateVersion,
+      sourceCount: result.schedule.sourceCount,
+    },
+    {
+      matches: [
+        {
+          bestOf: 3,
+          currentMapNumber: 1,
+          id: 'csgo_mc_3001',
+          scheduledAt: 1_784_620_800_000,
+          status: 'live',
+          teamNames: ['Alpha', 'Bravo'],
+        },
+        {
+          bestOf: 1,
+          currentMapNumber: null,
+          id: 'csgo_mc_3002',
+          scheduledAt: 1_784_624_400_000,
+          status: 'upcoming',
+          teamNames: ['Charlie', 'Delta'],
+        },
+      ],
+      mayHaveNextPage: false,
+      page: 1,
+      pageSize: 20,
+      providerStateVersion: '0001784609292',
+      sourceCount: 3,
+    },
+  );
+  assert.deepEqual(result.schedule.matches[0]?.maps, [
+    {
+      mapNumber: 1,
+      name: 'Ancient',
+      status: 'live',
+      teams: [
+        { score: 6, teamId: 'hltv_team_101' },
+        { score: 4, teamId: 'hltv_team_102' },
+      ],
+      winnerTeamId: null,
+    },
+  ]);
+});
+
+test('schedule fetches exactly the requested page and reports only pagination evidence', async () => {
+  const matches = Array.from({ length: 20 }, (_, index) => ({
+    mc_info: {
+      format: '1',
+      id: `csgo_mc_${4_000 + index}`,
+      plan_ts: String(1_784_700_000 + index * 3_600),
+      t1_info: { disp_name: `Alpha ${index}`, id: `hltv_team_${5_000 + index * 2}` },
+      t2_info: { disp_name: `Bravo ${index}`, id: `hltv_team_${5_001 + index * 2}` },
+    },
+    state: { bout_states: [], status: '0', t1_score: '0', t2_score: '0' },
+    tt_info: { disp_name: 'Example Cup', id: 'csgo_tt_4' },
+  }));
+  const source = createFiveEPlayMatchSourceWithTransport(
+    {},
+    new ReplayTransport([
+      {
+        kind: 'ok',
+        payload: {
+          data: { matches, state_ver: 'page-2-state' },
+          errcode: 0,
+          success: true,
+        },
+        status: 200,
+        urlIncludes: 'session_list?game_status=1&game_type=1&grades=&page=2&limit=20',
+      },
+    ]),
+  );
+
+  const result = await source.schedule({ page: 2 });
+
+  assert.equal(result.kind, 'available');
+  if (result.kind !== 'available') return;
+  assert.equal(result.schedule.page, 2);
+  assert.equal(result.schedule.pageSize, 20);
+  assert.equal(result.schedule.sourceCount, 20);
+  assert.equal(result.schedule.matches.length, 20);
+  assert.equal(result.schedule.mayHaveNextPage, true);
+});
+
+test('schedule rejects invalid page numbers', async () => {
+  const source = createFiveEPlayMatchSourceWithTransport({}, new ReplayTransport([]));
+
+  for (const page of [0, -1, 1.5, Number.MAX_SAFE_INTEGER + 1]) {
+    await assert.rejects(
+      source.schedule({ page }),
+      (error) => error instanceof FiveEPlaySourceError && error.code === 'INVALID_ARGUMENT',
+    );
+  }
+});
+
+test('schedule blocks a provider page containing duplicate match identities', async () => {
+  const providerMatch = (status: '0' | '2') => ({
+    mc_info: {
+      format: '1',
+      id: 'csgo_mc_6001',
+      plan_ts: '1784700000',
+      t1_info: { disp_name: 'Alpha', id: 'hltv_team_6101' },
+      t2_info: { disp_name: 'Bravo', id: 'hltv_team_6102' },
+    },
+    state: { bout_states: [], status, t1_score: '0', t2_score: '0' },
+    tt_info: { disp_name: 'Example Cup', id: 'csgo_tt_6' },
+  });
+  const source = createFiveEPlayMatchSourceWithTransport(
+    {},
+    new ReplayTransport([
+      {
+        kind: 'ok',
+        payload: {
+          data: { matches: [providerMatch('0'), providerMatch('2')], state_ver: 'duplicate' },
+          errcode: 0,
+          success: true,
+        },
+        status: 200,
+        urlIncludes: 'session_list?game_status=1&game_type=1&grades=&page=1&limit=20',
+      },
+    ]),
+  );
+
+  const result = await source.schedule();
+
+  assert.deepEqual(
+    result.kind === 'blocked'
+      ? { kind: result.kind, page: result.page, reason: result.reason }
+      : { kind: result.kind },
+    { kind: 'blocked', page: 1, reason: 'provider-schema-unsupported' },
+  );
+});
+
+test('schedule blocks contradictory global and map status evidence', async () => {
+  const source = createFiveEPlayMatchSourceWithTransport(
+    {},
+    new ReplayTransport([
+      {
+        kind: 'ok',
+        payload: {
+          data: {
+            matches: [
+              {
+                mc_info: {
+                  format: '3',
+                  id: 'csgo_mc_7001',
+                  plan_ts: '1784700000',
+                  t1_info: { disp_name: 'Alpha', id: 'hltv_team_7101' },
+                  t2_info: { disp_name: 'Bravo', id: 'hltv_team_7102' },
+                },
+                state: {
+                  bout_states: [
+                    {
+                      bout_num: '1',
+                      map_name: 'Ancient',
+                      result: '',
+                      status: '1',
+                      t1_score: '6',
+                      t2_score: '4',
+                    },
+                  ],
+                  status: '2',
+                  t1_score: '0',
+                  t2_score: '0',
+                },
+                tt_info: { disp_name: 'Example Cup', id: 'csgo_tt_7' },
+              },
+            ],
+            state_ver: 'contradictory',
+          },
+          errcode: 0,
+          success: true,
+        },
+        status: 200,
+        urlIncludes: 'session_list?game_status=1&game_type=1&grades=&page=1&limit=20',
+      },
+    ]),
+  );
+
+  const result = await source.schedule();
+
+  assert.equal(result.kind, 'blocked');
+  if (result.kind !== 'blocked') return;
+  assert.equal(result.reason, 'provider-schema-unsupported');
+});
+
+test('schedule distinguishes provider outages from unsupported provider schemas', async () => {
+  const unavailableSource = createFiveEPlayMatchSourceWithTransport(
+    {},
+    new ReplayTransport([
+      {
+        kind: 'unavailable',
+        payload: null,
+        status: 503,
+        urlIncludes: 'session_list?game_status=1&game_type=1&grades=&page=1&limit=20',
+      },
+    ]),
+  );
+  const unsupportedSource = createFiveEPlayMatchSourceWithTransport(
+    {},
+    new ReplayTransport([
+      {
+        kind: 'ok',
+        payload: {
+          data: {
+            matches: [
+              {
+                mc_info: {
+                  format: '1',
+                  id: 'csgo_mc_8001',
+                  plan_ts: '1784700000',
+                  t1_info: { disp_name: 'Alpha', id: 'hltv_team_8101' },
+                  t2_info: { disp_name: 'Bravo', id: 'hltv_team_8102' },
+                },
+                state: { bout_states: [], status: 'unexpected', t1_score: '0', t2_score: '0' },
+                tt_info: { disp_name: 'Example Cup', id: 'csgo_tt_8' },
+              },
+            ],
+            state_ver: 'unsupported',
+          },
+          errcode: 0,
+          success: true,
+        },
+        status: 200,
+        urlIncludes: 'session_list?game_status=1&game_type=1&grades=&page=1&limit=20',
+      },
+    ]),
+  );
+
+  const unavailable = await unavailableSource.schedule();
+  const unsupported = await unsupportedSource.schedule();
+
+  assert.equal(unavailable.kind, 'blocked');
+  assert.equal(unsupported.kind, 'blocked');
+  if (unavailable.kind !== 'blocked' || unsupported.kind !== 'blocked') return;
+  assert.equal(unavailable.reason, 'provider-unavailable');
+  assert.equal(unsupported.reason, 'provider-schema-unsupported');
+});
+
+test('schedule treats an HTTP 200 provider failure envelope as retryable unavailability', async () => {
+  const source = createFiveEPlayMatchSourceWithTransport(
+    {},
+    new ReplayTransport([
+      {
+        kind: 'ok',
+        payload: { data: null, errcode: 10_001, message: 'busy', success: false },
+        status: 200,
+        urlIncludes: 'session_list?game_status=1&game_type=1&grades=&page=1&limit=20',
+      },
+    ]),
+  );
+
+  const result = await source.schedule();
+
+  assert.equal(result.kind, 'blocked');
+  if (result.kind !== 'blocked') return;
+  assert.equal(result.reason, 'provider-unavailable');
+});
+
+test('schedule reports caller cancellation as an ABORTED source error', async () => {
+  const controller = new AbortController();
+  controller.abort(new Error('caller cancelled'));
+  const source = createFiveEPlayMatchSourceWithTransport({}, new ReplayTransport([]));
+
+  await assert.rejects(
+    source.schedule({ signal: controller.signal }),
+    (error) => error instanceof FiveEPlaySourceError && error.code === 'ABORTED',
+  );
+});
+
+test('schedule preserves not-yet-decided upcoming teams without inventing identities', async () => {
+  const source = createFiveEPlayMatchSourceWithTransport(
+    {},
+    new ReplayTransport([
+      {
+        kind: 'ok',
+        payload: {
+          data: {
+            matches: [
+              {
+                mc_info: {
+                  format: '3',
+                  id: 'csgo_mc_9001',
+                  plan_ts: '1784700000',
+                  t1_info: { disp_name: 'TBD', id: '' },
+                  t2_info: { disp_name: 'TBD', id: '' },
+                },
+                state: { bout_states: [], status: '0', t1_score: '0', t2_score: '0' },
+                tt_info: { disp_name: 'Example Cup', id: 'csgo_tt_9' },
+              },
+            ],
+            state_ver: 'tbd-teams',
+          },
+          errcode: 0,
+          success: true,
+        },
+        status: 200,
+        urlIncludes: 'session_list?game_status=1&game_type=1&grades=&page=1&limit=20',
+      },
+    ]),
+  );
+
+  const result = await source.schedule();
+
+  assert.equal(result.kind, 'available');
+  if (result.kind !== 'available') return;
+  assert.deepEqual(
+    result.schedule.matches[0]?.teams.map((team) => ({ id: team.id, name: team.name })),
+    [
+      { id: null, name: 'TBD' },
+      { id: null, name: 'TBD' },
+    ],
+  );
+});
+
 test('curated fixture manifest is exact, hash-verified, and credential-free', async () => {
   const fixtureDirectory = new URL('./fixtures/', import.meta.url);
   const manifest = JSON.parse(

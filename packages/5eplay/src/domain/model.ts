@@ -881,6 +881,83 @@ export interface SnapshotOptions {
   readonly signal?: AbortSignal;
 }
 
+export interface ScheduleOptions {
+  readonly page?: number;
+  readonly deadlineMs?: number;
+  readonly signal?: AbortSignal;
+}
+
+export interface ScheduleTeam {
+  readonly id: string | null;
+  readonly name: string;
+  readonly logoUrl: string | null;
+  readonly country: string | null;
+  readonly rank: number | null;
+  readonly virtualRank: number | null;
+  readonly seriesScore: number;
+}
+
+export interface ScheduleMapTeam {
+  readonly teamId: string;
+  readonly score: number | null;
+}
+
+export interface ScheduleMap {
+  readonly mapNumber: number;
+  readonly name: string | null;
+  readonly status: 'unopened' | 'live' | 'settled';
+  readonly teams: readonly [ScheduleMapTeam, ScheduleMapTeam];
+  readonly winnerTeamId: string | null;
+}
+
+export interface ScheduleTournament {
+  readonly id: string;
+  readonly name: string;
+  readonly logoUrl: string | null;
+  readonly coverUrl: string | null;
+  readonly location: string | null;
+  readonly prize: string | null;
+  readonly gradeCode: string | null;
+  readonly gradeLabel: string | null;
+  readonly providerStatus: string | null;
+  readonly providerLocalStartTime: string | null;
+  readonly providerLocalEndTime: string | null;
+}
+
+export interface ScheduleMatch {
+  readonly id: string;
+  readonly url: string;
+  readonly bestOf: number | null;
+  readonly scheduledAt: UnixMilliseconds | null;
+  readonly status: 'live' | 'upcoming';
+  readonly teams: readonly [ScheduleTeam, ScheduleTeam];
+  readonly tournament: ScheduleTournament;
+  readonly stage: string | null;
+  readonly stageDescription: string | null;
+  readonly maps: readonly ScheduleMap[];
+  readonly currentMapNumber: number | null;
+}
+
+export interface SchedulePage {
+  readonly schema: 'fiveeplay-schedule/v1';
+  readonly observedAt: UnixMilliseconds;
+  readonly providerStateVersion: string | null;
+  readonly page: number;
+  readonly pageSize: 20;
+  readonly sourceCount: number;
+  readonly mayHaveNextPage: boolean;
+  readonly matches: readonly ScheduleMatch[];
+}
+
+export type SchedulePageResult =
+  | { readonly kind: 'available'; readonly schedule: SchedulePage }
+  | {
+      readonly kind: 'blocked';
+      readonly page: number;
+      readonly observedAt: UnixMilliseconds;
+      readonly reason: 'provider-unavailable' | 'provider-schema-unsupported';
+    };
+
 export interface WatchOptions {
   readonly signal?: AbortSignal;
 }
@@ -932,6 +1009,7 @@ export interface FiveEPlayMatchSourceOptions {
 }
 
 export interface FiveEPlayMatchSource {
+  schedule(options?: ScheduleOptions): Promise<SchedulePageResult>;
   snapshot(matchId: string, options?: SnapshotOptions): Promise<MatchSnapshotResult>;
   watch(matchId: string, options?: WatchOptions): MatchWatch;
 }

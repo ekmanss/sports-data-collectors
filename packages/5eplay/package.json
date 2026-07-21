@@ -15,6 +15,7 @@
   "files": [
     "dist",
     "README.md",
+    "INTEGRATION.md",
     "PROTOCOL.md",
     "LICENSE"
   ],

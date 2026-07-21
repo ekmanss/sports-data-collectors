@@ -19,6 +19,9 @@ if (result.kind === 'confirmed') {
 }
 ```
 
+For production integration, exhaustive result handling, state mapping, retry policy, and realtime
+ownership, see [INTEGRATION.md](INTEGRATION.md).
+
 `snapshot()` returns one of `confirmed`, `blocked`, `not-found`, `unsupported`, or `superseded`.
 A confirmed result certifies the core match state within an HTTP revision barrier. Optional detail
 sections report their own `complete`, `empty`, `partial`, `unavailable`, or `not-applicable` status;
@@ -147,8 +150,9 @@ output. `evidenceSink` receives best-effort event evidence records. Sink failure
 diagnostic and never blocks data collection. Realtime credentials stay in memory and are never
 included in results, errors, diagnostics, fixtures, or evidence records.
 
-See [PROTOCOL.md](PROTOCOL.md) for the current protocol invariants. The deterministic test evidence
-and provenance manifest live under `tests/fixtures/` in the repository.
+See [INTEGRATION.md](INTEGRATION.md) for the consumer guide and [PROTOCOL.md](PROTOCOL.md) for the
+current protocol invariants. The deterministic test evidence and provenance manifest live under
+`tests/fixtures/` in the repository.
 
 ## Development
 

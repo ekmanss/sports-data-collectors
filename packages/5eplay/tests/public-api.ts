@@ -4,8 +4,10 @@ import {
   type FiveEPlayMatchSource,
   type FiveEPlaySourceErrorCode,
   type ConfirmedMatchObservation,
+  type DataSection,
   type MatchFreshness,
   type MatchMap,
+  type MatchSnapshot,
   type MatchSnapshotResult,
   type MatchState,
   type MatchUpdate,
@@ -30,6 +32,73 @@ export function consumeSnapshot(result: MatchSnapshotResult): string {
       return result.observedRevision;
     default:
       return assertNever(result);
+  }
+}
+
+export function confirmedSnapshot(result: MatchSnapshotResult): MatchSnapshot | null {
+  switch (result.kind) {
+    case 'confirmed':
+      return result.snapshot;
+    case 'blocked':
+    case 'not-found':
+    case 'unsupported':
+    case 'superseded':
+      return null;
+    default:
+      return assertNever(result);
+  }
+}
+
+export type ConsumerPhase =
+  | 'not-started'
+  | 'map1-not-started'
+  | 'map1-live'
+  | 'between-map1-map2'
+  | 'map2-live'
+  | 'between-map2-map3'
+  | 'map3-live'
+  | 'series-closing'
+  | 'closed';
+
+export function consumerPhase(state: MatchState): ConsumerPhase {
+  if (state.lifecycle === 'closed') return 'closed';
+  switch (state.stateCase) {
+    case 'prestart':
+      return 'not-started';
+    case 'map1-unopened':
+      return 'map1-not-started';
+    case 'map1-live':
+      return 'map1-live';
+    case 'between-map1-map2':
+      return 'between-map1-map2';
+    case 'map2-live':
+      return 'map2-live';
+    case 'between-map2-map3':
+      return 'between-map2-map3';
+    case 'map3-live':
+      return 'map3-live';
+    case 'series-ended-map2-normal':
+    case 'series-ended-map3-normal':
+    case 'series-ended-map2-administrative':
+      return 'series-closing';
+    default:
+      return assertNever(state);
+  }
+}
+
+export function availableRows<Row>(
+  section: DataSection<readonly Row[]>,
+): readonly Row[] | null {
+  switch (section.status) {
+    case 'complete':
+    case 'empty':
+    case 'partial':
+      return section.data;
+    case 'unavailable':
+    case 'not-applicable':
+      return null;
+    default:
+      return assertNever(section);
   }
 }
 

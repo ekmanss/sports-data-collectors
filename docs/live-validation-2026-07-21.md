@@ -1,0 +1,284 @@
+# 5EPlay live validation — 2026-07-21
+
+This log records production observations before any implementation change. Timestamps are UTC.
+
+## Scope and stopping rule
+
+- Package: `@ekmanss/5eplay@20260721.2.0`
+- Commit: `c9e571c`
+- Runtime: Node.js `v24.15.0`
+- Provider schedule page: `https://event.5eplay.com/csgo/matches`, page 1
+- Stop after five independent reproducible defects, or after every currently visible live match and
+  the relevant live-state transitions have been exercised without finding another defect.
+
+## Baseline
+
+At `2026-07-21T08:07:03Z`, the first schedule page contained 20 source rows: three `live` and 17
+`upcoming`. The normalized schedule returned the same three live match IDs in provider order:
+
+- `csgo_mc_2395923`
+- `csgo_mc_2395548`
+- `csgo_mc_2396081`
+
+Pages 1 through 5 each contained 20 source rows and all 100 rows decoded successfully. Later pages
+contained future bracket slots whose team names were `TBD` and whose provider team IDs were empty;
+the normalized schedule preserved those unknown identities as `null` rather than inventing IDs.
+During live transitions, schedule map evidence could arrive before the corresponding detail
+snapshot became coherent. This confirms that the list is suitable for discovery but is not an
+atomic or authoritative detailed-phase observation.
+
+Before a map started, all three core vectors were `[1,-1,-1,-1]`. Two consecutive `snapshot()`
+calls for each match returned `confirmed / map1-unopened`; all five detail sections were either
+`complete` or successfully `empty`.
+
+## LIVE-001 — a newly live map is blocked as inconsistent
+
+- First observed: `2026-07-21T08:07:50Z`
+- Match: `csgo_mc_2395548`
+- Severity: high
+- Status: root cause reproduced; no fix applied
+
+The provider core vector changed from `[1,-1,-1,-1]` to `[1,1,-1,-1]`, which is the documented
+`map1-live` vector. Immediately afterward, two consecutive public calls returned:
+
+```json
+{
+  "kind": "blocked",
+  "matchId": "csgo_mc_2395548",
+  "reason": "inconsistent-state"
+}
+```
+
+Expected: `confirmed` with `state.stateCase === "map1-live"` and the available live map data.
+
+Observed impact: a consumer cannot obtain authoritative state or detailed data during this real
+map-live transition and must freeze automated decisions.
+
+Raw provider payloads used for diagnosis were stored temporarily outside the repository under
+`/tmp`; no provider capture or generated debug artifact is committed here.
+
+### Deterministic reproduction and diagnosis
+
+The saved core response reproduced the public failure without network access or optional details
+using the following transient diagnostic command:
+
+```bash
+pnpm --filter @ekmanss/5eplay exec tsx /tmp/repro-live-001.ts
+```
+
+The direct core decoder rejects it with `played map score breakdown is inconsistent`. During the
+first live round, both teams had provider `quick_score="1"` while `all_score="0"` and
+`fh_score="0"`. Changing only both quick scores to `0` made the exact captured response confirm as
+`map1-live`; changing either team alone, the bomb fields, or the empty map start time did not.
+Changing the formal and first-half scores to `1` also confirmed the response.
+
+This establishes that the implementation incorrectly requires the provider's provisional quick
+score to equal its settled map score. The provider legitimately advances quick score during an
+unsettled live round, so snapshots can be blocked while a round is in progress.
+
+A 90-second follow-up spanning provider rounds 4 and 5 never produced a readable interval: formal
+scores advanced from `2:1` to `3:1`, while quick scores advanced from `3:1` to `4:1` and then
+`5:1`. This is not a millisecond transition race; the defect can make the whole live map
+unavailable.
+
+At the regulation half switch, a brief exact-score window allowed `csgo_mc_2395548` to confirm. The
+decoded second-half state was coherent: regulation round 13, score `10:3`, first-half score `9:3`,
+second-half score `1:0`, and the expected side/role transition. This positive observation narrows
+LIVE-001 to provisional quick-score handling rather than the half-switch normalization itself.
+
+## Realtime baseline
+
+For `csgo_mc_2396081` while its vector was `[1,-1,-1,-1]`, a real `watch()` produced the required
+sequence `blocked / initializing` followed by `confirmed-state / map1-unopened`, then disposed
+cleanly. No independent realtime defect was observed in that baseline.
+
+## LIVE-002 — event history becomes unavailable during the pre-map live window
+
+- First observed: `2026-07-21T08:10:53Z`
+- Match: `csgo_mc_2395923`
+- Severity: medium
+- Status: root cause reproduced; no fix applied
+
+The same match previously returned a `confirmed / map1-unopened` snapshot with 17 complete event
+rows. While its authoritative core vector remained `[1,-1,-1,-1]`, a later confirmed snapshot
+reported:
+
+```json
+{
+  "detailsCompleteness": "partial",
+  "events": {
+    "status": "unavailable",
+    "gap": "EVENT_IDENTITY_OR_SCHEMA_MISMATCH"
+  }
+}
+```
+
+The other four detail sections remained complete or successfully empty. Expected: newly arriving
+valid provider events either extend the event history or are represented by an explicit supported
+partial condition; the entire event section should not regress from complete to unavailable solely
+because the match is waiting for map 1 to start.
+
+### Deterministic reproduction and diagnosis
+
+The saved core and event responses reproduced the failure without network access using the
+following transient diagnostic command:
+
+```bash
+pnpm --filter @ekmanss/5eplay exec tsx /tmp/repro-live-002.ts
+```
+
+One valid provider `type=10` match-started event used the engine map name `de_ancient`; the core and
+all ordinary event rows used the display name `Ancient`. Normalizing only that outer event field to
+`Ancient` changed the event section from unavailable to complete with 84 rows. Removing only the
+type 10 row also confirmed 83 complete rows, while removing player-quit or kill rows did not.
+
+The implementation therefore treats two provider-supported names for the same map as conflicting
+identities. It needs an evidence-backed engine-name/display-name canonicalization before enforcing
+the core/event map join.
+
+## LIVE-003 — warmup player statistics leak into a confirmed live map
+
+- First observed: `2026-07-21T08:22:15Z`
+- Match: `csgo_mc_2395923`
+- Severity: high
+- Status: root cause reproduced; no fix applied
+
+The authoritative vector had just become `[1,1,-1,-1]`. Two consecutive snapshots confirmed
+`map1-live` with map 1 at round 1 and score `0:0`, but exposed `overall / present` player rows with
+impossible official-match totals accumulated before the map started. Examples included:
+
+- one player with 25 kills at round 1;
+- several players with 12 deaths at round 1;
+- player money as high as 56,300;
+- both teams' aggregate kills and deaths far beyond one CS2 round.
+
+Expected: player rows that cannot belong to the confirmed official map timeline must not be exposed
+as current match statistics. They should remain unavailable/empty with an explicit gap until the
+provider data becomes coherent, or be separately labeled as warmup data if such a product is ever
+supported.
+
+Observed impact: consumers receive a confirmed match phase together with materially false player
+statistics, which is more dangerous than an explicit unavailable slice.
+
+### Deterministic reproduction and diagnosis
+
+The captured core response reproduced the leak without network access using the following
+transient diagnostic command:
+
+```bash
+pnpm --filter @ekmanss/5eplay exec tsx /tmp/repro-live-003.ts
+```
+
+The assertion observes 77 aggregate deaths at round 1. All ten player IDs exactly matched the two
+analysis rosters, ruling out a simple roster identity mismatch. During a subsequent 37-second
+observation, the provider state remained round 1, score `0:0`, and empty `start_time`, while the
+aggregate deaths grew from 114 to 132 and kills from 107 to 123. This is a respawning warmup stream,
+not an official CS2 round.
+
+The implementation validates player identity and numeric shape but not temporal plausibility
+against the confirmed map timeline. A live player plane needs a coherence bound derived from
+`currentRound`, settled round arrays, score, and non-respawning CS2 semantics; incoherent rows must
+be isolated behind an explicit gap rather than marked present.
+
+## LIVE-004 — an apparently official map 2 starts while map 1 is unopened
+
+- First observed: `2026-07-21T08:26:34Z`
+- Match: `csgo_mc_2396081`
+- Severity: high if confirmed as official play
+- Status: root cause reproduced; no fix applied
+
+The provider core vector changed from `[1,-1,-1,-1]` to `[1,-1,1,-1]`: bout 1 (`Ancient`) stayed
+unopened while bout 2 (`Mirage`) became live. Two public snapshots correctly refused the unknown
+vector as `blocked / inconsistent-state` under the current protocol model.
+
+The shape did not disappear as a brief server warmup artifact. Bout 2 subsequently advanced from
+round 1 at `0:0` to round 2 at `0:1`, while bout 1 remained unopened. If round, player, event, and
+veto evidence confirms this as official play, the implementation's assumption that provider bout
+number is always chronological series order is invalid for a real match, leaving consumers without
+an authoritative live state.
+
+### Deterministic reproduction and diagnosis
+
+The captured core response reproduced the block without network access using the following
+transient diagnostic command:
+
+```bash
+pnpm --filter @ekmanss/5eplay exec tsx /tmp/repro-live-004.ts
+```
+
+The direct decoder reports `unsupported live provider state vector 1/-1/1/-1`. Bout 1 had only a
+match-started event and no official round evidence. Bout 2 had coherent score/round arrays, exactly
+ten aggregate deaths after its first settled round, and round-start/round-end events advancing into
+round 3.
+
+Changing only the provider bout numbers so that live Mirage becomes chronological map 1 made the
+same core response confirm as `map1-live` with score `0:1`; merely changing provider array order did
+not. This confirms that provider bout number is not a safe chronological series-map number. The
+domain model needs a separate provider bout identity and evidence-derived play order, with event
+joins translated through that mapping.
+
+## LIVE-005 — warmup events are exposed as complete match history
+
+- First observed: `2026-07-21T08:10:53Z` in the LIVE-002 capture
+- Match: `csgo_mc_2395923`
+- Severity: high
+- Status: root cause reproduced; no fix applied
+
+The captured authoritative core still said `map1-unopened`, but the event endpoint already
+contained many respawning warmup kills and player join/quit events. Isolating LIVE-002 by changing
+only `de_ancient` to `Ancient` made the current implementation report all 84 rows as
+`events / complete`.
+
+The public event model does not label these rows as warmup or otherwise distinguish them from
+official match history. Expected: events that precede an evidence-backed official map timeline must
+either be excluded, explicitly labeled as warmup/provisional, or held behind an honest gap. They
+must not be presented as complete official event history.
+
+Observed impact: consumers can compute kills, participation, or audit history from events that did
+not occur in the official match, even if LIVE-003 player-stat validation is fixed separately.
+
+### Deterministic reproduction and diagnosis
+
+The same captured core and event responses reproduced this independently of LIVE-002 using the
+following transient diagnostic command:
+
+```bash
+pnpm --filter @ekmanss/5eplay exec tsx /tmp/repro-live-005.ts
+```
+
+The reproducer changed only the single engine-name alias `de_ancient` to `Ancient` to remove
+LIVE-002 from the experiment. The resulting public snapshot was `confirmed / map1-unopened`, while
+the event section was `complete` with 84 rows: 56 kills (`type=8`), 26 player-quit rows (`type=4`),
+one player-join row (`type=3`), and one match-started row (`type=10`). The red assertion expected no
+official kills for an unopened map and observed 56. A decoded kill included concrete killer and
+victim IDs, sides, weapon, coordinates, and an evidence reference, so consumers cannot distinguish
+it from an official kill by shape.
+
+The captured provider rows contained no explicit warmup flag, timestamp, or round number, and no
+official round-start or round-end events (`type=1` or `type=2`). The current event decoder validates
+schema and match/map/tournament identity, then classifies the section as complete from stable
+pagination alone; it never reconciles the rows with the confirmed core phase or an official-round
+boundary. Thus the provider's pre-round respawning stream is exposed as complete match history.
+
+This needs a cross-source timeline gate: event rows before evidence-backed official play must stay
+provisional/unavailable, be excluded, or be explicitly modeled as warmup. Transport completeness
+must not imply semantic completeness.
+
+## Result and remaining risk
+
+The stopping threshold was reached with five independent reproducible defects, so live monitoring
+stopped as specified. No product code, fixture, API contract, or package version was changed.
+
+| ID | Failure mode | Consumer risk |
+| --- | --- | --- |
+| LIVE-001 | Provisional quick score blocks a live round | No authoritative state or data during live play |
+| LIVE-002 | Engine/display map aliases invalidate event identity | Event history becomes unavailable |
+| LIVE-003 | Warmup player counters are marked present | Confirmed snapshots contain false player statistics |
+| LIVE-004 | Provider bout number is assumed to be chronological | Real map play is rejected as an impossible vector |
+| LIVE-005 | Warmup events are marked complete | False kills and participation enter official history |
+
+The observations cover one real schedule page, all three live matches visible at the start, the
+map-1 unopened-to-live transition, first-half live rounds, a half switch, realtime initialization,
+and a non-chronological provider bout. They do not prove correctness for BO1 closing, map-end and
+between-map transitions, overtime, match cancellation, or final closure. Those paths remain
+unverified rather than known-good.

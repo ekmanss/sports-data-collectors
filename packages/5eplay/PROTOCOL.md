@@ -3,6 +3,12 @@
 This document records only invariants used by the current implementation. Deterministic evidence
 provenance and hashes are in `tests/fixtures/manifest.json`.
 
+Provider observations and unresolved counterexamples are maintained separately in the
+[schedule-page facts](../../docs/provider/5eplay-schedule-page-facts.md),
+[match-page facts](../../docs/provider/5eplay-match-page-facts.md), and
+[live validation log](../../docs/live-validation-2026-07-21.md). This implementation contract must
+not be treated as proof that the provider cannot emit a shape which the current package rejects.
+
 ## Authority and endpoints
 
 `GET https://esports-data.5eplaycdn.com/v1/api/csgo/matches/{matchId}/data` is the sole confirmed

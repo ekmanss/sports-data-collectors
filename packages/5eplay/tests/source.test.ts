@@ -1294,6 +1294,65 @@ test('snapshot keeps technical map closure distinct from played maps', async (co
   assert.deepEqual(result.snapshot.maps[2]?.teams.map((team) => team.score), [null, null]);
 });
 
+test('normal 2-0 remains normal when the provider closes the unused third map', async () => {
+  const body = JSON.parse(
+    await readFile(
+      new URL('./fixtures/states/bo3-complete-two-maps.json', import.meta.url),
+      'utf8',
+    ),
+  ) as {
+    data: {
+      match: {
+        bouts_state: Array<{
+          curr_bout_stage: string;
+          status: string;
+          t1_stats: { id: string };
+          t2_stats: { id: string };
+        }>;
+        mc_info: {
+          t1_info: { id: string };
+          t2_info: { id: string };
+        };
+      };
+    };
+  };
+  const unusedMap = body.data.match.bouts_state[2];
+  assert.ok(unusedMap);
+  unusedMap.status = '2';
+  unusedMap.curr_bout_stage = 'fh';
+  unusedMap.t1_stats.id = body.data.match.mc_info.t1_info.id;
+  unusedMap.t2_stats.id = body.data.match.mc_info.t2_info.id;
+  const coreFrame = {
+    kind: 'ok' as const,
+    payload: body,
+    status: 200,
+    urlIncludes: '/matches/csgo_mc_2396047/data',
+  };
+  const result = await createFiveEPlayMatchSourceWithTransport(
+    { timing: { closeCalibrationMs: 1, livePollMs: 1 } },
+    new ReplayTransport([coreFrame, coreFrame]),
+  ).snapshot('csgo_mc_2396047');
+
+  assert.equal(result.kind, 'confirmed');
+  if (result.kind !== 'confirmed') return;
+  assert.equal(result.snapshot.state.closure, 'normal');
+  assert.deepEqual(result.snapshot.state.phase, {
+    finalMapNumber: 2,
+    kind: 'series-ended',
+  });
+  assert.deepEqual(
+    result.snapshot.maps.map((map) => ({
+      status: map.status,
+      technicalDisposition: map.technicalDisposition,
+    })),
+    [
+      { status: 'settled', technicalDisposition: null },
+      { status: 'settled', technicalDisposition: null },
+      { status: 'closed-without-play', technicalDisposition: 'unused' },
+    ],
+  );
+});
+
 test('missing or malformed statistics on no-play technical maps do not block closure', async (context) => {
   const originalFetch = globalThis.fetch;
   context.after(() => {

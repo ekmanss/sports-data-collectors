@@ -1,6 +1,15 @@
 export { createFiveEPlayMatchSource } from './api/source.js';
 export { FiveEPlaySourceError } from './domain/errors.js';
+export {
+  describeMatchState,
+  renderMatchMarkdown,
+} from './output/markdown.js';
+export { writeMatchSnapshotArtifacts } from './output/artifacts.js';
 export type { FiveEPlaySourceErrorCode } from './domain/errors.js';
+export type {
+  MatchArtifactOptions,
+  MatchArtifactPaths,
+} from './output/artifacts.js';
 export type {
   AnalysisMap,
   AnalysisMapTeam,

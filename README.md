@@ -16,6 +16,13 @@ Deterministic CI never contacts 5EPlay. Run the explicit live smoke test locally
 FIVEEPLAY_MATCH_ID=csgo_mc_2395547 pnpm test:live
 ```
 
+Save a complete confirmed snapshot as JSON plus a filtered, human-readable Markdown file with the
+same basename:
+
+```bash
+pnpm snapshot:5eplay -- --match-id csgo_mc_2395547 --out-dir ./match-data
+```
+
 See the [package README](packages/5eplay/README.md) for API usage and
 [protocol invariants](packages/5eplay/PROTOCOL.md) for classification and synchronization rules.
 

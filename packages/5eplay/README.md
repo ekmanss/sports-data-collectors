@@ -25,6 +25,33 @@ if (result.kind === 'confirmed') {
 }
 ```
 
+To keep the complete confirmed JSON for debugging while also producing a filtered,
+analysis-friendly Markdown file, write the snapshot as an artifact pair:
+
+```ts
+import {
+  createFiveEPlayMatchSource,
+  writeMatchSnapshotArtifacts,
+} from '@ekmanss/5eplay';
+
+const result = await createFiveEPlayMatchSource().snapshot('csgo_mc_2395547');
+if (result.kind === 'confirmed') {
+  const paths = await writeMatchSnapshotArtifacts(result.snapshot, {
+    outputDirectory: './match-data',
+  });
+  console.log(paths.jsonPath, paths.markdownPath);
+}
+```
+
+Both files use the same basename. The JSON is the complete `MatchSnapshot` without filtering. The
+Markdown is organized by independent handlers following the 5E page terminology: `地图BP`,
+`比赛数据` / `数据总览`, and the five `赛前分析` subsections. Beyond the visible page fields it
+retains analysis-relevant API detail such as CT/T splits, advanced player metrics, round sequences,
+duels, multi-kill distributions, comparison highlights, player-power metrics, and formal-round
+match logs. It omits schema/revision tokens, provider state, artwork URLs, country
+metadata, section transport metadata, and community/player ratings. Its headline status uses the
+authoritative phase model, including unopened/live maps and both between-map states.
+
 For production integration, exhaustive result handling, state mapping, retry policy, and realtime
 ownership, see [INTEGRATION.md](INTEGRATION.md).
 
@@ -64,8 +91,7 @@ never have to mistake an empty collection for a failed request. Page, row, event
 limits prevent unbounded collection.
 
 5EPlay odds, streams, chat, post-match editorial content, general discovery/list APIs beyond the
-single-page CS2 schedule, rendered Markdown, browser data, and account state are deliberately
-excluded.
+single-page CS2 schedule, browser data, and account state are deliberately excluded.
 
 ## Match states
 
@@ -207,6 +233,12 @@ outside the repository:
 
 ```bash
 pnpm record -- --match-id csgo_mc_2395547 --out-dir /absolute/evidence/path
+```
+
+For a one-off confirmed snapshot artifact pair, run:
+
+```bash
+pnpm snapshot -- --match-id csgo_mc_2395547 --out-dir ./match-data
 ```
 
 This project is unofficial and is not affiliated with or endorsed by 5EPlay. Consumers are

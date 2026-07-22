@@ -1110,13 +1110,17 @@ function stateFromEvidence(
   if (maps.slice(0, finalMap.mapNumber).some((entry) => entry.status === 'unopened')) {
     throw new InconsistentProviderStateError('terminal match has a gap in chronological map order');
   }
-  const closure = maps.some((entry) => entry.closedWithoutPlay)
+  const closure = maps.some((entry) => entry.technicalDisposition === 'awarded')
     ? 'administrative' as const
     : 'normal' as const;
   const normalShape =
     closure === 'normal' &&
     maps.slice(0, finalMap.mapNumber).every((entry) => entry.status === 'settled') &&
-    maps.slice(finalMap.mapNumber).every((entry) => entry.status === 'unopened');
+    maps.slice(finalMap.mapNumber).every(
+      (entry) =>
+        entry.status === 'unopened' ||
+        (entry.status === 'closed-without-play' && entry.technicalDisposition === 'unused'),
+    );
   const administrativeShape =
     closure === 'administrative' &&
     maps.length === 3 &&

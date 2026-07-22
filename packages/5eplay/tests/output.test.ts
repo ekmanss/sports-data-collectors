@@ -75,7 +75,9 @@ async function snapshotWithUnusedDecider(): Promise<MatchSnapshot> {
   return result.snapshot;
 }
 
-async function snapshotWithAnalysis(): Promise<MatchSnapshot> {
+async function snapshotWithAnalysis(
+  mutateAnalysis?: (payload: unknown) => void,
+): Promise<MatchSnapshot> {
   const matchId = 'csgo_mc_2395918';
   const [
     corePayload,
@@ -104,6 +106,7 @@ async function snapshotWithAnalysis(): Promise<MatchSnapshot> {
       'utf8',
     ).then((body) => JSON.parse(body) as unknown),
   ]);
+  mutateAnalysis?.(analysisPayload);
   const coreFrame = {
     kind: 'ok' as const,
     payload: corePayload,
@@ -378,7 +381,10 @@ async function snapshotWithEvents(): Promise<MatchSnapshot> {
   ).snapshot(MATCH_ID);
   assert.equal(result.kind, 'confirmed');
   if (result.kind !== 'confirmed') throw new Error('event fixture was not confirmed');
-  return result.snapshot;
+  const snapshot = structuredClone(result.snapshot);
+  (snapshot.maps[0] as { currentRound: number }).currentRound = 3;
+  (snapshot.maps[1] as { currentRound: number }).currentRound = 1;
+  return snapshot;
 }
 
 test('analysis-facing status describes every supported BO3 stage', () => {
@@ -600,6 +606,81 @@ test('Markdown groups useful formal-round logs by map and omits non-round noise'
   assert.doesNotMatch(markdown, /weapon_logo|https?:\/\//i);
 });
 
+test('Markdown trims a long warmup prefix when the provider omits the first formal round start', async () => {
+  const snapshot = structuredClone(await snapshotWithEvents());
+  const events = snapshot.details.events.data;
+  assert.ok(events);
+  const killTemplate = events.find((event) => event.type === '8' && event.mapNumber === 1);
+  const endTemplate = events.find((event) => event.type === '2' && event.mapNumber === 1);
+  assert.ok(killTemplate);
+  assert.ok(endTemplate);
+
+  const kill = (
+    updateVersion: string,
+    killer: string,
+    victim: string,
+    eventId: string,
+  ) => {
+    const event = structuredClone(killTemplate);
+    (event as { updateVersion: string }).updateVersion = updateVersion;
+    const attributes = event.attributes as Record<string, string | number | boolean | null>;
+    attributes.killer_name = killer;
+    attributes.killer_nick = killer;
+    attributes.victim_name = victim;
+    attributes.victim_nick = victim;
+    attributes.event_id = eventId;
+    return event;
+  };
+  const warmup = Array.from({ length: 20 }, (_, index) =>
+    kill(
+      String(1_784_543_700_000 + index * 1_000),
+      'WarmupKiller',
+      `WarmupVictim${index % 2}`,
+      `warmup-${index}`,
+    ),
+  );
+  const formal = Array.from({ length: 4 }, (_, index) =>
+    kill(
+      String(1_784_543_820_000 + index * 1_000),
+      `FormalKiller${index}`,
+      `FormalVictim${index}`,
+      `formal-${index}`,
+    ),
+  );
+  const roundEnd = structuredClone(endTemplate);
+  (roundEnd as { updateVersion: string }).updateVersion = '1784543825000';
+  const roundEndAttributes = roundEnd.attributes as Record<
+    string,
+    string | number | boolean | null
+  >;
+  roundEndAttributes.ct_score = '0';
+  roundEndAttributes.t_score = '1';
+  (snapshot.details.events as { data: typeof events }).data = [
+    ...warmup,
+    ...formal,
+    roundEnd,
+    ...events.filter((event) => event.mapNumber === 2),
+  ];
+  (snapshot.maps[0] as { currentRound: number }).currentRound = 1;
+
+  const markdown = renderMatchMarkdown(snapshot);
+
+  assert.match(markdown, /FormalKiller0/);
+  assert.doesNotMatch(markdown, /WarmupKiller|WarmupVictim/);
+});
+
+test('Markdown withholds a formally incomplete settled-map log even when transport is complete', async () => {
+  const snapshot = structuredClone(await snapshotWithEvents());
+  (snapshot.maps[0] as { currentRound: number }).currentRound = 5;
+
+  const markdown = renderMatchMarkdown(snapshot);
+
+  assert.match(markdown, /正式回合覆盖不完整/);
+  assert.match(markdown, /为避免不完整日志误导分析，仅对应地图不输出事件明细/);
+  assert.doesNotMatch(markdown, /#### 第一局 \/ Anubis/);
+  assert.match(markdown, /#### 第二局 \/ Cache/);
+});
+
 test('Markdown withholds incomplete event logs and exposes the exact collection gap', async () => {
   const snapshot = structuredClone(await snapshotWithEvents());
   const section = snapshot.details.events as {
@@ -700,6 +781,116 @@ test('Markdown follows 5E terminology and pre-match analysis hierarchy', async (
   assert.doesNotMatch(markdown, /选手评分|社区评分/);
   assert.doesNotMatch(markdown, /\|Impact\||全表无数据字段/);
   assert.match(markdown, /接口未返回交手汇总或比赛明细/);
+});
+
+test('analysis power players are regrouped by the authoritative match roster', async () => {
+  const snapshot = await snapshotWithAnalysis((payload) => {
+    const analysis = payload as {
+      data: {
+        result: {
+          power_comparison: {
+            t1_player_stats: Array<{
+              player_item: { team_id: string; team_name: string };
+            }>;
+            t2_player_stats: Array<{
+              player_item: { team_id: string; team_name: string };
+            }>;
+          };
+        };
+      };
+    };
+    const power = analysis.data.result.power_comparison;
+    const misplaced = power.t2_player_stats.shift();
+    assert.ok(misplaced);
+    misplaced.player_item.team_id = '';
+    misplaced.player_item.team_name = '';
+    power.t1_player_stats.push(misplaced);
+  });
+
+  assert.deepEqual(snapshot.details.analysis.data?.power.map((players) => players.length), [5, 5]);
+  assert.equal(
+    snapshot.details.analysis.data?.power[0]?.some((player) => player.playerName === 'Ckanic'),
+    false,
+  );
+  assert.equal(
+    snapshot.details.analysis.data?.power[1]?.some((player) => player.playerName === 'Ckanic'),
+    true,
+  );
+});
+
+test('Markdown treats provisional all-player-null KAST zeroes as missing values', async () => {
+  const snapshot = structuredClone(await snapshotWithDetailedStatistics());
+  const map = snapshot.maps[2];
+  assert.ok(map);
+  (snapshot as { state: MatchState }).state = {
+    certainty: 'confirmed',
+    closure: 'normal',
+    dataFinality: 'provisional',
+    lifecycle: 'closing',
+    phase: { kind: 'series-ended', finalMapNumber: 3 },
+  };
+  for (const team of map.playerStatistics.teams) {
+    for (const row of team.overall.rows ?? []) {
+      (row as { kastPercent: number | null }).kastPercent = null;
+    }
+  }
+  for (const team of snapshot.seriesPlayerStatistics.teams) {
+    for (const row of team.overall.rows ?? []) {
+      (row as { kastPercent: number | null }).kastPercent = null;
+    }
+  }
+  const mapHighlights = map.playerStatistics.highlights.rows ?? [];
+  const seriesHighlights = snapshot.seriesPlayerStatistics.highlights.rows ?? [];
+  for (const row of [...mapHighlights, ...seriesHighlights]) {
+    const metric = row.metrics.find((candidate) => candidate.title === 'KAST');
+    if (metric) {
+      (metric as unknown as { values: [string | null, string | null] }).values = ['0%', '0%'];
+    }
+  }
+
+  const markdown = renderMatchMarkdown(snapshot);
+  const mapSection = markdown.slice(
+    markdown.indexOf(`### ${map.displayName}`),
+    markdown.indexOf('### 数据总览'),
+  );
+
+  assert.doesNotMatch(mapSection, /KAST 0%/);
+  assert.doesNotMatch(markdown.slice(markdown.indexOf('### 数据总览')), /KAST 0%/);
+  assert.match(mapSection, /KAST —/);
+});
+
+test('Markdown omits overtime columns when a regulation map only has provider zero placeholders', async () => {
+  const snapshot = structuredClone(await snapshotWithDetailedStatistics());
+  const map = snapshot.maps[2];
+  assert.ok(map);
+  (map as { currentRound: number }).currentRound = 15;
+  const [first, second] = map.teams;
+  assert.ok(first);
+  assert.ok(second);
+  Object.assign(first, {
+    firstHalfScore: 10,
+    overtimeRounds: [],
+    overtimeScore: 0,
+    overtimeSide: 'CT',
+    score: 13,
+    secondHalfScore: 3,
+  });
+  Object.assign(second, {
+    firstHalfScore: 2,
+    overtimeRounds: [],
+    overtimeScore: 0,
+    overtimeSide: 'T',
+    score: 2,
+    secondHalfScore: 0,
+  });
+
+  const markdown = renderMatchMarkdown(snapshot);
+  const mapSection = markdown.slice(
+    markdown.indexOf(`### ${map.displayName}`),
+    markdown.indexOf('### 数据总览'),
+  );
+
+  assert.doesNotMatch(mapSection, /加时/);
 });
 
 test('artifact writer preserves the complete JSON beside the filtered Markdown', async (context) => {

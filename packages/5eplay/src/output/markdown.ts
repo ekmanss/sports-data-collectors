@@ -9,7 +9,6 @@ import type {
   MatchState,
   PlayerPowerMetric,
   PlayerStatHighlight,
-  PlayerStatHighlights,
   PlayerStatRows,
   PlayerState,
   PlayerStatistics,
@@ -444,13 +443,26 @@ function statPlaneLines(
 
 function highlightsLines(
   context: RenderContext,
-  highlights: PlayerStatHighlights,
+  statistics: PlayerStatistics,
 ): string[] {
+  const highlights = statistics.highlights;
   if (highlights.rows === null) return ['**选手对比**：_数据不可用_', ''];
   if (highlights.rows.length === 0) return [];
   const metricSummary = (highlight: PlayerStatHighlight, index: 0 | 1) =>
     highlight.metrics
-      .map((metric) => `${metric.title} ${value(metric.values[index])}`)
+      .map((metric) => {
+        const raw = metric.values[index];
+        const leaderId = highlight.leaders[index].playerId;
+        const leader = leaderId === null
+          ? undefined
+          : statistics.teams[index].overall.rows?.find((row) => row.id === leaderId);
+        const provisionalMissingKast =
+          context.input.state.dataFinality === 'provisional' &&
+          metric.title.toUpperCase() === 'KAST' &&
+          /^0(?:\.0+)?%$/.test(raw ?? '') &&
+          leader?.kastPercent === null;
+        return `${metric.title} ${provisionalMissingKast ? '—' : value(raw)}`;
+      })
       .join('；');
   const rows = highlights.rows.map((highlight) => [
     highlight.title,
@@ -492,7 +504,7 @@ function statisticsLines(
       ...statPlaneLines(context, 'T', team.t),
     );
   }
-  return [...lines, ...highlightsLines(context, statistics.highlights)];
+  return [...lines, ...highlightsLines(context, statistics)];
 }
 
 interface RoundOutcome {
@@ -672,6 +684,11 @@ function mapsHandler(context: RenderContext): string[] {
     lines.push(`- 本场 BP：${veto}`, '');
     if (map.played || map.technicalDisposition === 'awarded') {
       const live = map.status === 'live';
+      const regularRoundLimit = (map.regulationRoundsPerHalf ?? 12) * 2;
+      const hasOvertime =
+        map.stage === 'overtime' ||
+        (map.currentRound !== null && map.currentRound > regularRoundLimit) ||
+        map.teams.some((team) => team.overtimeRounds.some((round) => round !== 0));
       lines.push(
         ...sparseTable(
           live
@@ -686,14 +703,17 @@ function mapsHandler(context: RenderContext): string[] {
           map.teams.map((team) => live
             ? [
                 teamName(context, team.teamId), value(team.score), value(team.quickScore),
-                value(team.firstHalfScore), value(team.secondHalfScore), value(team.overtimeScore),
+                value(team.firstHalfScore), value(team.secondHalfScore),
+                value(hasOvertime ? team.overtimeScore : null),
                 value(team.currentSide), value(team.firstHalfSide), value(team.secondHalfSide),
-                value(team.overtimeSide), value(team.money), value(team.equipmentValue),
+                value(hasOvertime ? team.overtimeSide : null),
+                value(team.money), value(team.equipmentValue),
               ]
             : [
                 teamName(context, team.teamId), value(team.score), value(team.firstHalfScore),
-                value(team.secondHalfScore), value(team.overtimeScore), value(team.firstHalfSide),
-                value(team.secondHalfSide), value(team.overtimeSide),
+                value(team.secondHalfScore), value(hasOvertime ? team.overtimeScore : null),
+                value(team.firstHalfSide), value(team.secondHalfSide),
+                value(hasOvertime ? team.overtimeSide : null),
               ]),
         ),
         '',
@@ -1215,6 +1235,7 @@ function formalRoundEvents(
 
   const candidates = new Map<number, RoundCandidate>();
   let startedRound: number | null = null;
+  let sawRoundStart = false;
   let bufferedEvents: MatchEvent[] = [];
   const score = (event: MatchEvent, key: 'ct_score' | 't_score'): number | null => {
     const raw = eventAttribute(event, key);
@@ -1222,10 +1243,30 @@ function formalRoundEvents(
     const parsed = Number(raw);
     return Number.isInteger(parsed) && parsed >= 0 ? parsed : null;
   };
+  const trimWarmupPrefix = (
+    roundEvents: readonly MatchEvent[],
+    hasExplicitStart: boolean,
+  ): readonly MatchEvent[] => {
+    const killCount = roundEvents.filter((event) => event.type === '8').length;
+    if (hasExplicitStart || killCount <= 10) return roundEvents;
+    let cutAt = -1;
+    for (let index = 1; index < roundEvents.length; index += 1) {
+      try {
+        const previous = BigInt(roundEvents[index - 1]?.updateVersion ?? '');
+        const current = BigInt(roundEvents[index]?.updateVersion ?? '');
+        if (current - previous >= 45_000n) cutAt = index;
+      } catch {
+        // Without a monotonic timestamp boundary an implausible no-start round
+        // is safer to omit than to present warmup activity as formal play.
+      }
+    }
+    return cutAt === -1 ? [] : roundEvents.slice(cutAt);
+  };
 
   for (const event of events) {
     if (event.mapNumber !== mapNumber) continue;
     if (event.type === '1') {
+      sawRoundStart = true;
       startedRound =
         event.roundNumber !== null &&
         Number.isInteger(event.roundNumber) &&
@@ -1244,13 +1285,19 @@ function formalRoundEvents(
     const ctScore = score(event, 'ct_score');
     const tScore = score(event, 't_score');
     const completedRounds = ctScore === null || tScore === null ? null : ctScore + tScore;
-    if (completedRounds !== null && completedRounds > 0) {
+    const candidateEvents = trimWarmupPrefix(bufferedEvents, sawRoundStart);
+    if (
+      completedRounds !== null &&
+      completedRounds > 0 &&
+      (candidateEvents.length > 0 || sawRoundStart)
+    ) {
       candidates.set(completedRounds, {
-        events: [...bufferedEvents, event],
+        events: [...candidateEvents, event],
         roundNumber: completedRounds,
       });
     }
     startedRound = null;
+    sawRoundStart = false;
     bufferedEvents = [];
   }
 
@@ -1373,20 +1420,46 @@ function formalEventRows(
 function eventsHandler(context: RenderContext): string[] {
   if (!('details' in context.input)) return [];
   const section = context.input.details.events;
+  const transportTrusted = section.status === 'complete' || section.status === 'empty';
+  const formalEventsByMap = new Map(
+    context.input.maps.map((map) => [
+      map.mapNumber,
+      section.data === null ? [] : formalRoundEvents(section.data, map.mapNumber),
+    ]),
+  );
+  const coverageGaps = transportTrusted && section.data !== null
+    ? context.input.maps.flatMap((map) => {
+        if (!map.played || map.status !== 'settled') return [];
+        const reconstructed = new Set(
+          (formalEventsByMap.get(map.mapNumber) ?? []).map((entry) => entry.roundNumber),
+        ).size;
+        return reconstructed === map.currentRound
+          ? []
+          : [{
+              label: `${map.displayName ?? `图 ${map.mapNumber}`} ${reconstructed}/${map.currentRound}`,
+              mapNumber: map.mapNumber,
+            }];
+      })
+    : [];
+  const coverageGapMapNumbers = new Set(coverageGaps.map((gap) => gap.mapNumber));
   const lines: string[] = [
-    `- 采集状态：${sectionStatus(section)}`,
+    coverageGaps.length === 0
+      ? `- 采集状态：${sectionStatus(section)}`
+      : `- 采集状态：部分数据（正式回合覆盖不完整：${coverageGaps.map((gap) => gap.label).join('；')}）`,
     '- 范围：仅正式回合中的击杀、下包和回合结束事件；按发生顺序排列',
     '- 日志比分为随换边变化的 CT:T 阵营比分；逐回合结果中的比分为固定战队顺序',
     '',
   ];
-  const trusted = section.status === 'complete' || section.status === 'empty';
-  if (!trusted) {
+  if (!transportTrusted) {
     lines.push('- 为避免不完整日志误导分析，本节不输出事件明细；完整原始响应仍保留在同目录 JSON 中', '');
+  } else if (coverageGaps.length > 0) {
+    lines.push('- 为避免不完整日志误导分析，仅对应地图不输出事件明细；其他地图的完整日志继续保留', '');
   }
-  if (trusted && section.data !== null) {
+  if (transportTrusted && section.data !== null) {
     for (const map of context.input.maps) {
       if (!map.played) continue;
-      const events = formalRoundEvents(section.data, map.mapNumber);
+      if (coverageGapMapNumbers.has(map.mapNumber)) continue;
+      const events = formalEventsByMap.get(map.mapNumber) ?? [];
       if (events.length === 0) continue;
       const names = [map.displayName ?? `图 ${map.mapNumber}`, map.name]
         .filter((entry, index, entries): entry is string =>
@@ -1404,7 +1477,11 @@ function eventsHandler(context: RenderContext): string[] {
       );
     }
   }
-  if (!trusted || section.data === null || !lines.some((line) => line.startsWith('#### '))) {
+  if (
+    !transportTrusted ||
+    section.data === null ||
+    !lines.some((line) => line.startsWith('#### '))
+  ) {
     lines.push('_暂无正式回合日志_');
   }
   return subBlock('比赛日志', lines);

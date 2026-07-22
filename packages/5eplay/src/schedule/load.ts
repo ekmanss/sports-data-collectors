@@ -252,9 +252,22 @@ function decodeSchedule(
   if (new Set(sourceMatchIds).size !== sourceMatchIds.length) {
     throw new TypeError('schedule response repeats a match identity');
   }
-  const matches = sourceMatches
-    .map((match, index) => scheduleMatch(match, index))
-    .filter((match): match is ScheduleMatch => match !== null);
+  const matches: ScheduleMatch[] = [];
+  let decodedRows = 0;
+  for (const [index, sourceMatch] of sourceMatches.entries()) {
+    try {
+      const decoded = scheduleMatch(sourceMatch, index);
+      decodedRows += 1;
+      if (decoded !== null) matches.push(decoded);
+    } catch {
+      // A single provider row can transiently contradict itself while the other
+      // rows on the page remain useful. Page-level identity checks above still
+      // fail closed because they cannot be isolated safely.
+    }
+  }
+  if (sourceMatches.length > 0 && decodedRows === 0) {
+    throw new TypeError('schedule response contains no independently decodable match rows');
+  }
   return deepFreeze({
     kind: 'available',
     schedule: {

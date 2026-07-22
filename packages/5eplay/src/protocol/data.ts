@@ -715,6 +715,7 @@ function map(
   providerBoutNumber: number,
   orderFinality: 'confirmed' | 'provisional',
   teamIds: readonly [string, string],
+  forceUnopened = false,
 ): MatchMap {
   const bout = asRecord(value, `provider bout ${providerBoutNumber}`);
   const number = integer(bout.bout_num, `provider bout ${providerBoutNumber}.bout_num`);
@@ -727,9 +728,9 @@ function map(
     bout.start_time,
     `provider bout ${providerBoutNumber}.start_time`,
   );
-  const closedWithoutPlay = statusCode === 2 && startedAt === null;
+  const providerClosedWithoutPlay = statusCode === 2 && startedAt === null;
   const result = nullableString(bout.result);
-  const winnerTeamId =
+  const providerWinnerTeamId =
     statusCode !== 2
       ? null
       : result === 't1'
@@ -805,6 +806,43 @@ function map(
     vetoAction,
     vetoTeamId,
   };
+  const phantomUnusedClosure =
+    statusCode === 2 &&
+    !providerClosedWithoutPlay &&
+    result === null &&
+    currentRound === null &&
+    teams.every(
+      (team) =>
+        team.score === null &&
+        team.quickScore === null &&
+        team.firstHalfScore === null &&
+        team.secondHalfScore === null &&
+        team.overtimeScore === null &&
+        team.firstHalfRounds.every((round) => round === 0) &&
+        team.secondHalfRounds.every((round) => round === 0) &&
+        team.overtimeRounds.every((round) => round === 0),
+    );
+  const closedWithoutPlay = providerClosedWithoutPlay || phantomUnusedClosure;
+  if (forceUnopened) {
+    return {
+      ...metadata,
+      bombPlantedAt: null,
+      closedWithoutPlay: false,
+      currentRound: null,
+      endedAt: null,
+      gameTimeSeconds: null,
+      played: false,
+      playerStatistics: nonOfficialPlayerStatistics(statistics),
+      roundStartedAt: null,
+      settled: false,
+      stage: null,
+      startedAt: null,
+      status: 'unopened',
+      teams: [inactiveTeam(teams[0], false), inactiveTeam(teams[1], false)],
+      technicalDisposition: null,
+      winnerTeamId: null,
+    };
+  }
   if (statusCode === -1) {
     assertUnplayedPlayerStatistics(statistics);
     for (const team of teams) {
@@ -878,7 +916,7 @@ function map(
     const nonOfficialStatistics = nonOfficialPlayerStatistics(statistics);
     for (const team of teams) assertNoPlayTeam(team);
     if (
-      endedAt !== null ||
+      (providerClosedWithoutPlay && endedAt !== null) ||
       currentRound !== null ||
       roundStartedAt !== null ||
       bombPlantedAt !== null ||
@@ -887,7 +925,7 @@ function map(
     ) {
       throw new InconsistentProviderStateError('technical map contains gameplay data');
     }
-    if (winnerTeamId === null) {
+    if (providerWinnerTeamId === null) {
       if (
         result !== null ||
         teams.some((team) => team.score !== null || team.quickScore !== null)
@@ -913,7 +951,7 @@ function map(
         winnerTeamId: null,
       };
     }
-    const expectedScores = winnerTeamId === teamIds[0] ? [1, 0] : [0, 1];
+    const expectedScores = providerWinnerTeamId === teamIds[0] ? [1, 0] : [0, 1];
     if (
       teams.some(
         (team, index) =>
@@ -922,7 +960,7 @@ function map(
     ) {
       throw new InconsistentProviderStateError('awarded technical map is not a 1-0 award');
     }
-    const awardedTeams = winnerTeamId === teamIds[0]
+    const awardedTeams = providerWinnerTeamId === teamIds[0]
       ? [awardedWinnerTeam(teams[0]), awardedLoserTeam(teams[1])] as const
       : [awardedLoserTeam(teams[0]), awardedWinnerTeam(teams[1])] as const;
     return {
@@ -941,9 +979,18 @@ function map(
       status: 'closed-without-play',
       teams: awardedTeams,
       technicalDisposition: 'awarded',
-      winnerTeamId,
+      winnerTeamId: providerWinnerTeamId,
     };
   }
+  const scoreWinnerTeamId =
+    teams[0].score !== null &&
+    teams[1].score !== null &&
+    teams[0].score !== teams[1].score
+      ? teams[0].score > teams[1].score
+        ? teamIds[0]
+        : teamIds[1]
+      : null;
+  const winnerTeamId = providerWinnerTeamId ?? scoreWinnerTeamId;
   if (winnerTeamId === null) {
     throw new InconsistentProviderStateError('played settled map has no winner');
   }
@@ -1322,6 +1369,28 @@ export function decodeCoreResponse(
     }
     return first.providerBoutNumber - second.providerBoutNumber;
   });
+  const liveEntries = chronologicalBouts
+    .map((entry, index) => ({ entry, index }))
+    .filter(({ entry }) => entry.statusCode === 1);
+  let credibleLiveProviderBoutNumber: number | null = null;
+  if (liveEntries.length > 1) {
+    for (const { entry, index } of liveEntries) {
+      try {
+        map(
+          entry.bout,
+          (index + 1) as MapNumber,
+          entry.providerBoutNumber,
+          'confirmed',
+          teamIds,
+        );
+        credibleLiveProviderBoutNumber = entry.providerBoutNumber;
+        break;
+      } catch {
+        // Try the next live-marked slot. A provider transition can briefly leave
+        // a later slot carrying impossible scores from another lifecycle.
+      }
+    }
+  }
   const maps = chronologicalBouts.map((entry, index) =>
     map(
       entry.bout,
@@ -1333,13 +1402,30 @@ export function decodeCoreResponse(
         ? 'confirmed'
         : 'provisional',
       teamIds,
+      liveEntries.length > 1 &&
+        credibleLiveProviderBoutNumber !== null &&
+        entry.statusCode === 1 &&
+        entry.providerBoutNumber !== credibleLiveProviderBoutNumber,
     ),
   );
-  const seriesScore = [
+  const providerSeriesScore = [
     { score: integer(globalState.t1_score, 'global_state.t1_score'), teamId: firstTeam.id },
     { score: integer(globalState.t2_score, 'global_state.t2_score'), teamId: secondTeam.id },
   ] as const satisfies readonly [TeamScore, TeamScore];
-  const state = stateFromEvidence(globalStatus, maps, seriesScore, 2);
+  const settledWinnerCounts = teamIds.map(
+    (teamId) => maps.filter((entry) => entry.winnerTeamId === teamId).length,
+  ) as [number, number];
+  const mapsProveTerminal =
+    globalStatus === 1 &&
+    maps.every((entry) => entry.status !== 'live') &&
+    Math.max(...settledWinnerCounts) >= 2;
+  const seriesScore = mapsProveTerminal
+    ? [
+        { score: settledWinnerCounts[0], teamId: firstTeam.id },
+        { score: settledWinnerCounts[1], teamId: secondTeam.id },
+      ] as const satisfies readonly [TeamScore, TeamScore]
+    : providerSeriesScore;
+  const state = stateFromEvidence(mapsProveTerminal ? 2 : globalStatus, maps, seriesScore, 2);
   const stateVersion = asString(data.state_ver, 'response.data.state_ver');
   const confirmedSeriesPlayerStatistics = seriesPlayerStatistics(globalState, teamIds);
   const snapshot: ConfirmedMatchObservation = {
@@ -1368,7 +1454,7 @@ export function decodeCoreResponse(
     seriesPlayerStatistics: confirmedSeriesPlayerStatistics,
     seriesScore,
     seriesWinnerTeamId:
-      globalStatus === 2
+      state.lifecycle === 'closing'
         ? seriesScore.find((entry) => entry.score === 2)?.teamId ?? null
         : null,
     state,

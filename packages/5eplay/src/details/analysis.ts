@@ -168,6 +168,53 @@ function recentMatches(value: unknown, label: string): readonly HistoricalMatch[
   });
 }
 
+function rosterPlayerIds(value: unknown, label: string): readonly string[] {
+  return asArray(value, label).flatMap((entry, index) => {
+    try {
+      const id = asString(asRecord(entry, `${label}[${index}]`).id, `${label}[${index}].id`);
+      return id === '' ? [] : [id];
+    } catch {
+      return [];
+    }
+  });
+}
+
+function rosterGroupedPower(
+  comparison: Record<string, unknown>,
+  power: Record<string, unknown>,
+): readonly [readonly PlayerPower[], readonly PlayerPower[]] {
+  const rosterIds = [
+    rosterPlayerIds(comparison.t1_player_stats, 'analysis.t1.players'),
+    rosterPlayerIds(comparison.t2_player_stats, 'analysis.t2.players'),
+  ] as const;
+  const ownerByPlayerId = new Map<string, 0 | 1>();
+  const ambiguousIds = new Set<string>();
+  for (const teamIndex of [0, 1] as const) {
+    for (const playerId of rosterIds[teamIndex]) {
+      const previous = ownerByPlayerId.get(playerId);
+      if (previous !== undefined && previous !== teamIndex) ambiguousIds.add(playerId);
+      else ownerByPlayerId.set(playerId, teamIndex);
+    }
+  }
+  for (const playerId of ambiguousIds) ownerByPlayerId.delete(playerId);
+
+  const providerGroups = [
+    asArray(power.t1_player_stats, 'analysis.power.t1').map((entry, index) =>
+      playerPower(entry, `analysis.power.t1[${index}]`),
+    ),
+    asArray(power.t2_player_stats, 'analysis.power.t2').map((entry, index) =>
+      playerPower(entry, `analysis.power.t2[${index}]`),
+    ),
+  ] as const;
+  const grouped: [PlayerPower[], PlayerPower[]] = [[], []];
+  for (const providerTeamIndex of [0, 1] as const) {
+    for (const player of providerGroups[providerTeamIndex]) {
+      grouped[ownerByPlayerId.get(player.playerId) ?? providerTeamIndex].push(player);
+    }
+  }
+  return grouped;
+}
+
 export function parseAnalysis(
   payload: unknown,
   matchId: string,
@@ -209,14 +256,7 @@ export function parseAnalysis(
     maps: asArray(comparison.team_map_stats, 'analysis.team_map_stats').map((map, index) =>
       analysisMap(map, teamIds, `analysis.team_map_stats[${index}]`),
     ),
-    power: [
-      asArray(power.t1_player_stats, 'analysis.power.t1').map((entry, index) =>
-        playerPower(entry, `analysis.power.t1[${index}]`),
-      ),
-      asArray(power.t2_player_stats, 'analysis.power.t2').map((entry, index) =>
-        playerPower(entry, `analysis.power.t2[${index}]`),
-      ),
-    ],
+    power: rosterGroupedPower(comparison, power),
     recentMatches: [
       { teamId: teamIds[0], matches: recentMatches(result.t1_rec_matches, 'analysis.t1_recent') },
       { teamId: teamIds[1], matches: recentMatches(result.t2_rec_matches, 'analysis.t2_recent') },

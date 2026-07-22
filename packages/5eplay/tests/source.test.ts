@@ -379,7 +379,7 @@ test('schedule blocks a provider page containing duplicate match identities', as
   );
 });
 
-test('schedule blocks contradictory global and map status evidence', async () => {
+test('schedule isolates contradictory match rows without discarding valid page peers', async () => {
   const source = createFiveEPlayMatchSourceWithTransport(
     {},
     new ReplayTransport([
@@ -413,6 +413,22 @@ test('schedule blocks contradictory global and map status evidence', async () =>
                 },
                 tt_info: { disp_name: 'Example Cup', id: 'csgo_tt_7' },
               },
+              {
+                mc_info: {
+                  format: '1',
+                  id: 'csgo_mc_7002',
+                  plan_ts: '1784703600',
+                  t1_info: { disp_name: 'Charlie', id: 'hltv_team_7103' },
+                  t2_info: { disp_name: 'Delta', id: 'hltv_team_7104' },
+                },
+                state: {
+                  bout_states: [],
+                  status: '0',
+                  t1_score: '0',
+                  t2_score: '0',
+                },
+                tt_info: { disp_name: 'Example Cup', id: 'csgo_tt_7' },
+              },
             ],
             state_ver: 'contradictory',
           },
@@ -427,9 +443,10 @@ test('schedule blocks contradictory global and map status evidence', async () =>
 
   const result = await source.schedule();
 
-  assert.equal(result.kind, 'blocked');
-  if (result.kind !== 'blocked') return;
-  assert.equal(result.reason, 'provider-schema-unsupported');
+  assert.equal(result.kind, 'available');
+  if (result.kind !== 'available') return;
+  assert.equal(result.schedule.sourceCount, 2);
+  assert.deepEqual(result.schedule.matches.map((match) => match.id), ['csgo_mc_7002']);
 });
 
 test('schedule distinguishes provider outages from unsupported provider schemas', async () => {
@@ -685,6 +702,107 @@ test('snapshot classifies the complete observed BO3 phase matrix', async (contex
       fixture.file,
     );
   }
+});
+
+test('snapshot quarantines an impossible second live map and keeps the credible current map', async (context) => {
+  const originalFetch = globalThis.fetch;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  const body = JSON.parse(
+    await readFile(new URL('./fixtures/states/bo3-map2-live.json', import.meta.url), 'utf8'),
+  ) as {
+    data: {
+      match: {
+        mc_info: { id: string; t1_info: { id: string }; t2_info: { id: string } };
+        bouts_state: Array<{
+          status: string;
+          curr_bout_stage: string;
+          curr_round_num: string;
+          t1_stats: Record<string, unknown>;
+          t2_stats: Record<string, unknown>;
+        }>;
+      };
+    };
+  };
+  const impossibleThirdMap = body.data.match.bouts_state[2];
+  assert.ok(impossibleThirdMap);
+  impossibleThirdMap.status = '1';
+  impossibleThirdMap.curr_bout_stage = 'fh';
+  impossibleThirdMap.curr_round_num = '6';
+  Object.assign(impossibleThirdMap.t1_stats, {
+    all_score: '14',
+    fh_score: '3',
+    id: body.data.match.mc_info.t1_info.id,
+    ot_score: '0',
+    quick_score: '14',
+    sh_score: '0',
+  });
+  Object.assign(impossibleThirdMap.t2_stats, {
+    all_score: '13',
+    fh_score: '3',
+    id: body.data.match.mc_info.t2_info.id,
+    ot_score: '0',
+    quick_score: '13',
+    sh_score: '0',
+  });
+  globalThis.fetch = async () => Response.json(body);
+
+  const result = await createFiveEPlayMatchSource().snapshot(body.data.match.mc_info.id);
+
+  assert.equal(result.kind, 'confirmed');
+  if (result.kind !== 'confirmed') return;
+  assert.deepEqual(result.snapshot.state.phase, { kind: 'map-live', mapNumber: 2 });
+  assert.equal(result.snapshot.maps[2]?.status, 'unopened');
+  assert.equal(result.snapshot.providerState.bouts[2]?.statusCode, 1);
+});
+
+test('snapshot derives a provisional terminal series from settled maps while global score lags', async (context) => {
+  const originalFetch = globalThis.fetch;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  const body = JSON.parse(
+    await readFile(
+      new URL('./fixtures/states/bo3-complete-three-maps.json', import.meta.url),
+      'utf8',
+    ),
+  ) as {
+    data: {
+      match: {
+        mc_info: { id: string };
+        global_state: {
+          status: string;
+          t1_quick_score: string;
+          t1_score: string;
+          t2_quick_score: string;
+          t2_score: string;
+        };
+      };
+    };
+  };
+  Object.assign(body.data.match.global_state, {
+    status: '1',
+    t1_quick_score: '1',
+    t1_score: '1',
+    t2_quick_score: '1',
+    t2_score: '1',
+  });
+  globalThis.fetch = async () => Response.json(body);
+
+  const result = await createFiveEPlayMatchSource({
+    timing: { closeCalibrationMs: 180_000, livePollMs: 1 },
+  }).snapshot(body.data.match.mc_info.id);
+
+  assert.equal(result.kind, 'confirmed');
+  if (result.kind !== 'confirmed') return;
+  assert.equal(result.snapshot.state.lifecycle, 'closing');
+  assert.deepEqual(result.snapshot.state.phase, {
+    kind: 'series-ended',
+    finalMapNumber: 3,
+  });
+  assert.deepEqual(result.snapshot.seriesScore.map((entry) => entry.score), [1, 2]);
+  assert.equal(result.snapshot.providerState.globalStatusCode, 1);
 });
 
 test('snapshot treats quick score as provisional telemetry during a live round', async (context) => {
@@ -1397,6 +1515,8 @@ test('normal 2-0 remains normal when the provider closes the unused third map', 
       match: {
         bouts_state: Array<{
           curr_bout_stage: string;
+          end_time: string;
+          start_time: string;
           status: string;
           t1_stats: { id: string };
           t2_stats: { id: string };
@@ -1412,6 +1532,8 @@ test('normal 2-0 remains normal when the provider closes the unused third map', 
   assert.ok(unusedMap);
   unusedMap.status = '2';
   unusedMap.curr_bout_stage = 'fh';
+  unusedMap.start_time = '1784722695';
+  unusedMap.end_time = '1784723472';
   unusedMap.t1_stats.id = body.data.match.mc_info.t1_info.id;
   unusedMap.t2_stats.id = body.data.match.mc_info.t2_info.id;
   const coreFrame = {

@@ -182,6 +182,7 @@ function stableClosedCandidate(
   closeCalibrationMs: number,
 ): ConfirmedMatchObservation | null {
   if (observation.state.lifecycle !== 'closing') return null;
+  if (observation.providerState.globalStatusCode !== 2) return null;
   const terminalEndedAt = Math.max(0, ...observation.maps.map((map) => map.endedAt ?? 0));
   if (terminalEndedAt === 0 || Date.now() - terminalEndedAt < closeCalibrationMs) return null;
   const closed = {

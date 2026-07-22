@@ -406,6 +406,7 @@ class MatchWatchImpl implements MatchWatch {
         const calibrationMs = this.#defaults.timing?.closeCalibrationMs ?? 180_000;
         if (
           this.#terminalCandidate.observations >= 2 &&
+          observation.providerState.globalStatusCode === 2 &&
           endedAt > 0 &&
           now - endedAt >= calibrationMs
         ) {

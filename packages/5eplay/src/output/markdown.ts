@@ -212,9 +212,6 @@ function overviewHandler(context: RenderContext): string[] {
     `- 地点：${value(input.tournament.location)}`,
     `- 奖励/奖金：${value(input.tournament.prize)}`,
     `- 系列赛胜者：${teamName(context, input.seriesWinnerTeamId)}`,
-    ...('detailsCompleteness' in input
-      ? [`- 详细数据采集：${input.detailsCompleteness === 'complete' ? '完整' : '部分可用'}`]
-      : []),
     '- 缺失值：`—` 表示接口未提供或当前状态不适用，不等于 0；采集完整不表示每个字段都有值',
     '',
   ];
@@ -448,7 +445,21 @@ function highlightsLines(
   const highlights = statistics.highlights;
   if (highlights.rows === null) return ['**选手对比**：_数据不可用_', ''];
   if (highlights.rows.length === 0) return [];
-  const metricSummary = (highlight: PlayerStatHighlight, index: 0 | 1) =>
+  const isZeroOrMissingMetric = (raw: string | null): boolean => {
+    if (raw === null || raw.trim() === '') return true;
+    const numeric = Number(raw.trim().replace(/%$/, ''));
+    return Number.isFinite(numeric) && numeric === 0;
+  };
+  const isPlaceholder = (highlight: PlayerStatHighlight, index: 0 | 1): boolean =>
+    highlight.leaders[index].playerId === null &&
+    highlight.metrics.every((metric) => isZeroOrMissingMetric(metric.values[index]));
+  const metricSummary = (
+    highlight: PlayerStatHighlight,
+    index: 0 | 1,
+    placeholder: boolean,
+  ) => {
+    if (placeholder) return '—';
+    return (
     highlight.metrics
       .map((metric) => {
         const raw = metric.values[index];
@@ -463,14 +474,32 @@ function highlightsLines(
           leader?.kastPercent === null;
         return `${metric.title} ${provisionalMissingKast ? '—' : value(raw)}`;
       })
-      .join('；');
-  const rows = highlights.rows.map((highlight) => [
-    highlight.title,
-    playerName(context, highlight.leaders[0].playerId),
-    metricSummary(highlight, 0),
-    playerName(context, highlight.leaders[1].playerId),
-    metricSummary(highlight, 1),
-  ]);
+      .join('；')
+    );
+  };
+  const rows = highlights.rows.flatMap((highlight) => {
+    const placeholders = [
+      isPlaceholder(highlight, 0),
+      isPlaceholder(highlight, 1),
+    ] as const;
+    if (placeholders[0] && placeholders[1]) return [];
+    return [[
+      highlight.title,
+      placeholders[0]
+        ? '无'
+        : highlight.leaders[0].playerId === null
+          ? '选手未提供'
+          : playerName(context, highlight.leaders[0].playerId),
+      metricSummary(highlight, 0, placeholders[0]),
+      placeholders[1]
+        ? '无'
+        : highlight.leaders[1].playerId === null
+          ? '选手未提供'
+          : playerName(context, highlight.leaders[1].playerId),
+      metricSummary(highlight, 1, placeholders[1]),
+    ]];
+  });
+  if (rows.length === 0) return [];
   return [
     '**选手对比**',
     '',
@@ -630,6 +659,38 @@ function roundTimelineLines(context: RenderContext, map: MatchMap): string[] {
   ];
 }
 
+type LiveQuickScoreProjection =
+  | { readonly kind: 'credible'; readonly scores: readonly [number, number] }
+  | { readonly kind: 'incoherent' }
+  | { readonly kind: 'omit' };
+
+function liveQuickScoreProjection(map: MatchMap): LiveQuickScoreProjection {
+  const [firstTeam, secondTeam] = map.teams;
+  const formal = [firstTeam.score, secondTeam.score] as const;
+  const quick = [firstTeam.quickScore, secondTeam.quickScore] as const;
+  if ([...formal, ...quick].some((score) => score === null)) return { kind: 'omit' };
+  const formalScores = formal as readonly [number, number];
+  const quickScores = quick as readonly [number, number];
+  if (
+    [...formalScores, ...quickScores].some((score) =>
+      !Number.isInteger(score) || score < 0)
+  ) {
+    return { kind: 'incoherent' };
+  }
+  const deltas = [
+    quickScores[0] - formalScores[0],
+    quickScores[1] - formalScores[1],
+  ] as const;
+  if (deltas[0] === 0 && deltas[1] === 0) return { kind: 'omit' };
+  if (
+    deltas.every((delta) => delta === 0 || delta === 1) &&
+    deltas[0] + deltas[1] === 1
+  ) {
+    return { kind: 'credible', scores: quickScores };
+  }
+  return { kind: 'incoherent' };
+}
+
 function mapsHandler(context: RenderContext): string[] {
   const lines: string[] = [
     '- 统计口径：KAST=发生击杀、助攻、存活或死亡被补枪的回合占比；ADR/KPR/DPR=每回合平均伤害/击杀/死亡；Opening Kill%=首杀回合占比；Opening差=首杀数-首死数；Multi-kill=多杀回合数；Traded Deaths=死亡后被队友补枪次数',
@@ -684,6 +745,10 @@ function mapsHandler(context: RenderContext): string[] {
     lines.push(`- 本场 BP：${veto}`, '');
     if (map.played || map.technicalDisposition === 'awarded') {
       const live = map.status === 'live';
+      const quickScore = live ? liveQuickScoreProjection(map) : { kind: 'omit' } as const;
+      if (quickScore.kind === 'incoherent') {
+        lines.push('- 即时比分遥测与正式回合不一致，未纳入 MD；原值见 JSON', '');
+      }
       const regularRoundLimit = (map.regulationRoundsPerHalf ?? 12) * 2;
       const hasOvertime =
         map.stage === 'overtime' ||
@@ -700,9 +765,10 @@ function mapsHandler(context: RenderContext): string[] {
                 '战队', '最终比分', '上半场', '下半场', '加时',
                 '上半场阵营', '下半场阵营', '加时阵营',
               ],
-          map.teams.map((team) => live
+          map.teams.map((team, teamIndex) => live
             ? [
-                teamName(context, team.teamId), value(team.score), value(team.quickScore),
+                teamName(context, team.teamId), value(team.score),
+                value(quickScore.kind === 'credible' ? quickScore.scores[teamIndex] : null),
                 value(team.firstHalfScore), value(team.secondHalfScore),
                 value(hasOvertime ? team.overtimeScore : null),
                 value(team.currentSide), value(team.firstHalfSide), value(team.secondHalfSide),
@@ -1353,8 +1419,13 @@ function killEventText(
     event.targetPlayerId,
     ['victim_name', 'victim_nick'],
   );
+  const killerSide = eventSide(eventAttribute(event, 'killer_side'));
+  const victimSide = eventSide(eventAttribute(event, 'victim_side'));
+  const sameSide =
+    (killerSide === 'CT' || killerSide === 'T') &&
+    killerSide === victimSide;
   const suffix = [weaponName(eventAttribute(event, 'weapon')), ...details].join('；');
-  return `${killer}[${value(eventSide(eventAttribute(event, 'killer_side')))}] > ${victim}[${value(eventSide(eventAttribute(event, 'victim_side')))}]（${suffix}）`;
+  return `${killer}[${value(killerSide)}]${sameSide ? ' 队友误杀 ' : ' > '}${victim}[${value(victimSide)}]（${suffix}）`;
 }
 
 function bombPlantEventText(

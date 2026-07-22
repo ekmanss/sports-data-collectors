@@ -539,8 +539,18 @@ test('Markdown keeps player details for settled and live maps only', async () =>
   assert.match(liveFirstMap, /#### 选手数据/);
   assert.match(liveFirstMap, /\*\*选手状态快照\*\*/);
   assert.match(liveFirstMap, /\|选手\|K-D-A\|KD差\|ADR\|/);
-  assert.match(liveFirstMap, /即时比分（接口遥测）/);
+  assert.doesNotMatch(liveFirstMap, /即时比分（接口遥测）/);
   assert.doesNotMatch(liveFirstMap, /全表无数据字段/);
+});
+
+test('Markdown omits the aggregate completeness of non-rendered detail sections', async () => {
+  const snapshot = structuredClone(await snapshotWithAnalysis());
+  (snapshot as { detailsCompleteness: 'partial' }).detailsCompleteness = 'partial';
+
+  const markdown = renderMatchMarkdown(snapshot);
+
+  assert.doesNotMatch(markdown, /详细数据采集/);
+  assert.match(markdown, /## 赛前分析\n\n- 采集状态：完整/);
 });
 
 test('Markdown renders settled, live, and unused maps with state-specific fields', async () => {
@@ -604,6 +614,26 @@ test('Markdown groups useful formal-round logs by map and omits non-round noise'
   assert.equal(markdown.match(/reyoz\[T\] > shg\[CT\]（M4A4；爆头）/g)?.length, 1);
   assert.doesNotMatch(markdown, /事件属性|weapon=|killer_side=|HiddenJoin|warmup_only|post_round_only|WarmupKiller/);
   assert.doesNotMatch(markdown, /weapon_logo|https?:\/\//i);
+});
+
+test('Markdown labels same-side formal kills as team kills', async () => {
+  const snapshot = structuredClone(await snapshotWithEvents());
+  const events = snapshot.details.events.data?.filter((candidate) =>
+    candidate.type === '8'
+    && (candidate.attributes.killer_name === 'reyoz'
+      || candidate.attributes.killer_nick === 'reyoz')
+    && candidate.attributes.weapon === 'galilar');
+  assert.ok(events && events.length > 0);
+  for (const event of events) {
+    const attributes = event.attributes as Record<string, string | number | boolean | null>;
+    assert.equal(attributes.killer_side, 'T');
+    attributes.victim_side = 'T';
+  }
+
+  const markdown = renderMatchMarkdown(snapshot);
+
+  assert.match(markdown, /reyoz\[T\] 队友误杀 shg\[T\]（Galil AR/);
+  assert.doesNotMatch(markdown, /reyoz\[T\] > shg\[T\]（Galil AR/);
 });
 
 test('Markdown trims a long warmup prefix when the provider omits the first formal round start', async () => {
@@ -734,6 +764,29 @@ test('Markdown suppresses placeholder telemetry, trims labels, and normalizes eq
   assert.doesNotMatch(markdown, /^#\s{2,}|\s{2,}vs/m);
 });
 
+test('Markdown shows only a credible one-round live quick score', async () => {
+  const equal = structuredClone(await snapshotFromFixture('bo3-map1-live.json'));
+  const equalMarkdown = renderMatchMarkdown(equal);
+  assert.doesNotMatch(equalMarkdown, /即时比分（接口遥测）/);
+
+  const plausible = structuredClone(equal);
+  const plausibleTeam = plausible.maps[0]?.teams[1] as { quickScore: number | null };
+  plausibleTeam.quickScore = (plausibleTeam.quickScore ?? 0) + 1;
+  const plausibleMarkdown = renderMatchMarkdown(plausible);
+  assert.match(plausibleMarkdown, /即时比分（接口遥测）/);
+  assert.doesNotMatch(plausibleMarkdown, /即时比分遥测与正式回合不一致/);
+
+  const incoherent = structuredClone(equal);
+  const incoherentTeam = incoherent.maps[0]?.teams[1] as { quickScore: number | null };
+  incoherentTeam.quickScore = (incoherentTeam.quickScore ?? 0) + 3;
+  const incoherentMarkdown = renderMatchMarkdown(incoherent);
+  assert.doesNotMatch(incoherentMarkdown, /即时比分（接口遥测）/);
+  assert.match(
+    incoherentMarkdown,
+    /即时比分遥测与正式回合不一致，未纳入 MD；原值见 JSON/,
+  );
+});
+
 test('Markdown does not present unresolved BP values as literal null or unknown', async () => {
   const snapshot = structuredClone(await snapshotFromFixture('bo3-prestart.json'));
   for (const map of snapshot.maps) {
@@ -857,6 +910,30 @@ test('Markdown treats provisional all-player-null KAST zeroes as missing values'
   assert.doesNotMatch(mapSection, /KAST 0%/);
   assert.doesNotMatch(markdown.slice(markdown.indexOf('### 数据总览')), /KAST 0%/);
   assert.match(mapSection, /KAST —/);
+});
+
+test('Markdown distinguishes an absent zero-value highlight leader from missing identity', async () => {
+  const placeholder = structuredClone(await snapshotWithDetailedStatistics());
+  const placeholderMarkdown = renderMatchMarkdown(placeholder);
+
+  assert.match(placeholderMarkdown, /\|残局王\|[^|]+\|[^|]+\|无\|—\|/);
+  assert.doesNotMatch(placeholderMarkdown, /\|残局王\|[^\n]*\|—\|残局获胜 0；多杀次数 0\|/);
+
+  const missingIdentity = structuredClone(placeholder);
+  const clutch = missingIdentity.maps[0]?.playerStatistics.highlights.rows?.find(
+    (highlight) => highlight.title === '残局王',
+  );
+  assert.ok(clutch);
+  for (const metric of clutch.metrics) {
+    (metric.values as unknown as [string | null, string | null])[1] =
+      metric.title === '残局获胜' ? '2' : '3';
+  }
+  const missingIdentityMarkdown = renderMatchMarkdown(missingIdentity);
+
+  assert.match(
+    missingIdentityMarkdown,
+    /\|残局王\|[^|]+\|[^|]+\|选手未提供\|残局获胜 2；多杀次数 3\|/,
+  );
 });
 
 test('Markdown omits overtime columns when a regulation map only has provider zero placeholders', async () => {

@@ -51,6 +51,10 @@ duels, multi-kill distributions, comparison highlights, player-power metrics, an
 match logs. It omits schema/revision tokens, provider state, artwork URLs, country
 metadata, section transport metadata, and community/player ratings. Its headline status uses the
 authoritative phase model, including unopened/live maps and both between-map states.
+To reduce AI context usage without dropping analysis data, repeated player-power metadata is
+grouped per player, duel details use a lossless kill/opening-kill matrix, formal events are grouped
+in occurrence order by round, and columns that are entirely unavailable are named once instead of
+repeating an empty cell for every row.
 
 For production integration, exhaustive result handling, state mapping, retry policy, and realtime
 ownership, see [INTEGRATION.md](INTEGRATION.md).

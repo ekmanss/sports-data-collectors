@@ -50,9 +50,26 @@ function percent(value_: number | null, signed = false): string {
 function table(headers: readonly string[], rows: readonly (readonly string[])[]): string[] {
   if (rows.length === 0) return ['_暂无数据_'];
   return [
-    `| ${headers.map(value).join(' | ')} |`,
-    `| ${headers.map(() => '---').join(' | ')} |`,
-    ...rows.map((row) => `| ${row.map(value).join(' | ')} |`),
+    `|${headers.map(value).join('|')}|`,
+    `|${headers.map(() => '---').join('|')}|`,
+    ...rows.map((row) => `|${row.map(value).join('|')}|`),
+  ];
+}
+
+function sparseTable(headers: readonly string[], rows: readonly (readonly string[])[]): string[] {
+  if (rows.length === 0) return table(headers, rows);
+  const retainedIndexes = headers.flatMap((_, index) =>
+    rows.some((row) => row[index] !== '—') ? [index] : []);
+  const omittedIndexes = headers.flatMap((_, index) =>
+    retainedIndexes.includes(index) ? [] : [index]);
+  return [
+    ...(omittedIndexes.length === 0
+      ? []
+      : [`- 全表无数据字段：${omittedIndexes.map((index) => headers[index]).join('、')}`, '']),
+    ...table(
+      retainedIndexes.map((index) => headers[index] ?? '—'),
+      rows.map((row) => retainedIndexes.map((index) => row[index] ?? '—')),
+    ),
   ];
 }
 
@@ -202,7 +219,7 @@ function statRows(
     '爆头率',
     '首杀次数',
   ];
-  return table(
+  return sparseTable(
     headers,
     rows.rows.map((player) => [
       player.name || playerName(context, player.id),
@@ -245,7 +262,7 @@ function advancedStatRows(rows: readonly PlayerState[]): string[] {
   return [
     '**高级指标**',
     '',
-    ...table(
+    ...sparseTable(
       [
         '选手',
         'Impact',
@@ -300,7 +317,7 @@ function liveStateRows(rows: readonly PlayerState[]): string[] {
   return [
     '**选手状态快照**',
     '',
-    ...table(
+    ...sparseTable(
       ['选手', '存活', '生命', '金钱', '护甲', '头盔', '拆弹器', '装备'],
       players.map((player) => [
         player.name,
@@ -318,27 +335,34 @@ function liveStateRows(rows: readonly PlayerState[]): string[] {
 }
 
 function duelRows(context: RenderContext, rows: readonly PlayerState[]): string[] {
-  const duels = rows.flatMap((player) => [
-    ...((player.killsByOpponent.rows ?? []).map((duel) => [
-      player.name,
-      '击杀',
-      playerName(context, duel.opponentPlayerId),
-      String(duel.kills),
-      booleanValue(duel.providerMarkedMost),
-    ])),
-    ...((player.openingKillsByOpponent.rows ?? []).map((duel) => [
-      player.name,
-      '首杀',
-      playerName(context, duel.opponentPlayerId),
-      String(duel.kills),
-      booleanValue(duel.providerMarkedMost),
-    ])),
-  ]);
-  if (duels.length === 0) return [];
+  const players = rows.filter((player) =>
+    (player.killsByOpponent.rows?.length ?? 0) > 0
+    || (player.openingKillsByOpponent.rows?.length ?? 0) > 0);
+  if (players.length === 0) return [];
+  const opponentIds = [...new Set(players.flatMap((player) => [
+    ...(player.killsByOpponent.rows ?? []).map((duel) => duel.opponentPlayerId),
+    ...(player.openingKillsByOpponent.rows ?? []).map((duel) => duel.opponentPlayerId),
+  ]))];
+  const duelValue = (
+    duels: NonNullable<PlayerState['killsByOpponent']['rows']>,
+    opponentId: string,
+  ): string => {
+    const duel = duels.find((entry) => entry.opponentPlayerId === opponentId);
+    return duel === undefined ? '—' : `${duel.kills}${duel.providerMarkedMost ? '*' : ''}`;
+  };
   return [
     '**对位数据**',
     '',
-    ...table(['选手', '类型', '对手', '次数', '最高标记'], duels),
+    '- 单元格：击杀/首杀；`*` 表示接口最高标记',
+    '',
+    ...sparseTable(
+      ['选手', ...opponentIds.map((id) => playerName(context, id))],
+      players.map((player) => [
+        player.name,
+        ...opponentIds.map((opponentId) =>
+          `${duelValue(player.killsByOpponent.rows ?? [], opponentId)}/${duelValue(player.openingKillsByOpponent.rows ?? [], opponentId)}`),
+      ]),
+    ),
     '',
   ];
 }
@@ -349,7 +373,7 @@ function multiKillRows(rows: readonly PlayerState[]): string[] {
   return [
     '**Multi-kill 分布**',
     '',
-    ...table(
+    ...sparseTable(
       ['选手', '2K', '3K', '4K', '5K'],
       players.map((player) => [
         player.name,
@@ -561,7 +585,7 @@ function mapsHandler(context: RenderContext): string[] {
       `- 选图：${value(map.vetoAction)}${map.vetoTeamId === null ? '' : ` / ${teamName(context, map.vetoTeamId)}`}`,
       `- 技术判定：${value(map.technicalDisposition)}`,
       '',
-      ...table(
+      ...sparseTable(
         [
           '战队',
           '总分',
@@ -702,67 +726,40 @@ function recentMatches(
   );
 }
 
-interface FlatPowerMetric {
-  readonly guideline: string | null;
-  readonly name: string;
-  readonly path: string;
-  readonly score: string | null;
-  readonly width: number | null;
-}
-
-function flattenPowerMetrics(
+function powerMetricRows(
   metrics: readonly PlayerPowerMetric[],
-  parentPath = '',
-): FlatPowerMetric[] {
+  depth = 0,
+): string[][] {
   return metrics.flatMap((metric) => {
-    const path = parentPath === '' ? metric.name : `${parentPath} / ${metric.name}`;
     return [
-      {
-        guideline: metric.guideline,
-        name: metric.name,
-        path,
-        score: metric.score,
-        width: metric.width,
-      },
-      ...flattenPowerMetrics(metric.children, path),
+      [
+        `${'↳'.repeat(depth)}${metric.name}`,
+        value(metric.score),
+        value(metric.guideline),
+        value(metric.width),
+      ],
+      ...powerMetricRows(metric.children, depth + 1),
     ];
   });
 }
 
 function playerPowerLines(context: RenderContext, analysis: MatchAnalysis): string[] {
-  const rows = analysis.power.flatMap((teamPower) =>
-    teamPower.flatMap((player) => {
-      const metrics = flattenPowerMetrics(player.metrics);
-      if (metrics.length === 0) {
-        return [[
-          player.playerName,
-          player.teamName ?? teamName(context, player.teamId),
-          value(player.sideLabel ?? player.side),
-          value(player.timeFrameCode),
-          value(player.hltvRating),
-          '—',
-          '—',
-          '—',
-          '—',
-        ]];
-      }
-      return metrics.map((metric) => [
-        player.playerName,
-        player.teamName ?? teamName(context, player.teamId),
-        value(player.sideLabel ?? player.side),
-        value(player.timeFrameCode),
-        value(player.hltvRating),
-        metric.path,
-        value(metric.score),
-        value(metric.guideline),
-        value(metric.width),
-      ]);
-    }),
-  );
-  return table(
-    ['选手', '战队', '阵营', '时间范围', 'HLTV Rating', '能力指标', '分数', '参考线', '宽度'],
-    rows,
-  );
+  const lines: string[] = [];
+  for (const teamPower of analysis.power) {
+    for (const player of teamPower) {
+      lines.push(
+        `#### ${value(player.playerName)} / ${value(player.teamName ?? teamName(context, player.teamId))}`,
+        '',
+        `- 阵营：${value(player.sideLabel ?? player.side)}；时间范围：${value(player.timeFrameCode)}；HLTV Rating：${value(player.hltvRating)}`,
+        '',
+        ...(player.metrics.length === 0
+          ? ['_暂无能力指标_']
+          : table(['能力指标（`↳` 表示子级）', '分数', '参考线', '宽度'], powerMetricRows(player.metrics))),
+        '',
+      );
+    }
+  }
+  return lines.length === 0 ? ['_暂无数据_'] : lines;
 }
 
 function analysisLines(context: RenderContext, analysis: MatchAnalysis): string[] {
@@ -803,7 +800,7 @@ function analysisLines(context: RenderContext, analysis: MatchAnalysis): string[
     ]),
   );
   const lines: string[] = [
-    ...subBlock('选手分析（近三个月数据）', table(
+    ...subBlock('选手分析（近三个月数据）', sparseTable(
       [
         '战队',
         '选手',
@@ -819,11 +816,11 @@ function analysisLines(context: RenderContext, analysis: MatchAnalysis): string[
       playerRows,
     )),
     ...subBlock('选手能力指标', playerPowerLines(context, analysis)),
-    ...subBlock('地图分析（近三个月数据）', table(
+    ...subBlock('地图分析（近三个月数据）', sparseTable(
       ['地图', '地图BP', '战队', '场次', '胜场', '胜率', 'Pick次数', 'Pick率', 'Ban次数', 'Ban率'],
       mapRows,
     )),
-    ...subBlock('战队分析（近三个月数据）', table(
+    ...subBlock('战队分析（近三个月数据）', sparseTable(
       ['战队', '胜率（小局）', 'Rating', 'K/D', '上半场手枪局胜率', '下半场手枪局胜率'],
       teamRows,
     )),
@@ -925,11 +922,10 @@ function formalRoundEvents(
   return formalEvents;
 }
 
-function killEventRow(
+function killEventText(
   context: RenderContext,
   event: MatchEvent,
-  roundNumber: number,
-): string[] {
+): string {
   const details: string[] = [];
   if (trueEventAttribute(event, 'head_shot')) details.push('爆头');
   if (trueEventAttribute(event, 'penetrated')) details.push('穿透击杀');
@@ -947,40 +943,41 @@ function killEventRow(
     const side = eventAttribute(event, 'flasher_side');
     details.push(`闪光助攻：${flasher}${side === null ? '' : ` (${side})`}`);
   }
-  return [
-    `R${roundNumber}`,
-    '击杀',
-    eventParticipant(context, event, event.actorPlayerId, ['killer_name', 'killer_nick']),
-    value(eventAttribute(event, 'killer_side')),
-    eventParticipant(context, event, event.targetPlayerId, ['victim_name', 'victim_nick']),
-    value(eventAttribute(event, 'victim_side')),
-    value(eventAttribute(event, 'weapon')),
-    details.length === 0 ? '—' : details.join('；'),
-  ];
+  const killer = eventParticipant(
+    context,
+    event,
+    event.actorPlayerId,
+    ['killer_name', 'killer_nick'],
+  );
+  const victim = eventParticipant(
+    context,
+    event,
+    event.targetPlayerId,
+    ['victim_name', 'victim_nick'],
+  );
+  const suffix = [value(eventAttribute(event, 'weapon')), ...details].join('；');
+  return `${killer}[${value(eventAttribute(event, 'killer_side'))}] > ${victim}[${value(eventAttribute(event, 'victim_side'))}]（${suffix}）`;
 }
 
-function bombPlantEventRow(
+function bombPlantEventText(
   context: RenderContext,
   event: MatchEvent,
-  roundNumber: number,
-): string[] {
+): string {
   const ctPlayers = eventAttribute(event, 'ct_players');
   const tPlayers = eventAttribute(event, 't_players');
-  return [
-    `R${roundNumber}`,
-    '放置炸弹',
-    eventParticipant(context, event, event.actorPlayerId, ['player_name', 'player_nick']),
-    'T',
-    '—',
-    '—',
-    value(eventAttribute(event, 'bomb_site')),
-    ctPlayers === null && tPlayers === null
-      ? '—'
-      : `存活：CT ${value(ctPlayers)} / T ${value(tPlayers)}`,
-  ];
+  const player = eventParticipant(
+    context,
+    event,
+    event.actorPlayerId,
+    ['player_name', 'player_nick'],
+  );
+  const survivors = ctPlayers === null && tPlayers === null
+    ? ''
+    : `（存活 CT ${value(ctPlayers)}/T ${value(tPlayers)}）`;
+  return `${player}[T] 放置炸弹@${value(eventAttribute(event, 'bomb_site'))}${survivors}`;
 }
 
-function roundEndEventRow(event: MatchEvent, roundNumber: number): string[] {
+function roundEndEventText(event: MatchEvent): string {
   const winner = eventAttribute(event, 'winner');
   const ctScore = eventAttribute(event, 'ct_score');
   const tScore = eventAttribute(event, 't_score');
@@ -994,23 +991,32 @@ function roundEndEventRow(event: MatchEvent, roundNumber: number): string[] {
     ctScore === null || tScore === null ? null : `比分 CT ${ctScore}:${tScore} T`,
     reason,
   ].filter((entry): entry is string => entry !== null);
-  return [
-    `R${roundNumber}`,
-    '回合结束',
-    value(winner),
-    value(winner),
-    '—',
-    '—',
-    '—',
-    result.length === 0 ? '—' : result.join('；'),
-  ];
+  return `回合结束：${result.length === 0 ? '—' : result.join('；')}`;
 }
 
-function formalEventRow(context: RenderContext, formalEvent: FormalRoundEvent): string[] {
-  const { event, roundNumber } = formalEvent;
-  if (event.type === '8') return killEventRow(context, event, roundNumber);
-  if (event.type === '6') return bombPlantEventRow(context, event, roundNumber);
-  return roundEndEventRow(event, roundNumber);
+function formalEventText(context: RenderContext, event: MatchEvent): string {
+  if (event.type === '8') return killEventText(context, event);
+  if (event.type === '6') return bombPlantEventText(context, event);
+  return roundEndEventText(event);
+}
+
+function formalEventRows(
+  context: RenderContext,
+  events: readonly FormalRoundEvent[],
+): string[][] {
+  const groups: Array<{ roundNumber: number; texts: string[] }> = [];
+  for (const { event, roundNumber } of events) {
+    const current = groups.at(-1);
+    if (current?.roundNumber === roundNumber) {
+      current.texts.push(formalEventText(context, event));
+    } else {
+      groups.push({ roundNumber, texts: [formalEventText(context, event)] });
+    }
+  }
+  return groups.map((group) => [
+    `R${group.roundNumber}`,
+    group.texts.join('<br>'),
+  ]);
 }
 
 function eventsHandler(context: RenderContext): string[] {
@@ -1028,9 +1034,11 @@ function eventsHandler(context: RenderContext): string[] {
       lines.push(
         `#### ${value(names.join(' / '))}`,
         '',
+        '- 事件按发生顺序；`>` 表示击杀，括号内依次为武器及关键信息',
+        '',
         ...table(
-          ['回合', '事件', '发起方', '阵营', '目标', '目标阵营', '武器 / 炸弹点', '关键信息'],
-          events.map((event) => formalEventRow(context, event)),
+          ['回合', '正式事件'],
+          formalEventRows(context, events),
         ),
         '',
       );

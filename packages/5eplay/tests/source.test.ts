@@ -994,11 +994,103 @@ test('snapshot blocks an internally contradictory terminal vector', async (conte
     'inconsistent-global-complete-map-live.json',
   );
   assert.deepEqual(result, {
+    diagnosticCode: 'SERIES_SCORE_DOES_NOT_MATCH_SETTLED_MAP_RESULTS',
     kind: 'blocked',
     matchId: 'csgo_mc_2396047',
     observedAt: result.kind === 'blocked' ? result.observedAt : null,
     reason: 'inconsistent-state',
   });
+});
+
+test('snapshot accepts an awarded opening map followed by two played maps', async (context) => {
+  const originalFetch = globalThis.fetch;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  const body = JSON.parse(
+    await readFile(
+      new URL('./fixtures/states/bo3-complete-three-maps.json', import.meta.url),
+      'utf8',
+    ),
+  ) as {
+    data: {
+      match: {
+        bouts_state: Array<Record<string, unknown> & {
+          t1_stats: Record<string, unknown>;
+          t2_stats: Record<string, unknown>;
+        }>;
+      };
+    };
+  };
+  const awarded = body.data.match.bouts_state[0];
+  assert.ok(awarded);
+  Object.assign(awarded, {
+    bomb_planted_time: '',
+    curr_bout_stage: 'fh',
+    curr_round_num: '',
+    end_time: '',
+    game_time: '0',
+    round_start_time: '',
+    start_time: '',
+    t1_pr_stats: [],
+    t2_pr_stats: [],
+  });
+  const placeholderRounds = Array.from({ length: 12 }, () => 0);
+  Object.assign(awarded.t1_stats, {
+    all_score: '1',
+    equipment_value: '',
+    fh_data: placeholderRounds,
+    fh_role: '',
+    fh_score: '0',
+    flags: [],
+    money: '',
+    ot_data: placeholderRounds,
+    ot_role: '',
+    ot_score: '0',
+    quick_score: '1',
+    role: '',
+    sh_data: placeholderRounds,
+    sh_role: '',
+    sh_score: '0',
+  });
+  Object.assign(awarded.t2_stats, {
+    all_score: '0',
+    equipment_value: '',
+    fh_data: placeholderRounds,
+    fh_role: '',
+    fh_score: '0',
+    flags: [],
+    money: '',
+    ot_data: placeholderRounds,
+    ot_role: '',
+    ot_score: '0',
+    quick_score: '0',
+    role: '',
+    sh_data: placeholderRounds,
+    sh_role: '',
+    sh_score: '0',
+  });
+  globalThis.fetch = async () => Response.json(body);
+
+  const result = await createFiveEPlayMatchSource({
+    timing: { closeCalibrationMs: 1, livePollMs: 1 },
+  }).snapshot('csgo_mc_2395547');
+
+  assert.equal(result.kind, 'confirmed', JSON.stringify(result));
+  if (result.kind !== 'confirmed') return;
+  assert.equal(result.snapshot.state.closure, 'administrative');
+  assert.deepEqual(result.snapshot.state.phase, {
+    finalMapNumber: 3,
+    kind: 'series-ended',
+  });
+  assert.deepEqual(
+    result.snapshot.maps.map((map) => [map.status, map.technicalDisposition]),
+    [
+      ['closed-without-play', 'awarded'],
+      ['settled', null],
+      ['settled', null],
+    ],
+  );
 });
 
 test('core identity mismatch is blocked as inconsistent rather than mislabeled unsupported', async (context) => {
@@ -1988,7 +2080,7 @@ test('event history bridges a growing head and verifies it is stable before comp
   assert.equal(result.kind, 'confirmed');
   if (result.kind !== 'confirmed') return;
   assert.equal(result.snapshot.details.events.status, 'complete');
-  assert.equal(result.snapshot.details.events.data.length, 12);
+  assert.equal(result.snapshot.details.events.data.length, 11);
   assert.deepEqual(cursors, ['0', '1784543714790', '0', '0']);
   assert.equal(
     result.snapshot.details.events.data.at(-1)?.updateVersion,
@@ -2125,7 +2217,7 @@ test('event history rejects a stable head that deleted earlier head events', asy
   assert.equal(result.snapshot.details.events.gap, 'HEAD_REGRESSED');
 });
 
-test('event identity must agree with the confirmed tournament and map', async (context) => {
+test('event identity isolates an invalid row without discarding valid rows', async (context) => {
   const originalFetch = globalThis.fetch;
   context.after(() => {
     globalThis.fetch = originalFetch;
@@ -2151,11 +2243,74 @@ test('event identity must agree with the confirmed tournament and map', async (c
 
   assert.equal(result.kind, 'confirmed');
   if (result.kind !== 'confirmed') return;
-  assert.equal(result.snapshot.details.events.status, 'unavailable');
+  assert.equal(result.snapshot.details.events.status, 'partial');
   assert.equal(
     result.snapshot.details.events.gap,
     'EVENT_IDENTITY_OR_SCHEMA_MISMATCH',
   );
+  assert.ok(result.snapshot.details.events.data.length > 0);
+  assert.ok(result.snapshot.details.events.data.every((event) => event.tournamentId === 'csgo_tt_9246'));
+});
+
+test('event history collapses stable provider event ids across update versions', async (context) => {
+  const originalFetch = globalThis.fetch;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  const [core, page] = await Promise.all(
+    ['states/bo3-between-map2-map3.json', 'events/page-1.json'].map(async (name) =>
+      JSON.parse(await readFile(new URL(`./fixtures/${name}`, import.meta.url), 'utf8')),
+    ),
+  );
+  const original = structuredClone(page.data.list[0]);
+  const info = JSON.parse(original.log_info);
+  info.kill.event_id = 'stable-event-1';
+  original.log_info = JSON.stringify(info);
+  const replayed = structuredClone(original);
+  original.update_version = '1784543737000';
+  replayed.update_version = '1784543738000';
+  page.data.list = [original, replayed, ...page.data.list];
+  globalThis.fetch = async (input) => {
+    const url = new URL(String(input));
+    if (url.pathname.endsWith('/matches/csgo_mc_2395547/data')) return Response.json(core);
+    if (url.pathname.endsWith('/match/csgo_mc_2395547/event/log')) return Response.json(page);
+    return new Response(null, { status: 404 });
+  };
+
+  const result = await createFiveEPlayMatchSource({
+    limits: { eventPageSize: 500 },
+  }).snapshot('csgo_mc_2395547');
+
+  assert.equal(result.kind, 'confirmed');
+  if (result.kind !== 'confirmed') return;
+  const eventData = result.snapshot.details.events.data;
+  assert.ok(eventData);
+  const stableEvents = eventData.filter(
+    (event) => event.attributes.event_id === 'stable-event-1',
+  );
+  assert.equal(stableEvents.length, 1);
+});
+
+test('unresolved BO3 participants preserve format evidence in unsupported results', async (context) => {
+  const originalFetch = globalThis.fetch;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  const body = JSON.parse(
+    await readFile(new URL('./fixtures/states/bo3-prestart.json', import.meta.url), 'utf8'),
+  );
+  body.data.match.mc_info.t1_info.id = '';
+  body.data.match.mc_info.t2_info.id = '';
+  globalThis.fetch = async () => Response.json(body);
+
+  const result = await createFiveEPlayMatchSource().snapshot('csgo_mc_2395547');
+
+  assert.deepEqual(result, {
+    format: '3',
+    kind: 'unsupported',
+    matchId: 'csgo_mc_2395547',
+    reason: 'participants-unresolved',
+  });
 });
 
 test('event history reports a gap when a safety limit truncates pagination', async (context) => {

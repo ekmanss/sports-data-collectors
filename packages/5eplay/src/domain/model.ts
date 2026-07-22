@@ -732,6 +732,7 @@ export type BlockedReason =
 export type UnsupportedReason =
   | 'format-not-supported'
   | 'format-unverified'
+  | 'participants-unresolved'
   | 'provider-schema-unsupported';
 
 export type MatchSnapshotResult =
@@ -741,6 +742,7 @@ export type MatchSnapshotResult =
       readonly matchId: string;
       readonly reason: BlockedReason;
       readonly observedAt: UnixMilliseconds;
+      readonly diagnosticCode?: string;
     }
   | { readonly kind: 'not-found'; readonly matchId: string }
   | {

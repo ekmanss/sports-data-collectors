@@ -384,6 +384,11 @@ async function snapshot(
     if (error instanceof FiveEPlaySourceError) throw error;
     if (error instanceof InconsistentProviderStateError) {
       return {
+        diagnosticCode: error.message
+          .trim()
+          .toUpperCase()
+          .replaceAll(/[^A-Z0-9]+/g, '_')
+          .replaceAll(/^_+|_+$/g, ''),
         kind: 'blocked',
         matchId,
         observedAt: unixMilliseconds(),

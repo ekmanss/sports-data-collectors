@@ -60,11 +60,11 @@ export class ProviderUnavailableError extends Error {
 
 export class UnsupportedFormatError extends Error {
   readonly format: string;
-  readonly reason: 'format-not-supported' | 'format-unverified';
+  readonly reason: 'format-not-supported' | 'format-unverified' | 'participants-unresolved';
 
   constructor(
     format: string,
-    reason: 'format-not-supported' | 'format-unverified',
+    reason: 'format-not-supported' | 'format-unverified' | 'participants-unresolved',
   ) {
     super(`unsupported provider format ${format}`);
     this.name = 'UnsupportedFormatError';
@@ -1123,14 +1123,16 @@ function stateFromEvidence(
     );
   const administrativeShape =
     closure === 'administrative' &&
-    maps.length === 3 &&
-    maps[0]?.status === 'settled' &&
-    maps[0].played &&
-    maps[1]?.status === 'closed-without-play' &&
-    maps[1].technicalDisposition === 'awarded' &&
-    maps[2]?.status === 'closed-without-play' &&
-    maps[2].technicalDisposition === 'unused' &&
-    finalMap.mapNumber === 2;
+    maps.slice(0, finalMap.mapNumber).every(
+      (entry) =>
+        (entry.status === 'settled' && entry.played) ||
+        (entry.status === 'closed-without-play' && entry.technicalDisposition === 'awarded'),
+    ) &&
+    maps.slice(finalMap.mapNumber).every(
+      (entry) =>
+        entry.status === 'unopened' ||
+        (entry.status === 'closed-without-play' && entry.technicalDisposition === 'unused'),
+    );
   if (!normalShape && !administrativeShape) {
     throw new InconsistentProviderStateError('terminal map layout is not evidence-backed');
   }
@@ -1177,6 +1179,26 @@ function tournament(value: unknown): Tournament {
   };
 }
 
+function canonicalMapName(value: string): string {
+  return value.trim().toLowerCase().replace(/^de_/, '').replace(/[^a-z0-9]/g, '');
+}
+
+function selectedMapOrder(value: unknown): readonly string[] | null {
+  try {
+    const selected = asArray(value, 'global_state.bp_map_item').flatMap((entry) => {
+      const item = asRecord(entry, 'global_state.bp_map_item entry');
+      const action = nullableString(item.bp_type);
+      const name = nullableString(item.map_name);
+      return (action === 'pick' || action === 'left') && name !== null
+        ? [canonicalMapName(name)]
+        : [];
+    });
+    return selected.length === 3 && new Set(selected).size === 3 ? selected : null;
+  } catch {
+    return null;
+  }
+}
+
 export function decodeCoreResponse(
   payload: unknown,
   requestedMatchId: string,
@@ -1195,12 +1217,27 @@ export function decodeCoreResponse(
     throw new InconsistentProviderStateError('match identity mismatch');
   }
 
-  const providerFormat = asString(matchInfo.format, 'match.mc_info.format');
+  const providerBouts = asArray(providerMatch.bouts_state, 'match.bouts_state');
+  const providerFormat = nullableString(matchInfo.format);
+  const participantsUnresolved = [matchInfo.t1_info, matchInfo.t2_info].some((info) => {
+    try {
+      return nullableString(asRecord(info, 'match team info').id) === null;
+    } catch {
+      return true;
+    }
+  });
+  if (
+    (providerFormat === null || providerFormat === '3') &&
+    providerBouts.length === 3 &&
+    participantsUnresolved
+  ) {
+    throw new UnsupportedFormatError('3', 'participants-unresolved');
+  }
   if (providerFormat === '1') {
     throw new UnsupportedFormatError(providerFormat, 'format-unverified');
   }
   if (providerFormat !== '3') {
-    throw new UnsupportedFormatError(providerFormat, 'format-not-supported');
+    throw new UnsupportedFormatError(providerFormat ?? '', 'format-not-supported');
   }
   if (asString(matchInfo.match_version, 'match.mc_info.match_version') !== 'cs2') {
     throw new TypeError('provider match is not CS2');
@@ -1214,7 +1251,6 @@ export function decodeCoreResponse(
   if (globalStatus !== 0 && globalStatus !== 1 && globalStatus !== 2) {
     throw new InconsistentProviderStateError(`unsupported global status ${globalStatus}`);
   }
-  const providerBouts = asArray(providerMatch.bouts_state, 'match.bouts_state');
   if (providerBouts.length !== 3) throw new TypeError('BO3 must contain three map slots');
   const boutEvidence = providerBouts
     .map((bout, index) => ({
@@ -1225,6 +1261,9 @@ export function decodeCoreResponse(
       ),
       result: nullableString(
         asRecord(bout, `match.bouts_state[${index}]`).result,
+      ),
+      mapName: nullableString(
+        asRecord(bout, `match.bouts_state[${index}]`).map_name,
       ),
       startedAt: providerSeconds(
         asRecord(bout, `match.bouts_state[${index}]`).start_time,
@@ -1258,7 +1297,23 @@ export function decodeCoreResponse(
     if (entry.statusCode === 1) return 2;
     return 3;
   };
+  const bpMapOrder = selectedMapOrder(globalState.bp_map_item);
+  const bpIndexes = bpMapOrder === null
+    ? null
+    : new Map(bpMapOrder.map((name, index) => [name, index]));
+  const bpOrderIsComplete =
+    bpIndexes !== null &&
+    boutEvidence.every(
+      (entry) => entry.mapName !== null && bpIndexes.has(canonicalMapName(entry.mapName)),
+    ) &&
+    new Set(boutEvidence.map((entry) => canonicalMapName(entry.mapName ?? ''))).size === 3;
   const chronologicalBouts = [...boutEvidence].sort((first, second) => {
+    if (bpOrderIsComplete && bpIndexes !== null) {
+      return (
+        (bpIndexes.get(canonicalMapName(first.mapName ?? '')) ?? 0) -
+        (bpIndexes.get(canonicalMapName(second.mapName ?? '')) ?? 0)
+      );
+    }
     const rankDifference = progressRank(first) - progressRank(second);
     if (rankDifference !== 0) return rankDifference;
     if (first.startedAt !== null && second.startedAt !== null) {

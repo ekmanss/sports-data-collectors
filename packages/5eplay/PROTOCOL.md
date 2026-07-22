@@ -57,14 +57,17 @@ the returned match ID for authoritative phase and complete detail collection.
 `global_state.status` and each bout's lifecycle fields determine phase. `bout_num` is preserved as
 `providerBoutNumber`, a stable provider identity, but it is not chronological map order. Played
 settlements are ordered by evidenced `start_time`; awarded no-play settlements follow them; the
-current live bout follows all settlements; unopened slots come last. This ordering covers the
-observed played → awarded → live sequence even when the provider numbers are 2 → 1 → 3. Provider
-bout number is only the deterministic tie-breaker inside equally unevidenced groups. The resulting
-one-based position is `mapNumber`. Played, live, and awarded maps have
+current live bout follows all settlements; unopened slots come last. When the BP vector contains
+three unique pick/pick/left map names and all three names join uniquely to the bout maps, that
+explicit selected-map order takes precedence. This covers both the observed played → awarded → live
+sequence with provider numbers 2 → 1 → 3 and a terminal award in map 1 followed by two played maps.
+Provider bout number is only the deterministic tie-breaker inside equally unevidenced groups. The
+resulting one-based position is `mapNumber`. Played, live, and awarded maps have
 `orderFinality: 'confirmed'`; unopened and unused slots remain `provisional`.
 
-`plan_ts`, BP, `live_status`, page text, quick score, player counters, and logging text never promote
-the authoritative phase.
+`plan_ts`, `live_status`, page text, quick score, player counters, and logging text never promote the
+authoritative phase. A complete, uniquely joined BP vector orders maps but never changes lifecycle
+or result evidence.
 
 | Core evidence | Confirmed phase |
 | --- | --- |
@@ -78,12 +81,11 @@ Contradictory evidence remains blocked: this includes multiple live maps, a live
 has a series winner, chronological gaps, a terminal match with a live map, or series scores that do
 not equal accepted map winners. A settled map without a start time is never treated as played. A
 live series may contain an awarded `1:0` no-play map before the current live map; an unused no-play
-slot or nonzero official gameplay fields in that position remains contradictory. The only accepted
-terminal administrative shape is an ordinarily played and settled chronological map 1,
-followed by an awarded map 2 with an exact formal `1:0` score and no gameplay data, followed by an
-unused map 3 with no score, result, timing, rounds, or players. These maps expose
-`closedWithoutPlay: true` and `technicalDisposition: 'awarded' | 'unused'`. Any other no-play or
-technical-looking combination remains blocked until independent evidence supports it.
+slot or nonzero official gameplay fields in that position remains contradictory. A terminal
+administrative series accepts any contiguous chronological prefix composed of played settlements
+and evidenced `1:0` no-play awards; any later slot must be unopened or an unused no-play map with no
+score, result, timing, rounds, or players. These maps expose `closedWithoutPlay: true` and
+`technicalDisposition: 'awarded' | 'unused'`. Other technical-looking combinations remain blocked.
 
 A no-play award may contain zero-valued half/overtime scores and fixed-length zero round arrays.
 They are accepted only when every value is zero and all timing/current-round gameplay evidence is
@@ -141,12 +143,15 @@ conflicting payloads for one event identity, cursor non-progress, a repeated ful
 event limit, or deadline produces a partial section with an explicit gap. Every request, including
 head verification and bridging, shares the same page, event, attempt, signal, and deadline budget.
 
-Deduplicate by `(matchId, providerBoutId, updateVersion)`, compare the normalized full-event payload when
-identities repeat, and return numeric versions in ascending order. Every row must match the core
+Deduplicate by stable provider `event_id` within `(matchId, providerBoutId, eventType)` when present,
+falling back to `updateVersion`; compare the normalized payload without `updateVersion` when an
+identity repeats, and retain the newest equivalent update. Every row must match the core
 match ID and tournament ID. Its provider bout number and ID must join the corresponding core map.
 Map names are compared through one canonical identity form that accepts observed display/engine
-aliases such as `Ancient` and `de_ancient`; the public event retains the core display name. An
-identity mismatch makes the event section unavailable rather than joining unrelated data.
+aliases such as `Ancient` and `de_ancient`; the public event retains the core display name. A row
+identity mismatch is isolated, retains the other verified rows, and makes the event section partial
+with `EVENT_IDENTITY_OR_SCHEMA_MISMATCH`. A conflicting payload for one stable identity remains a
+gap rather than being joined as a new event.
 
 Transport pagination completeness is not semantic match-history completeness. Events belonging to
 an `unopened` or `closed-without-play` core map are excluded, because real unopened bouts can carry

@@ -209,8 +209,11 @@ interface StoredEvent {
 }
 
 interface EventPage {
+  readonly cursor: string | null;
   readonly events: readonly MatchEvent[];
+  readonly gap: string | null;
   readonly observedAt: UnixMilliseconds;
+  readonly sourceCount: number;
   readonly token: string;
 }
 
@@ -219,17 +222,20 @@ type PageRead =
   | { readonly kind: 'failure'; readonly gap: string; readonly observedAt: UnixMilliseconds };
 
 function eventKey(event: MatchEvent): string {
+  const providerEventId = event.attributes.event_id;
+  if (typeof providerEventId === 'string' || typeof providerEventId === 'number') {
+    return `${event.matchId}:${event.providerBoutId ?? ''}:${event.type}:event:${providerEventId}`;
+  }
   return `${event.matchId}:${event.providerBoutId ?? ''}:${event.updateVersion}`;
 }
 
 function eventFingerprint(event: MatchEvent): string {
-  return createHash('sha256').update(JSON.stringify(event)).digest('hex');
+  const { updateVersion: _updateVersion, ...stableEvent } = event;
+  return createHash('sha256').update(JSON.stringify(stableEvent)).digest('hex');
 }
 
-function pageToken(events: readonly MatchEvent[]): string {
-  return events
-    .map((event) => `${eventKey(event)}:${eventFingerprint(event)}`)
-    .join('|');
+function pageToken(rows: readonly unknown[]): string {
+  return createHash('sha256').update(JSON.stringify(rows)).digest('hex');
 }
 
 export async function loadEvents(
@@ -243,6 +249,7 @@ export async function loadEvents(
   let pages = 0;
   let headObservedAt = unixMilliseconds();
   let gap: string | null = null;
+  let rowGap: string | null = null;
   let complete = false;
   const events = new Map<string, StoredEvent>();
 
@@ -278,15 +285,52 @@ export async function loadEvents(
     try {
       const data = asRecord(providerData(response.payload, 'event page'), 'event page.data');
       const rows = asArray(data.list, 'event page.data.list');
-      const parsed = rows.map((row, index) =>
-        eventFromRow(row, context, `event page row[${index}]`),
-      );
+      const parsed: MatchEvent[] = [];
+      let pageGap: string | null = null;
+      for (const [index, row] of rows.entries()) {
+        try {
+          parsed.push(eventFromRow(row, context, `event page row[${index}]`));
+        } catch {
+          pageGap = 'EVENT_IDENTITY_OR_SCHEMA_MISMATCH';
+        }
+      }
+      const pageEvents = new Map<string, StoredEvent>();
+      for (const event of parsed) {
+        const key = eventKey(event);
+        const fingerprint = eventFingerprint(event);
+        const existing = pageEvents.get(key);
+        if (existing !== undefined && existing.fingerprint !== fingerprint) {
+          pageGap = 'EVENT_VERSION_CONFLICT';
+          continue;
+        }
+        if (
+          existing === undefined ||
+          compareVersions(existing.event.updateVersion, event.updateVersion) < 0
+        ) {
+          pageEvents.set(key, { event, fingerprint });
+        }
+      }
+      let nextCursor: string | null = null;
+      const lastRow = rows.at(-1);
+      if (lastRow !== undefined) {
+        try {
+          nextCursor = asString(
+            asRecord(lastRow, 'event page last row').update_version,
+            'event page last row.update_version',
+          );
+        } catch {
+          pageGap = 'EVENT_IDENTITY_OR_SCHEMA_MISMATCH';
+        }
+      }
       return {
         kind: 'ok',
         page: {
-          events: parsed,
+          cursor: nextCursor,
+          events: [...pageEvents.values()].map((stored) => stored.event),
+          gap: pageGap,
           observedAt: response.observedAt,
-          token: pageToken(parsed),
+          sourceCount: rows.length,
+          token: pageToken(rows),
         },
       };
     } catch {
@@ -305,6 +349,9 @@ export async function loadEvents(
       const existing = events.get(key);
       if (existing !== undefined) {
         if (existing.fingerprint !== fingerprint) return 'EVENT_VERSION_CONFLICT';
+        if (compareVersions(existing.event.updateVersion, event.updateVersion) < 0) {
+          events.set(key, { event, fingerprint });
+        }
         continue;
       }
       if (events.size >= limits.maxEvents) {
@@ -349,7 +396,7 @@ export async function loadEvents(
           return { gap: 'EVENT_VERSION_CONFLICT', index };
         }
       }
-      if (page.events.length < pageSize && suffix.length !== priorHead.length) {
+      if (page.sourceCount < pageSize && suffix.length !== priorHead.length) {
         return { gap: 'HEAD_REGRESSED', index };
       }
       return { gap: null, index };
@@ -362,11 +409,12 @@ export async function loadEvents(
     gap = initial.gap;
     headObservedAt = initial.observedAt;
   } else {
+    rowGap = initial.page.gap;
     gap = addEvents(initial.page.events);
     let latestHeadToken = initial.page.token;
     let latestHeadEvents = initial.page.events;
-    let tailComplete = initial.page.events.length < pageSize;
-    let cursor = initial.page.events.at(-1)?.updateVersion ?? null;
+    let tailComplete = initial.page.sourceCount < pageSize;
+    let cursor = initial.page.cursor;
     const seenBackfillPages = new Set<string>([initial.page.token]);
 
     while (gap === null && !tailComplete) {
@@ -385,10 +433,11 @@ export async function loadEvents(
         break;
       }
       seenBackfillPages.add(read.page.token);
+      rowGap ??= read.page.gap;
       gap = addEvents(read.page.events);
       if (gap !== null) break;
-      tailComplete = read.page.events.length < pageSize;
-      cursor = read.page.events.at(-1)?.updateVersion ?? null;
+      tailComplete = read.page.sourceCount < pageSize;
+      cursor = read.page.cursor;
       if (!tailComplete && (cursor === null || cursor === previousCursor)) {
         gap = 'CURSOR_DID_NOT_ADVANCE';
       }
@@ -402,6 +451,7 @@ export async function loadEvents(
         break;
       }
       headObservedAt = verification.page.observedAt;
+      rowGap ??= verification.page.gap;
       if (verification.page.token === latestHeadToken) {
         complete = true;
         break;
@@ -414,20 +464,16 @@ export async function loadEvents(
         gap = overlap.gap;
         break;
       }
-      if (overlap.index === 0) {
-        gap = 'HEAD_REGRESSED';
-        break;
-      }
       gap = addEvents(verification.page.events);
       if (gap !== null) break;
       if (overlap.index < 0) {
-        if (verification.page.events.length < pageSize) {
+        if (verification.page.sourceCount < pageSize) {
           if (priorHead.length > 0) gap = 'HEAD_DID_NOT_OVERLAP';
           latestHeadToken = verification.page.token;
           latestHeadEvents = verification.page.events;
           continue;
         }
-        let bridgeCursor = verification.page.events.at(-1)?.updateVersion ?? null;
+        let bridgeCursor = verification.page.cursor;
         const seenBridgePages = new Set<string>([verification.page.token]);
         let bridged = false;
         while (gap === null && !bridged) {
@@ -446,6 +492,7 @@ export async function loadEvents(
             break;
           }
           seenBridgePages.add(bridge.page.token);
+          rowGap ??= bridge.page.gap;
           const bridgeOverlap = priorHead.length === 0
             ? { gap: null, index: -1 }
             : headOverlap(bridge.page, priorHead, anchor);
@@ -459,12 +506,12 @@ export async function loadEvents(
             bridged = true;
             break;
           }
-          if (bridge.page.events.length < pageSize) {
+          if (bridge.page.sourceCount < pageSize) {
             if (priorHead.length === 0) bridged = true;
             else gap = 'HEAD_DID_NOT_OVERLAP';
             break;
           }
-          bridgeCursor = bridge.page.events.at(-1)?.updateVersion ?? null;
+          bridgeCursor = bridge.page.cursor;
           if (bridgeCursor === null || bridgeCursor === previousCursor) {
             gap = 'CURSOR_DID_NOT_ADVANCE';
           }
@@ -476,6 +523,10 @@ export async function loadEvents(
     }
   }
 
+  if (complete && rowGap !== null) {
+    complete = false;
+    gap = rowGap;
+  }
   if (!complete && gap === null) gap = 'UNKNOWN_GAP';
   const data = [...events.values()]
     .map((stored) => stored.event)

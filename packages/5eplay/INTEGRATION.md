@@ -158,7 +158,9 @@ Use the result kinds as follows:
 | `unsupported` | Format or schema is not safely understood | Stop automatic processing and surface the reason |
 
 `unsupported / format-unverified` is the expected result for BO1 until the package has sufficient
-independent BO1 evidence. It is not equivalent to prestart or closed.
+independent BO1 evidence. `unsupported / participants-unresolved` preserves `format: "3"` for a
+known BO3 whose one or both team identities are still TBD; discovery may be retried after the
+bracket advances. Neither result is equivalent to prestart or closed.
 
 ## Map the authoritative match state
 
@@ -388,7 +390,8 @@ A reasonable consumer policy is:
 | `blocked / initializing` or `resyncing` | Wait for the watcher; do not start a second watcher |
 | `blocked / provider-unavailable` | Exponential backoff with jitter; retain last confirmed data as stale |
 | `blocked / stale-http` or `version-gap` | Freeze decisions until a confirmed resync |
-| `blocked / inconsistent-state` | Freeze decisions and emit an operator-visible diagnostic |
+| `blocked / inconsistent-state` | Freeze decisions and surface its machine-readable `diagnosticCode` |
+| `unsupported / participants-unresolved` | Keep the known BO3 discovery row and retry after bracket participants resolve |
 | `blocked / realtime-unavailable` | Let the existing watcher reconnect; HTTP resync is mandatory |
 | `superseded` | Retry immediately from a fresh snapshot |
 | `FiveEPlaySourceError / ABORTED` | Stop if caller-initiated; otherwise apply the operation timeout policy |

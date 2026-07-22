@@ -38,13 +38,21 @@ const arguments_ = argumentsFromCommandLine(process.argv.slice(2));
 const source = createFiveEPlayMatchSource();
 const result = await source.snapshot(arguments_.matchId);
 if (result.kind !== 'confirmed') {
-  throw new Error(`match snapshot was not confirmed: ${JSON.stringify(result)}`);
+  const exitCodes = {
+    blocked: 2,
+    'not-found': 3,
+    superseded: 4,
+    unsupported: 5,
+  } as const;
+  process.stderr.write(`snapshot not written: ${JSON.stringify(result)}\n`);
+  process.exitCode = exitCodes[result.kind];
+} else {
+  const paths = await writeMatchSnapshotArtifacts(result.snapshot, {
+    outputDirectory: arguments_.outputDirectory,
+  });
+  process.stdout.write(`${JSON.stringify({
+    jsonPath: paths.jsonPath,
+    markdownPath: paths.markdownPath,
+    status: describeMatchState(result.snapshot.state),
+  })}\n`);
 }
-const paths = await writeMatchSnapshotArtifacts(result.snapshot, {
-  outputDirectory: arguments_.outputDirectory,
-});
-process.stdout.write(`${JSON.stringify({
-  jsonPath: paths.jsonPath,
-  markdownPath: paths.markdownPath,
-  status: describeMatchState(result.snapshot.state),
-})}\n`);

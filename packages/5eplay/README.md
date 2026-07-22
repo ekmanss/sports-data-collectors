@@ -62,7 +62,11 @@ an indicator-by-player matrix, both teams' map-analysis values share one map row
 a lossless kill/opening-kill matrix, and round-score team order is declared once in the header.
 Formal events remain in occurrence order by round. Event player aliases, side names, and common
 weapon identifiers are normalized; event scores are explicitly labeled as CT:T side scores rather
-than fixed-team scores. Comparison highlights identify one representative per provider category
+than fixed-team scores. Stable provider event IDs are deduplicated across update versions, and
+round-end score totals recover a formal round when its `round_start` marker is missing while
+discarding warmup score resets. Partial or unavailable event sections show their exact `gap` but do
+not render event detail into Markdown; the retained raw JSON remains available for diagnosis.
+Comparison highlights identify one representative per provider category
 instead of implying that every attached metric is independently team-leading. Pre-match output
 also distinguishes current match teams from player-profile affiliations and 5E Rating from HLTV
 Rating. Entirely unavailable columns are omitted; `—` consistently means unavailable or not
@@ -75,6 +79,10 @@ ownership, see [INTEGRATION.md](INTEGRATION.md).
 A confirmed result certifies the core match state within an HTTP revision barrier. Optional detail
 sections report their own `complete`, `empty`, `partial`, `unavailable`, or `not-applicable` status;
 their failure never turns a valid core state into a guess.
+An `inconsistent-state` block includes a stable `diagnosticCode` derived from the failed invariant.
+An unresolved BO3 roster returns `unsupported / participants-unresolved` with `format: "3"` instead
+of losing the known format. The snapshot CLI prints expected non-confirmed results as one compact
+JSON line on stderr and uses distinct nonzero exit codes without a Node stack trace.
 
 Confirmed observations use schema `fiveeplay-match/v3`.
 
@@ -126,7 +134,12 @@ series position; `providerBoutNumber` is the stable upstream slot identity. They
 separate because a provider bout numbered 2 has been observed as the actual first played map.
 `orderFinality` is `confirmed` for played, live, and awarded maps; unopened and unused slots are
 `provisional`. A `1:0` no-play award has also been observed between a played map and the current live
-map, so administrative settlement is not assumed to be terminal-only.
+map, so administrative settlement is not assumed to be terminal-only. When BP provides three
+unique selected map names matching the three bout maps, that explicit selection order determines
+`mapNumber`; otherwise the lifecycle/start-time evidence ordering remains the fallback. Terminal
+administrative series may contain an evidenced `1:0` award at any chronological position, followed
+or preceded by normally played maps, while unused slots are allowed only after the final deciding
+map.
 
 `state.phase.kind` is the exhaustive public discriminator: `prestart`, `map-unopened`, `map-live`,
 `between-maps`, or `series-ended`. The phase carries `mapNumber`,
@@ -151,7 +164,9 @@ events, both history products, and community data were complete at that observat
 
 Event rows carry both provider bout identity and chronological map number. Engine/display aliases
 are canonicalized for identity, and activity attached to an unopened or no-play map is excluded as
-non-official warmup data even when provider pagination itself is stable.
+non-official warmup data even when provider pagination itself is stable. An invalid event row is
+isolated from otherwise valid rows and marks the section partial. Markdown never treats a partial
+event collection as an analysis-safe subset.
 
 Series and per-map player statistics expose each team's `overall`, `ct`, and `t` planes separately.
 Every plane is `present`, `empty`, or `unavailable`; the package never fills a missing side split

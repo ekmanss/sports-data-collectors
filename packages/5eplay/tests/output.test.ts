@@ -242,6 +242,7 @@ async function snapshotWithEvents(): Promise<MatchSnapshot> {
     victimName: string,
     mapNumber = 1,
     mapName = 'Anubis',
+    eventId?: string,
   ): FixtureEventRow => eventRow(
     updateVersion,
     '8',
@@ -251,6 +252,7 @@ async function snapshotWithEvents(): Promise<MatchSnapshot> {
       killer_id: mapNumber === 1 ? '999001' : '999011',
       killer_name: killerName,
       killer_side: 'T',
+      ...(eventId === undefined ? {} : { event_id: eventId }),
       victim_id: mapNumber === 1 ? '999002' : '999012',
       victim_name: victimName,
       victim_side: 'CT',
@@ -259,6 +261,23 @@ async function snapshotWithEvents(): Promise<MatchSnapshot> {
     mapNumber,
     mapName,
   );
+  const assistedKill = killRow(
+    '1784543803900',
+    'galilar',
+    'reyoz',
+    'shg',
+    1,
+    'Anubis',
+    'formal-assist',
+  );
+  const assistedKillInfo = JSON.parse(assistedKill.log_info) as Record<string, unknown>;
+  const assistedKillDetail = assistedKillInfo.kill as Record<string, unknown>;
+  assistedKillDetail.head_shot = false;
+  assistedKillInfo.assist = {
+    assister_name: 'Qikert',
+    assister_side: 'T',
+  };
+  assistedKill.log_info = JSON.stringify(assistedKillInfo);
   eventPayload.data.list.push(
     killRow('1784543700000', 'warmup_only', 'WarmupKiller', 'WarmupVictim'),
     eventRow('1784543710000', '1', 'round_start', { round_num: '1' }),
@@ -289,6 +308,48 @@ async function snapshotWithEvents(): Promise<MatchSnapshot> {
       win_type_app: 2,
       winner: 'T',
     }, 2, 'Cache'),
+    eventRow('1784543800000', '1', 'round_start', { round_num: '1' }),
+    killRow('1784543801000', 'knife_karambit', 'WarmupKiller', 'WarmupVictim'),
+    eventRow('1784543802000', '2', 'round_end', {
+      ct_score: '0',
+      t_score: '1',
+      win_type: 'Terrorists_Win',
+      win_type_app: 2,
+      winner: 'T',
+    }),
+    eventRow('1784543803000', '1', 'round_start', { round_num: '2' }),
+    assistedKill,
+    killRow('1784543804000', 'm4a1', 'reyoz', 'shg', 1, 'Anubis', 'formal-1'),
+    killRow('1784543804001', 'm4a1', 'reyoz', 'shg', 1, 'Anubis', 'formal-1'),
+    eventRow('1784543804500', '6', 'bomb_planted', {
+      bomb_site: 'B',
+      ct_players: '3',
+      player_name: 'Planter',
+      t_players: '2',
+    }),
+    eventRow('1784543805000', '2', 'round_end', {
+      ct_score: '0',
+      t_score: '1',
+      win_type: 'Target_Bombed',
+      win_type_app: 3,
+      winner: 'T',
+    }),
+    eventRow('1784543806000', '1', 'round_start', { round_num: '2' }),
+    eventRow('1784543807000', '2', 'round_end', {
+      ct_score: '1',
+      t_score: '1',
+      win_type: 'CTs_Win',
+      win_type_app: 7,
+      winner: 'CT',
+    }),
+    killRow('1784543808000', 'deagle', 'reyoz', 'shg', 1, 'Anubis', 'formal-3'),
+    eventRow('1784543809000', '2', 'round_end', {
+      ct_score: '1',
+      t_score: '2',
+      win_type: 'Terrorists_Win',
+      win_type_app: 2,
+      winner: 'T',
+    }),
   );
   const coreFrame = {
     kind: 'ok' as const,
@@ -306,9 +367,15 @@ async function snapshotWithEvents(): Promise<MatchSnapshot> {
         status: 200,
         urlIncludes: `/match/${MATCH_ID}/event/log`,
       },
+      {
+        kind: 'ok',
+        payload: eventPayload,
+        status: 200,
+        urlIncludes: `/match/${MATCH_ID}/event/log`,
+      },
       coreFrame,
     ]),
-  ).snapshot(MATCH_ID, { eventLimits: { maxPages: 1 } });
+  ).snapshot(MATCH_ID);
   assert.equal(result.kind, 'confirmed');
   if (result.kind !== 'confirmed') throw new Error('event fixture was not confirmed');
   return result.snapshot;
@@ -527,8 +594,76 @@ test('Markdown groups useful formal-round logs by map and omits non-round noise'
   assert.match(markdown, /Planter\[T\] 放置炸弹@B（存活 CT 3\/T 2）/);
   assert.match(markdown, /回合结束：T 获胜；阵营比分 CT 0:1 T；炸弹爆炸/);
   assert.match(markdown, /Map2Killer\[T\] > Map2Victim\[CT\]（AK-47；爆头）/);
-  assert.doesNotMatch(markdown, /事件属性|weapon=|killer_side=|HiddenJoin|warmup_only|post_round_only/);
+  assert.match(markdown, /R3.*reyoz\[T\] > shg\[CT\]（Desert Eagle；爆头）/s);
+  assert.equal(markdown.match(/reyoz\[T\] > shg\[CT\]（M4A4；爆头）/g)?.length, 1);
+  assert.doesNotMatch(markdown, /事件属性|weapon=|killer_side=|HiddenJoin|warmup_only|post_round_only|WarmupKiller/);
   assert.doesNotMatch(markdown, /weapon_logo|https?:\/\//i);
+});
+
+test('Markdown withholds incomplete event logs and exposes the exact collection gap', async () => {
+  const snapshot = structuredClone(await snapshotWithEvents());
+  const section = snapshot.details.events as {
+    gap: string | null;
+    status: MatchSnapshot['details']['events']['status'];
+  };
+  section.status = 'partial';
+  section.gap = 'PAGE_LIMIT';
+
+  const markdown = renderMatchMarkdown(snapshot);
+
+  assert.match(markdown, /采集状态：部分数据（缺口：`PAGE_LIMIT`）/);
+  assert.match(markdown, /为避免不完整日志误导分析，本节不输出事件明细/);
+  assert.doesNotMatch(markdown, /#### 第一局 \/ Anubis/);
+});
+
+test('Markdown suppresses placeholder telemetry, trims labels, and normalizes equipment', async () => {
+  const snapshot = structuredClone(await snapshotFromFixture('bo3-map1-live.json'));
+  (snapshot as { observedAt: number }).observedAt = 1_784_543_400_000;
+  const firstMap = snapshot.maps[0] as {
+    gameTimeSeconds: number | null;
+    roundStartedAt: number | null;
+    playerStatistics: MatchSnapshot['maps'][number]['playerStatistics'];
+  };
+  firstMap.gameTimeSeconds = 0;
+  firstMap.roundStartedAt = 1_784_543_499_999;
+  const player = firstMap.playerStatistics.teams[0].overall.rows?.[0] as {
+    equipment: string[];
+  } | undefined;
+  assert.ok(player);
+  player.equipment = [
+    'm4a1',
+    'deagle',
+    'hegrenade',
+    'knife_butterfly',
+    'knife_m9_bayonet',
+    'ssg08',
+  ];
+  const firstTeam = snapshot.teams[0] as { name: string };
+  firstTeam.name = `  ${firstTeam.name}  `;
+
+  const markdown = renderMatchMarkdown(snapshot);
+
+  assert.doesNotMatch(markdown, /回合计时（秒）：0/);
+  assert.doesNotMatch(markdown, /2026-07-18T07:51:39\.999Z/);
+  assert.match(markdown, /接口时间晚于快照，已忽略/);
+  assert.match(
+    markdown,
+    /M4A4, Desert Eagle, HE Grenade, Butterfly Knife, M9 Bayonet, SSG 08/,
+  );
+  assert.doesNotMatch(markdown, /^#\s{2,}|\s{2,}vs/m);
+});
+
+test('Markdown does not present unresolved BP values as literal null or unknown', async () => {
+  const snapshot = structuredClone(await snapshotFromFixture('bo3-prestart.json'));
+  for (const map of snapshot.maps) {
+    const unresolved = map as { vetoAction: null; vetoTeamId: null };
+    unresolved.vetoAction = null;
+    unresolved.vetoTeamId = null;
+  }
+  const markdown = renderMatchMarkdown(snapshot);
+
+  assert.doesNotMatch(markdown, /本场 BP：null|本场BP[^\n]*unknown/);
+  assert.match(markdown, /本场 BP：—/);
 });
 
 test('Markdown follows 5E terminology and pre-match analysis hierarchy', async () => {

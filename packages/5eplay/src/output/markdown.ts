@@ -28,8 +28,9 @@ interface RenderContext {
 type MarkdownHandler = (context: RenderContext) => readonly string[];
 
 function value(value_: string | number | boolean | null | undefined): string {
-  if (value_ === null || value_ === undefined || value_ === '') return '—';
-  return String(value_)
+  const normalized = typeof value_ === 'string' ? value_.trim() : value_;
+  if (normalized === null || normalized === undefined || normalized === '') return '—';
+  return String(normalized)
     .replaceAll('\\', '\\\\')
     .replaceAll('|', '\\|')
     .replaceAll('\r\n', '<br>')
@@ -78,12 +79,12 @@ function subBlock(title: string, lines: readonly string[]): string[] {
 
 function teamName(context: RenderContext, teamId: string | null): string {
   if (teamId === null) return '—';
-  return context.teamNames.get(teamId) ?? teamId;
+  return value(context.teamNames.get(teamId) ?? teamId);
 }
 
 function playerName(context: RenderContext, playerId: string | null): string {
   if (playerId === null) return '—';
-  return context.playerNames.get(playerId) ?? playerId;
+  return value(context.playerNames.get(playerId) ?? playerId);
 }
 
 function lifecycleSuffix(state: MatchState): string {
@@ -134,19 +135,40 @@ function stageName(stage: MatchMap['stage']): string {
   }
 }
 
+function mapVetoLabel(context: RenderContext, map: MatchMap): string {
+  if (map.vetoAction === 'left') return 'decider（剩余决胜图）';
+  if (map.vetoAction !== 'pick') return '—';
+  return `pick${map.vetoTeamId === null ? '' : ` / ${teamName(context, map.vetoTeamId)}`}`;
+}
+
+function liveInstant(
+  timestamp: UnixMilliseconds | null,
+  observedAt: UnixMilliseconds,
+): string {
+  if (timestamp === null) return '—';
+  return timestamp > observedAt
+    ? '—（接口时间晚于快照，已忽略）'
+    : instant(timestamp);
+}
+
 function sectionStatus<T>(section: DataSection<T>): string {
-  switch (section.status) {
-    case 'complete':
-      return '完整';
-    case 'empty':
-      return '无数据';
-    case 'partial':
-      return '部分数据';
-    case 'unavailable':
-      return '不可用';
-    case 'not-applicable':
-      return '不适用';
-  }
+  const status = (() => {
+    switch (section.status) {
+      case 'complete':
+        return '完整';
+      case 'empty':
+        return '无数据';
+      case 'partial':
+        return '部分数据';
+      case 'unavailable':
+        return '不可用';
+      case 'not-applicable':
+        return '不适用';
+    }
+  })();
+  return section.gap === null
+    ? status
+    : `${status}（缺口：\`${section.gap.replaceAll('`', '')}\`）`;
 }
 
 function tournamentStage(
@@ -340,7 +362,9 @@ function liveStateRows(rows: readonly PlayerState[]): string[] {
         booleanValue(player.hasArmor),
         booleanValue(player.helmet),
         booleanValue(player.hasDefuseKit),
-        player.equipment.length === 0 ? '—' : player.equipment.join(', '),
+        player.equipment.length === 0
+          ? '—'
+          : player.equipment.map((equipment) => weaponName(equipment)).join(', '),
       ]),
     ),
     '',
@@ -606,9 +630,7 @@ function mapsHandler(context: RenderContext): string[] {
         entry !== null && entry !== '' && entries.indexOf(entry) === index);
     const mapTitle = names.join(' / ');
     lines.push(`### ${value(mapTitle)}`, '');
-    const veto = map.vetoAction === 'left'
-      ? 'decider（剩余决胜图）'
-      : `${map.vetoAction}${map.vetoTeamId === null ? '' : ` / ${teamName(context, map.vetoTeamId)}`}`;
+    const veto = mapVetoLabel(context, map);
     if (map.status === 'closed-without-play' && map.technicalDisposition === 'unused') {
       lines.push(
         '- 状态：未进行（决胜图；系列赛提前结束）',
@@ -623,10 +645,12 @@ function mapsHandler(context: RenderContext): string[] {
         `- 当前阶段：${stageName(map.stage)}`,
         `- 当前回合：${value(map.currentRound)}`,
         `- 赛制：MR${value(map.regulationRoundsPerHalf)}`,
-        `- 开始时间（UTC）：${instant(map.startedAt)}`,
-        `- 当前回合开始（UTC）：${instant(map.roundStartedAt)}`,
-        `- 回合计时（秒）：${value(map.gameTimeSeconds)}`,
-        `- 炸弹放置时间（UTC）：${instant(map.bombPlantedAt)}`,
+        `- 开始时间（UTC）：${liveInstant(map.startedAt, context.input.observedAt)}`,
+        `- 当前回合开始（UTC）：${liveInstant(map.roundStartedAt, context.input.observedAt)}`,
+        ...(map.gameTimeSeconds === null || map.gameTimeSeconds <= 0
+          ? []
+          : [`- 回合计时（秒）：${value(map.gameTimeSeconds)}`]),
+        `- 炸弹放置时间（UTC）：${liveInstant(map.bombPlantedAt, context.input.observedAt)}`,
       );
     } else if (map.status === 'settled') {
       lines.push(
@@ -955,7 +979,9 @@ function analysisLines(context: RenderContext, analysis: MatchAnalysis): string[
     map.name,
     map.vetoAction === 'left'
       ? 'decider'
-      : `${map.vetoAction}${map.vetoTeamId === null ? '' : `（${teamName(context, map.vetoTeamId)}）`}`,
+      : map.vetoAction === 'pick'
+        ? `pick${map.vetoTeamId === null ? '' : `（${teamName(context, map.vetoTeamId)}）`}`
+        : '—',
     ...mapTeamIds.map((teamId) => {
       const team = map.teams.find((entry) => entry.teamId === teamId);
       return team === undefined
@@ -1099,7 +1125,7 @@ function normalizedPlayerAlias(name: string): string {
 }
 
 function canonicalPlayerName(context: RenderContext, name: string): string {
-  return context.playerAliases.get(normalizedPlayerAlias(name)) ?? name;
+  return value(context.playerAliases.get(normalizedPlayerAlias(name)) ?? name);
 }
 
 function eventSide(side: string | null): string | null {
@@ -1112,50 +1138,139 @@ function eventSide(side: string | null): string | null {
 
 function weaponName(weapon: string | null): string {
   if (weapon === null) return '—';
+  const normalized = weapon.trim().toLowerCase().replace(/^weapon_/, '');
   const names: Readonly<Record<string, string>> = {
     ak47: 'AK-47',
+    aug: 'AUG',
     awp: 'AWP',
+    bayonet: 'Bayonet',
+    bizon: 'PP-Bizon',
+    cz75a: 'CZ75-Auto',
+    deagle: 'Desert Eagle',
+    decoy: 'Decoy Grenade',
     elite: 'Dual Berettas',
+    famas: 'FAMAS',
     fiveseven: 'Five-SeveN',
+    flashbang: 'Flashbang',
+    g3sg1: 'G3SG1',
     galilar: 'Galil AR',
     glock: 'Glock-18',
+    hegrenade: 'HE Grenade',
     hkp2000: 'P2000',
     inferno: 'Incendiary fire',
+    knife: 'Knife',
+    knife_butterfly: 'Butterfly Knife',
     knife_cord: 'Paracord Knife',
+    knife_css: 'Classic Knife',
+    knife_falchion: 'Falchion Knife',
+    knife_flip: 'Flip Knife',
+    knife_gut: 'Gut Knife',
+    knife_gypsy_jackknife: 'Navaja Knife',
+    knife_karambit: 'Karambit',
+    knife_kukri: 'Kukri Knife',
+    knife_m9_bayonet: 'M9 Bayonet',
+    knife_outdoor: 'Nomad Knife',
+    knife_push: 'Shadow Daggers',
+    knife_skeleton: 'Skeleton Knife',
+    knife_stiletto: 'Stiletto Knife',
+    knife_survival_bowie: 'Bowie Knife',
+    knife_tactical: 'Huntsman Knife',
+    knife_ursus: 'Ursus Knife',
+    knife_widowmaker: 'Talon Knife',
+    m4a1: 'M4A4',
     m4a1_silencer: 'M4A1-S',
     mac10: 'MAC-10',
+    mag7: 'MAG-7',
+    molotov: 'Molotov',
+    mp5sd: 'MP5-SD',
+    mp7: 'MP7',
     mp9: 'MP9',
+    negev: 'Negev',
+    nova: 'Nova',
     p250: 'P250',
+    p90: 'P90',
+    revolver: 'R8 Revolver',
+    sawedoff: 'Sawed-Off',
+    scar20: 'SCAR-20',
+    sg556: 'SG 553',
+    smokegrenade: 'Smoke Grenade',
+    ssg08: 'SSG 08',
+    taser: 'Zeus x27',
     tec9: 'Tec-9',
+    ump45: 'UMP-45',
     usp_silencer: 'USP-S',
+    xm1014: 'XM1014',
   };
-  return names[weapon] ?? weapon;
+  return names[normalized] ?? value(weapon);
 }
 
 function formalRoundEvents(
   events: readonly MatchEvent[],
   mapNumber: number,
 ): readonly FormalRoundEvent[] {
-  let activeRound: number | null = null;
-  const formalEvents: FormalRoundEvent[] = [];
+  interface RoundCandidate {
+    readonly events: readonly MatchEvent[];
+    readonly roundNumber: number;
+  }
+
+  const candidates = new Map<number, RoundCandidate>();
+  let startedRound: number | null = null;
+  let bufferedEvents: MatchEvent[] = [];
+  const score = (event: MatchEvent, key: 'ct_score' | 't_score'): number | null => {
+    const raw = eventAttribute(event, key);
+    if (raw === null) return null;
+    const parsed = Number(raw);
+    return Number.isInteger(parsed) && parsed >= 0 ? parsed : null;
+  };
+
   for (const event of events) {
     if (event.mapNumber !== mapNumber) continue;
     if (event.type === '1') {
-      activeRound =
+      startedRound =
         event.roundNumber !== null &&
         Number.isInteger(event.roundNumber) &&
         event.roundNumber > 0
           ? event.roundNumber
           : null;
+      bufferedEvents = [];
       continue;
     }
-    if (activeRound === null) continue;
-    if (event.type === '2' || event.type === '6' || event.type === '8') {
-      formalEvents.push({ event, roundNumber: activeRound });
+    if (event.type === '6' || event.type === '8') {
+      bufferedEvents.push(event);
+      continue;
     }
-    if (event.type === '2') activeRound = null;
+    if (event.type !== '2') continue;
+
+    const ctScore = score(event, 'ct_score');
+    const tScore = score(event, 't_score');
+    const completedRounds = ctScore === null || tScore === null ? null : ctScore + tScore;
+    if (completedRounds !== null && completedRounds > 0) {
+      candidates.set(completedRounds, {
+        events: [...bufferedEvents, event],
+        roundNumber: completedRounds,
+      });
+    }
+    startedRound = null;
+    bufferedEvents = [];
   }
-  return formalEvents;
+
+  const ordered = [...candidates.values()].sort((a, b) => a.roundNumber - b.roundNumber);
+  const contiguous: RoundCandidate[] = [];
+  for (const candidate of ordered) {
+    const previous = contiguous.at(-1);
+    if (previous !== undefined && candidate.roundNumber !== previous.roundNumber + 1) break;
+    contiguous.push(candidate);
+  }
+  const finalCompletedRound = contiguous.at(-1)?.roundNumber ?? null;
+  if (
+    startedRound !== null &&
+    bufferedEvents.length > 0 &&
+    (finalCompletedRound === null || startedRound === finalCompletedRound + 1)
+  ) {
+    contiguous.push({ events: bufferedEvents, roundNumber: startedRound });
+  }
+  return contiguous.flatMap((candidate) =>
+    candidate.events.map((event) => ({ event, roundNumber: candidate.roundNumber })));
 }
 
 function killEventText(
@@ -1264,7 +1379,11 @@ function eventsHandler(context: RenderContext): string[] {
     '- 日志比分为随换边变化的 CT:T 阵营比分；逐回合结果中的比分为固定战队顺序',
     '',
   ];
-  if (section.data !== null) {
+  const trusted = section.status === 'complete' || section.status === 'empty';
+  if (!trusted) {
+    lines.push('- 为避免不完整日志误导分析，本节不输出事件明细；完整原始响应仍保留在同目录 JSON 中', '');
+  }
+  if (trusted && section.data !== null) {
     for (const map of context.input.maps) {
       if (!map.played) continue;
       const events = formalRoundEvents(section.data, map.mapNumber);
@@ -1285,7 +1404,7 @@ function eventsHandler(context: RenderContext): string[] {
       );
     }
   }
-  if (section.data === null || !lines.some((line) => line.startsWith('#### '))) {
+  if (!trusted || section.data === null || !lines.some((line) => line.startsWith('#### '))) {
     lines.push('_暂无正式回合日志_');
   }
   return subBlock('比赛日志', lines);
@@ -1302,7 +1421,7 @@ const MARKDOWN_HANDLERS: readonly MarkdownHandler[] = [
 ];
 
 function createContext(input: MarkdownInput): RenderContext {
-  const teamNames = new Map(input.teams.map((team) => [team.id, team.name]));
+  const teamNames = new Map(input.teams.map((team) => [team.id, team.name.trim()]));
   const playerNames = new Map<string, string>();
   for (const statistics of [
     input.seriesPlayerStatistics,
@@ -1310,7 +1429,7 @@ function createContext(input: MarkdownInput): RenderContext {
   ]) {
     for (const team of statistics.teams) {
       for (const plane of [team.overall, team.ct, team.t]) {
-        for (const player of plane.rows ?? []) playerNames.set(player.id, player.name);
+        for (const player of plane.rows ?? []) playerNames.set(player.id, player.name.trim());
       }
     }
   }

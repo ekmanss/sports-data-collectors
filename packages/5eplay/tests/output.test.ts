@@ -836,6 +836,25 @@ test('Markdown follows 5E terminology and pre-match analysis hierarchy', async (
   assert.match(markdown, /接口未返回交手汇总或比赛明细/);
 });
 
+test('historical evidence Markdown omits nested histories without claiming the provider omitted them', async () => {
+  const snapshot = await snapshotWithAnalysis();
+  const standard = renderMatchMarkdown(snapshot);
+  assert.equal(renderMatchMarkdown(snapshot, { profile: 'standard' }), standard);
+  const historical = renderMatchMarkdown(snapshot, { profile: 'historical-evidence' });
+
+  assert.match(standard, /### 近期战绩/);
+  assert.match(standard, /### 交手战绩（最近五场）/);
+  assert.match(historical, /Historical evidence profile/);
+  assert.match(historical, /由调用方主动省略/);
+  assert.match(historical, /不表示接口未返回数据/);
+  assert.doesNotMatch(historical, /### 近期战绩/);
+  assert.doesNotMatch(historical, /### 交手战绩（最近五场）/);
+  assert.doesNotMatch(historical, /接口仅返回汇总胜率|接口未返回交手汇总或比赛明细/);
+  assert.match(historical, /### 选手分析（近三个月数据）/);
+  assert.match(historical, /### 地图分析（近三个月数据）/);
+  assert.match(historical, /### 战队分析（近三个月数据）/);
+});
+
 test('analysis power players are regrouped by the authoritative match roster', async () => {
   const snapshot = await snapshotWithAnalysis((payload) => {
     const analysis = payload as {

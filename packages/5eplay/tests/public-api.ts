@@ -10,6 +10,7 @@ import {
   type MatchSnapshot,
   type MatchSnapshotResult,
   type MatchState,
+  type MatchMarkdownOptions,
   type MatchUpdate,
   type ProvisionalTelemetry,
   type ScheduleMatch,
@@ -134,6 +135,10 @@ export function constructPublicError(code: FiveEPlaySourceErrorCode): FiveEPlayS
 }
 
 export const publicSource: FiveEPlayMatchSource = createFiveEPlayMatchSource();
+
+export const historicalMarkdownOptions: MatchMarkdownOptions = {
+  profile: 'historical-evidence',
+};
 
 // @ts-expect-error scheduled observations cannot claim a terminal phase or stable finality
 const impossibleScheduledState: MatchState = { certainty: 'confirmed', closure: null, dataFinality: 'stable', lifecycle: 'scheduled', phase: { finalMapNumber: 3, kind: 'series-ended' } };

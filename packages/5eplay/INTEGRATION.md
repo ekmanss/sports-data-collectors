@@ -332,6 +332,17 @@ economy, equipment and bomb telemetry is deliberately excluded. Therefore:
 - do not deduplicate every player/economy update solely by revision;
 - store `observedAt` and `freshness.coreObservedAt` alongside cached observations.
 
+## Historical Markdown evidence
+
+Use the default `renderMatchMarkdown(snapshot)` for the current match. When a complete historical
+match is embedded as supporting evidence, use
+`renderMatchMarkdown(snapshot, { profile: 'historical-evidence' })`. The profile keeps the
+historical match's own competitive facts and analysis but removes its nested `近期战绩` and
+`交手战绩` subsections, including summaries and rows. Its explicit omission note distinguishes
+consumer-requested de-nesting from provider missing data. Do not mutate a `MatchSnapshot` to empty
+those arrays before rendering; that would preserve a `complete` section status while changing its
+meaning.
+
 ## Realtime watch
 
 Use `watch()` when a process owns a match for more than one read. HTTP remains authoritative; MQTT

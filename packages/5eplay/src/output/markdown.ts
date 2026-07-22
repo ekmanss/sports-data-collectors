@@ -17,10 +17,17 @@ import type {
 
 type MarkdownInput = ConfirmedMatchObservation | MatchSnapshot;
 
+export type MatchMarkdownProfile = 'standard' | 'historical-evidence';
+
+export interface MatchMarkdownOptions {
+  readonly profile?: MatchMarkdownProfile;
+}
+
 interface RenderContext {
   readonly input: MarkdownInput;
   readonly playerAliases: ReadonlyMap<string, string>;
   readonly playerNames: ReadonlyMap<string, string>;
+  readonly profile: MatchMarkdownProfile;
   readonly teamNames: ReadonlyMap<string, string>;
 }
 
@@ -1099,6 +1106,12 @@ function analysisLines(context: RenderContext, analysis: MatchAnalysis): string[
     ]),
   );
   const lines: string[] = [
+    ...(context.profile === 'historical-evidence'
+      ? [
+          '> Historical evidence profile：本历史快照自身的“近期战绩”和“交手战绩”（含汇总与比赛明细）由调用方主动省略，以避免历史证据重复嵌套；不表示接口未返回数据。',
+          '',
+        ]
+      : []),
     ...subBlock('选手分析（近三个月数据）', sparseTable(
       [
         '战队',
@@ -1128,6 +1141,7 @@ function analysisLines(context: RenderContext, analysis: MatchAnalysis): string[
       teamRows,
     )),
   ];
+  if (context.profile === 'historical-evidence') return lines;
   const recentLines = analysis.recentMatches.flatMap((team) => [
     `#### ${value(teamName(context, team.teamId))}`,
     '',
@@ -1568,7 +1582,10 @@ const MARKDOWN_HANDLERS: readonly MarkdownHandler[] = [
   analysisHandler,
 ];
 
-function createContext(input: MarkdownInput): RenderContext {
+function createContext(
+  input: MarkdownInput,
+  options: MatchMarkdownOptions,
+): RenderContext {
   const teamNames = new Map(input.teams.map((team) => [team.id, team.name.trim()]));
   const playerNames = new Map<string, string>();
   for (const statistics of [
@@ -1590,11 +1607,20 @@ function createContext(input: MarkdownInput): RenderContext {
   const playerAliases = new Map(
     [...aliases].flatMap(([key, name]) => name === null ? [] : [[key, name] as const]),
   );
-  return { input, playerAliases, playerNames, teamNames };
+  return {
+    input,
+    playerAliases,
+    playerNames,
+    profile: options.profile ?? 'standard',
+    teamNames,
+  };
 }
 
 /** Renders a filtered, analysis-facing Markdown view while leaving the JSON source untouched. */
-export function renderMatchMarkdown(input: MarkdownInput): string {
-  const context = createContext(input);
+export function renderMatchMarkdown(
+  input: MarkdownInput,
+  options: MatchMarkdownOptions = {},
+): string {
+  const context = createContext(input, options);
   return `${MARKDOWN_HANDLERS.flatMap((handler) => handler(context)).join('\n').trim()}\n`;
 }

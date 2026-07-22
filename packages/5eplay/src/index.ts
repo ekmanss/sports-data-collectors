@@ -4,6 +4,10 @@ export {
   describeMatchState,
   renderMatchMarkdown,
 } from './output/markdown.js';
+export type {
+  MatchMarkdownOptions,
+  MatchMarkdownProfile,
+} from './output/markdown.js';
 export { writeMatchSnapshotArtifacts } from './output/artifacts.js';
 export type { FiveEPlaySourceErrorCode } from './domain/errors.js';
 export type {

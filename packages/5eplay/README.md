@@ -72,6 +72,24 @@ also distinguishes current match teams from player-profile affiliations and 5E R
 Rating. Entirely unavailable columns are omitted; `—` consistently means unavailable or not
 applicable, never an inferred zero.
 
+Consumers that embed complete historical match Markdown beside a current match can request the
+explicit historical evidence profile:
+
+```ts
+import { renderMatchMarkdown } from '@ekmanss/5eplay';
+
+const markdown = renderMatchMarkdown(historicalSnapshot, {
+  profile: 'historical-evidence',
+});
+```
+
+This profile preserves the match, maps, scores, player statistics, formal-round logs, and
+pre-match player/map/team analysis, but omits that historical snapshot's own `近期战绩` and
+`交手战绩` sections, including their aggregate win rates and match rows. The Markdown explicitly
+labels the omission as a consumer-requested de-nesting operation; it never claims that the
+provider omitted those rows. The default `standard` profile and artifact writer output are
+unchanged.
+
 For production integration, exhaustive result handling, state mapping, retry policy, and realtime
 ownership, see [INTEGRATION.md](INTEGRATION.md).
 

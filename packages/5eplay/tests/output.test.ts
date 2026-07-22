@@ -445,7 +445,7 @@ test('Markdown retains API-only statistical detail useful for analysis', async (
   assert.match(markdown, /\*\*选手对比\*\*/);
   assert.match(markdown, /\*\*MVP 指标参考\*\*/);
   assert.match(markdown, /#### 逐回合结果/);
-  assert.match(markdown, /\|回合\|阶段\|胜方\|阵营\|获胜方式\|回合后比分\|/);
+  assert.match(markdown, /\|回合\|阶段\|胜方\|阵营\|获胜方式\|比分（ARCRED:1win）\|/);
   assert.match(markdown, /\|R1\|上半场\|[^|]+\|T\|歼灭敌人\|/);
   assert.match(markdown, /\|R2\|上半场\|[^|]+\|CT\|拆弹获胜\|/);
   assert.match(markdown, /\|R4\|上半场\|[^|]+\|T\|炸弹爆炸\|/);
@@ -476,10 +476,13 @@ test('Markdown follows 5E terminology and pre-match analysis hierarchy', async (
   assert.match(markdown, /## 赛前分析/);
   assert.match(markdown, /### 选手分析（近三个月数据）/);
   assert.match(markdown, /### 选手能力指标/);
-  assert.match(markdown, /#### BledarD \/ The Suspect/);
-  assert.match(markdown, /阵营：全阵营；时间范围：3；HLTV Rating：1\.06/);
-  assert.match(markdown, /\|火力\|80\|100\|80\|/);
-  assert.match(markdown, /\|↳每回合击杀\|0\.74\|—\|80\|/);
+  assert.match(markdown, /\|BledarD\|The Suspect\|全阵营\|3\|1\.06\|/);
+  assert.match(markdown, /\|能力指标\|BledarD\|vAloN\|ammar\|/);
+  assert.match(markdown, /\|火力\|80\|25\|/);
+  assert.match(markdown, /\|↳每回合击杀\|0\.74\|0\.61\|/);
+  assert.match(markdown, /\|↳获胜回合平均击杀\|1\.03\|0\.87\|/);
+  assert.doesNotMatch(markdown, /获胜回合平均击杀（2）/);
+  assert.doesNotMatch(markdown, /指标单元格：分数\/参考线\/宽度/);
   assert.match(markdown, /### 地图分析（近三个月数据）/);
   assert.match(markdown, /### 战队分析（近三个月数据）/);
   assert.match(markdown, /### 近期战绩/);
@@ -489,7 +492,8 @@ test('Markdown follows 5E terminology and pre-match analysis hierarchy', async (
   assert.doesNotMatch(markdown, /历史比赛统计/);
   assert.match(markdown, /\|战队\|选手\|Rating\|K\/D\|KAST\|SWING\|ADR\|KPR\|/);
   assert.match(markdown, /\|ex-MANA\|BledarD\|1\.1\|1\.1\|69\.9%\|\+0\.5%\|76\.7\|0\.73\|/);
-  assert.match(markdown, /\|Mirage\|pick\|ex-MANA\|/);
+  assert.match(markdown, /\|地图\|地图BP\|ex-MANA\|Misa\|/);
+  assert.match(markdown, /\|Mirage\|pick\|2\/—\/100%\/1\/12%\/0\/—\|13\/—\/38%\/2\/6%\/8\/24%\|/);
   assert.doesNotMatch(markdown, /荒漠迷城|沙漠2|炼狱小镇/);
   assert.match(markdown, /上半场手枪局胜率/);
   assert.match(markdown, /下半场手枪局胜率/);

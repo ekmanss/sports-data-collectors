@@ -550,7 +550,7 @@ function roundTimelineLines(context: RenderContext, map: MatchMap): string[] {
         teamName(context, map.teams[winnerIndex].teamId),
         value(winningSide),
         outcome?.reason ?? `未知获胜方式（接口代码 ${code}）`,
-        `${teamName(context, firstTeam.teamId)} ${cumulativeScores[0]}:${cumulativeScores[1]} ${teamName(context, secondTeam.teamId)}`,
+        `${cumulativeScores[0]}:${cumulativeScores[1]}`,
       ]);
     }
   }
@@ -558,7 +558,14 @@ function roundTimelineLines(context: RenderContext, map: MatchMap): string[] {
   return [
     '#### 逐回合结果',
     '',
-    ...table(['回合', '阶段', '胜方', '阵营', '获胜方式', '回合后比分'], rows),
+    ...table([
+      '回合',
+      '阶段',
+      '胜方',
+      '阵营',
+      '获胜方式',
+      `比分（${teamName(context, firstTeam.teamId)}:${teamName(context, secondTeam.teamId)}）`,
+    ], rows),
     '',
   ];
 }
@@ -726,40 +733,104 @@ function recentMatches(
   );
 }
 
-function powerMetricRows(
+interface MatrixPowerMetric {
+  readonly depth: number;
+  readonly key: string;
+  readonly name: string;
+  readonly occurrence: number;
+  readonly score: string | null;
+}
+
+function matrixPowerMetrics(
   metrics: readonly PlayerPowerMetric[],
+  hltvRating: number | null,
+  parentKey = '',
   depth = 0,
-): string[][] {
+): MatrixPowerMetric[] {
+  const occurrences = new Map<string, number>();
   return metrics.flatMap((metric) => {
-    return [
-      [
-        `${'↳'.repeat(depth)}${metric.name}`,
-        value(metric.score),
-        value(metric.guideline),
-        value(metric.width),
-      ],
-      ...powerMetricRows(metric.children, depth + 1),
-    ];
+    const occurrence = (occurrences.get(metric.key) ?? 0) + 1;
+    occurrences.set(metric.key, occurrence);
+    const score = metric.score === null ? Number.NaN : Number(metric.score);
+    const mislabeledRatingDuplicate =
+      metric.key === 'kills_per_round_win'
+      && occurrence > 1
+      && hltvRating !== null
+      && Number.isFinite(score)
+      && score === hltvRating;
+    if (mislabeledRatingDuplicate) return [];
+    const segment = `${metric.key}#${occurrence}`;
+    const key = parentKey === '' ? segment : `${parentKey}/${segment}`;
+    return [{
+      depth,
+      key,
+      name: metric.name,
+      occurrence,
+      score: metric.score,
+    }, ...matrixPowerMetrics(metric.children, hltvRating, key, depth + 1)];
   });
 }
 
 function playerPowerLines(context: RenderContext, analysis: MatchAnalysis): string[] {
-  const lines: string[] = [];
-  for (const teamPower of analysis.power) {
-    for (const player of teamPower) {
-      lines.push(
-        `#### ${value(player.playerName)} / ${value(player.teamName ?? teamName(context, player.teamId))}`,
-        '',
-        `- 阵营：${value(player.sideLabel ?? player.side)}；时间范围：${value(player.timeFrameCode)}；HLTV Rating：${value(player.hltvRating)}`,
-        '',
-        ...(player.metrics.length === 0
-          ? ['_暂无能力指标_']
-          : table(['能力指标（`↳` 表示子级）', '分数', '参考线', '宽度'], powerMetricRows(player.metrics))),
-        '',
-      );
+  const players = analysis.power.flat();
+  if (players.length === 0) return ['_暂无数据_'];
+  const duplicateNames = new Set(players.flatMap((player, index) =>
+    players.some((other, otherIndex) =>
+      otherIndex !== index && other.playerName === player.playerName)
+      ? [player.playerName]
+      : []));
+  const playerLabels = players.map((player) => duplicateNames.has(player.playerName)
+    ? `${player.playerName} (${player.teamName ?? teamName(context, player.teamId)})`
+    : player.playerName);
+  const metricsByPlayer = players.map((player) =>
+    matrixPowerMetrics(player.metrics, player.hltvRating));
+  const metricDefinitions = new Map<
+    string,
+    { depth: number; name: string; occurrence: number }
+  >();
+  for (const metrics of metricsByPlayer) {
+    for (const metric of metrics) {
+      if (!metricDefinitions.has(metric.key)) {
+        metricDefinitions.set(metric.key, {
+          depth: metric.depth,
+          name: metric.name,
+          occurrence: metric.occurrence,
+        });
+      }
     }
   }
-  return lines.length === 0 ? ['_暂无数据_'] : lines;
+  const metricMaps = metricsByPlayer.map((metrics) =>
+    new Map(metrics.map((metric) => [metric.key, metric])));
+  const metricRows = [...metricDefinitions].map(([key, definition]) => {
+    const occurrenceSuffix = definition.occurrence === 1
+      ? ''
+      : `（${definition.occurrence}）`;
+    return [
+      `${'↳'.repeat(definition.depth)}${definition.name}${occurrenceSuffix}`,
+      ...metricMaps.map((metrics) => {
+        const metric = metrics.get(key);
+        return metric === undefined ? '—' : value(metric.score);
+      }),
+    ];
+  });
+  return [
+    ...table(
+      ['选手', '战队', '阵营', '时间范围', 'HLTV Rating'],
+      players.map((player) => [
+        player.playerName,
+        player.teamName ?? teamName(context, player.teamId),
+        value(player.sideLabel ?? player.side),
+        value(player.timeFrameCode),
+        value(player.hltvRating),
+      ]),
+    ),
+    '',
+    '- 指标单元格：接口分数；`↳` 表示子级；`—` 表示该选手无此指标',
+    '',
+    ...(metricRows.length === 0
+      ? ['_暂无能力指标_']
+      : table(['能力指标', ...playerLabels], metricRows)),
+  ];
 }
 
 function analysisLines(context: RenderContext, analysis: MatchAnalysis): string[] {
@@ -771,20 +842,25 @@ function analysisLines(context: RenderContext, analysis: MatchAnalysis): string[
     percent(team.firstSideRate),
     percent(team.secondSideRate),
   ]);
-  const mapRows = analysis.maps.flatMap((map) =>
-    map.teams.map((team) => [
-      map.name,
-      map.vetoAction,
-      teamName(context, team.teamId),
-      value(team.matches),
-      value(team.wins),
-      percent(team.winRate),
-      value(team.picks),
-      percent(team.pickRate),
-      value(team.bans),
-      percent(team.banRate),
-    ]),
-  );
+  const mapTeamIds = context.input.teams.map((team) => team.id);
+  const mapRows = analysis.maps.map((map) => [
+    map.name,
+    map.vetoAction,
+    ...mapTeamIds.map((teamId) => {
+      const team = map.teams.find((entry) => entry.teamId === teamId);
+      return team === undefined
+        ? '—'
+        : [
+            value(team.matches),
+            value(team.wins),
+            percent(team.winRate),
+            value(team.picks),
+            percent(team.pickRate),
+            value(team.bans),
+            percent(team.banRate),
+          ].join('/');
+    }),
+  ]);
   const playerRows = analysis.teams.flatMap((team) =>
     team.players.map((player) => [
       teamName(context, team.teamId),
@@ -816,10 +892,14 @@ function analysisLines(context: RenderContext, analysis: MatchAnalysis): string[
       playerRows,
     )),
     ...subBlock('选手能力指标', playerPowerLines(context, analysis)),
-    ...subBlock('地图分析（近三个月数据）', sparseTable(
-      ['地图', '地图BP', '战队', '场次', '胜场', '胜率', 'Pick次数', 'Pick率', 'Ban次数', 'Ban率'],
-      mapRows,
-    )),
+    ...subBlock('地图分析（近三个月数据）', [
+      '- 战队单元格：场次/胜场/胜率/Pick次数/Pick率/Ban次数/Ban率',
+      '',
+      ...sparseTable(
+        ['地图', '地图BP', ...mapTeamIds.map((teamId) => teamName(context, teamId))],
+        mapRows,
+      ),
+    ]),
     ...subBlock('战队分析（近三个月数据）', sparseTable(
       ['战队', '胜率（小局）', 'Rating', 'K/D', '上半场手枪局胜率', '下半场手枪局胜率'],
       teamRows,

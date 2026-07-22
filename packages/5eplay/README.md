@@ -49,12 +49,16 @@ Markdown is organized by independent handlers following the 5E page terminology:
 retains analysis-relevant API detail such as CT/T splits, advanced player metrics, round sequences,
 duels, multi-kill distributions, comparison highlights, player-power metrics, and formal-round
 match logs. It omits schema/revision tokens, provider state, artwork URLs, country
-metadata, section transport metadata, and community/player ratings. Its headline status uses the
-authoritative phase model, including unopened/live maps and both between-map states.
-To reduce AI context usage without dropping analysis data, repeated player-power metadata is
-grouped per player, duel details use a lossless kill/opening-kill matrix, formal events are grouped
-in occurrence order by round, and columns that are entirely unavailable are named once instead of
-repeating an empty cell for every row.
+metadata, section transport metadata, community/player ratings, and player-power bar-rendering
+guidelines/widths. It also suppresses the duplicated `kills_per_round_win` row that 5E mislabels
+with the player's HLTV rating. Those provider fields remain available in the complete JSON. Its
+headline status uses the authoritative phase model, including unopened/live maps and both
+between-map states.
+To reduce AI context usage while improving comparisons, player-power metrics are transposed into
+an indicator-by-player matrix, both teams' map-analysis values share one map row, duel details use
+a lossless kill/opening-kill matrix, and round-score team order is declared once in the header.
+Formal events remain in occurrence order by round, and columns that are entirely unavailable are
+named once instead of repeating an empty cell for every row.
 
 For production integration, exhaustive result handling, state mapping, retry policy, and realtime
 ownership, see [INTEGRATION.md](INTEGRATION.md).

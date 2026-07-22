@@ -169,11 +169,15 @@ function deadlineSignal(
       'deadlineMs must be a finite number between 1 and 600000',
     );
   }
-  const timeout = AbortSignal.timeout(deadlineMs);
-  if (callerSignal === undefined) return { dispose: () => undefined, signal: timeout };
+  const timeoutController = new AbortController();
+  const timeout = setTimeout(() => {
+    timeoutController.abort(new DOMException('The operation timed out', 'TimeoutError'));
+  }, deadlineMs);
+  const dispose = (): void => clearTimeout(timeout);
+  if (callerSignal === undefined) return { dispose, signal: timeoutController.signal };
   return {
-    dispose: () => undefined,
-    signal: AbortSignal.any([callerSignal, timeout]),
+    dispose,
+    signal: AbortSignal.any([callerSignal, timeoutController.signal]),
   };
 }
 

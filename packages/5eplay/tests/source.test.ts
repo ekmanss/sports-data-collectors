@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { getEventListeners } from 'node:events';
 import { readdir, readFile } from 'node:fs/promises';
@@ -3803,6 +3804,54 @@ test('optional detail deadlines yield partial data without poisoning confirmed c
   assert.equal(result.snapshot.details.teamRecentMatches.data, null);
   assert.equal(result.snapshot.details.teamPastMatches.data, null);
   assert.equal(result.snapshot.details.community.data, null);
+});
+
+test('snapshot deadline keeps a standalone process alive until optional details time out', () => {
+  const sourceUrl = new URL('../src/index.ts', import.meta.url).href;
+  const fixtureUrl = new URL('./fixtures/states/bo3-between-map2-map3.json', import.meta.url).href;
+  const childScript = `
+    const { readFile } = await import('node:fs/promises');
+    const { createFiveEPlayMatchSource } = await import(${JSON.stringify(sourceUrl)});
+    const core = JSON.parse(await readFile(new URL(${JSON.stringify(fixtureUrl)}), 'utf8'));
+    const timeoutResourcesBefore = process.getActiveResourcesInfo()
+      .filter((resource) => resource === 'Timeout').length;
+    let markDetailsStarted;
+    const detailsStarted = new Promise((resolve) => { markDetailsStarted = resolve; });
+    globalThis.fetch = async (input, init) => {
+      const url = new URL(String(input));
+      if (url.pathname.endsWith('/matches/csgo_mc_2395547/data')) return Response.json(core);
+      markDetailsStarted();
+      return new Promise((_resolve, reject) => {
+        const signal = init?.signal;
+        if (signal?.aborted) reject(signal.reason);
+        else signal?.addEventListener('abort', () => reject(signal.reason), { once: true });
+      });
+    };
+    const pendingSnapshot = createFiveEPlayMatchSource({
+      timing: { coreDeadlineMs: 100, detailDeadlineMs: 1, eventDeadlineMs: 1 },
+    }).snapshot('csgo_mc_2395547', { deadlineMs: 100 });
+    await detailsStarted;
+    const timeoutResourcesDuringSnapshot = process.getActiveResourcesInfo()
+      .filter((resource) => resource === 'Timeout').length;
+    if (timeoutResourcesDuringSnapshot <= timeoutResourcesBefore) {
+      throw new Error('snapshot deadline did not keep the process alive');
+    }
+    const result = await pendingSnapshot;
+    if (result.kind !== 'confirmed') throw new Error(JSON.stringify(result));
+  `;
+  const child = spawnSync(
+    process.execPath,
+    [
+      '--import',
+      'tsx',
+      '--input-type=module',
+      '--eval',
+      childScript,
+    ],
+    { stdio: 'ignore' },
+  );
+
+  assert.equal(child.status, 0);
 });
 
 test('caller cancellation surfaces one typed ABORTED error', async (context) => {

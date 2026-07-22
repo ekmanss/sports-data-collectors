@@ -1,6 +1,6 @@
 {
   "name": "@ekmanss/5eplay",
-  "version": "20260722.0.0",
+  "version": "20260722.1.0",
   "description": "Reliable 5EPlay CS2 match-state observations, detailed snapshots, and realtime updates.",
   "type": "module",
   "main": "./dist/index.js",

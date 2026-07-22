@@ -34,6 +34,47 @@ async function snapshotFromFixture(file: string): Promise<MatchSnapshot> {
   return result.snapshot;
 }
 
+async function snapshotWithUnusedDecider(): Promise<MatchSnapshot> {
+  const matchId = 'csgo_mc_2396047';
+  const payload = JSON.parse(
+    await readFile(
+      new URL('./fixtures/states/bo3-complete-two-maps.json', import.meta.url),
+      'utf8',
+    ),
+  ) as {
+    data: {
+      match: {
+        bouts_state: Array<{
+          curr_bout_stage: string;
+          status: string;
+          t1_stats: { id: string };
+          t2_stats: { id: string };
+        }>;
+        mc_info: { t1_info: { id: string }; t2_info: { id: string } };
+      };
+    };
+  };
+  const unusedMap = payload.data.match.bouts_state[2];
+  assert.ok(unusedMap);
+  unusedMap.status = '2';
+  unusedMap.curr_bout_stage = 'fh';
+  unusedMap.t1_stats.id = payload.data.match.mc_info.t1_info.id;
+  unusedMap.t2_stats.id = payload.data.match.mc_info.t2_info.id;
+  const frame = {
+    kind: 'ok' as const,
+    payload,
+    status: 200,
+    urlIncludes: `/matches/${matchId}/data`,
+  };
+  const result = await createFiveEPlayMatchSourceWithTransport(
+    { timing: { closeCalibrationMs: 1, livePollMs: 1 } },
+    new ReplayTransport([frame, frame]),
+  ).snapshot(matchId);
+  assert.equal(result.kind, 'confirmed');
+  if (result.kind !== 'confirmed') throw new Error('fixture snapshot was not confirmed');
+  return result.snapshot;
+}
+
 async function snapshotWithAnalysis(): Promise<MatchSnapshot> {
   const matchId = 'csgo_mc_2395918';
   const [
@@ -353,7 +394,7 @@ test('analysis-facing status describes every supported BO3 stage', () => {
         lifecycle: 'closing',
         phase: { kind: 'series-ended', finalMapNumber: 2 },
       },
-      '比赛已结束，最后进行图 2（结果待稳定确认）',
+      '比赛已结束，共进行 2 张地图（结果待稳定确认）',
     ],
     [
       {
@@ -363,7 +404,7 @@ test('analysis-facing status describes every supported BO3 stage', () => {
         lifecycle: 'closed',
         phase: { kind: 'series-ended', finalMapNumber: 3 },
       },
-      '比赛已结束，最后进行图 3（结果已稳定）',
+      '比赛已结束，共进行 3 张地图（结果已稳定）',
     ],
   ];
 
@@ -425,7 +466,26 @@ test('Markdown keeps player details for settled and live maps only', async () =>
   assert.match(liveFirstMap, /#### 选手数据/);
   assert.match(liveFirstMap, /\*\*选手状态快照\*\*/);
   assert.match(liveFirstMap, /\|选手\|K-D-A\|KD差\|ADR\|/);
-  assert.match(liveFirstMap, /全表无数据字段：Rating、K\/D、KAST/);
+  assert.match(liveFirstMap, /即时比分（接口遥测）/);
+  assert.doesNotMatch(liveFirstMap, /全表无数据字段/);
+});
+
+test('Markdown renders settled, live, and unused maps with state-specific fields', async () => {
+  const markdown = renderMatchMarkdown(await snapshotWithUnusedDecider());
+  const firstMap = markdown.slice(
+    markdown.indexOf('### 第一局'),
+    markdown.indexOf('### 第二局'),
+  );
+  const unusedMap = markdown.slice(
+    markdown.indexOf('### 第三局'),
+    markdown.indexOf('### 数据总览'),
+  );
+
+  assert.match(firstMap, /最终比分/);
+  assert.doesNotMatch(firstMap, /即时比分|当前阵营|回合计时|Flags/);
+  assert.match(unusedMap, /未进行（决胜图；系列赛提前结束）/);
+  assert.match(unusedMap, /decider（剩余决胜图）/);
+  assert.doesNotMatch(unusedMap, /\|战队\||unused|技术判定/);
 });
 
 test('Markdown retains API-only statistical detail useful for analysis', async () => {
@@ -434,8 +494,8 @@ test('Markdown retains API-only statistical detail useful for analysis', async (
   assert.match(markdown, /\*\*CT\*\*/);
   assert.match(markdown, /\*\*T\*\*/);
   assert.match(markdown, /\*\*高级指标\*\*/);
-  assert.match(markdown, /Opening Kill%/);
-  assert.match(markdown, /Flash Assists/);
+  assert.match(markdown, /Opening Kill%（回合占比）/);
+  assert.match(markdown, /Flash Assists（次数）/);
   assert.match(markdown, /Traded Deaths/);
   assert.match(markdown, /\*\*对位数据\*\*/);
   assert.match(markdown, /单元格：击杀\/首杀；`\*` 表示接口最高标记/);
@@ -443,16 +503,17 @@ test('Markdown retains API-only statistical detail useful for analysis', async (
   assert.match(markdown, /\|shg\|5\/3\|5\/2\|11\*\/1\|6\/1\|6\/1\|/);
   assert.match(markdown, /\*\*Multi-kill 分布\*\*/);
   assert.match(markdown, /\*\*选手对比\*\*/);
-  assert.match(markdown, /\*\*MVP 指标参考\*\*/);
+  assert.match(markdown, /代表选手由整个对比项确定/);
+  assert.doesNotMatch(markdown, /\*\*MVP 指标参考\*\*/);
   assert.match(markdown, /#### 逐回合结果/);
-  assert.match(markdown, /\|回合\|阶段\|胜方\|阵营\|获胜方式\|比分（ARCRED:1win）\|/);
+  assert.match(markdown, /\|回合\|阶段\|胜方\|胜方当回合阵营\|获胜方式\|比分（ARCRED:1win）\|/);
   assert.match(markdown, /\|R1\|上半场\|[^|]+\|T\|歼灭敌人\|/);
   assert.match(markdown, /\|R2\|上半场\|[^|]+\|CT\|拆弹获胜\|/);
   assert.match(markdown, /\|R4\|上半场\|[^|]+\|T\|炸弹爆炸\|/);
   assert.match(markdown, /\|R6\|上半场\|[^|]+\|CT\|超时获胜\|/);
   assert.match(markdown, /\|R13\|下半场\|[^|]+\|T\|歼灭敌人\|/);
   assert.doesNotMatch(markdown, /上半场回合序列|下半场回合序列/);
-  assert.match(markdown, /Quick Score/);
+  assert.doesNotMatch(markdown, /Quick Score|Flags|Damage\/Round/);
 });
 
 test('Markdown groups useful formal-round logs by map and omits non-round noise', async () => {
@@ -462,10 +523,10 @@ test('Markdown groups useful formal-round logs by map and omits non-round noise'
   assert.match(markdown, /#### 第一局 \/ Anubis/);
   assert.match(markdown, /#### 第二局 \/ Cache/);
   assert.match(markdown, /\|回合\|正式事件\|/);
-  assert.match(markdown, /reyoz\[T\] > shg\[CT\]（galilar；助攻：Qikert \(T\)）/);
+  assert.match(markdown, /reyoz\[T\] > shg\[CT\]（Galil AR；助攻：Qikert \(T\)）/);
   assert.match(markdown, /Planter\[T\] 放置炸弹@B（存活 CT 3\/T 2）/);
-  assert.match(markdown, /回合结束：T 获胜；比分 CT 0:1 T；炸弹爆炸/);
-  assert.match(markdown, /Map2Killer\[T\] > Map2Victim\[CT\]（ak47；爆头）/);
+  assert.match(markdown, /回合结束：T 获胜；阵营比分 CT 0:1 T；炸弹爆炸/);
+  assert.match(markdown, /Map2Killer\[T\] > Map2Victim\[CT\]（AK-47；爆头）/);
   assert.doesNotMatch(markdown, /事件属性|weapon=|killer_side=|HiddenJoin|warmup_only|post_round_only/);
   assert.doesNotMatch(markdown, /weapon_logo|https?:\/\//i);
 });
@@ -476,7 +537,9 @@ test('Markdown follows 5E terminology and pre-match analysis hierarchy', async (
   assert.match(markdown, /## 赛前分析/);
   assert.match(markdown, /### 选手分析（近三个月数据）/);
   assert.match(markdown, /### 选手能力指标/);
-  assert.match(markdown, /\|BledarD\|The Suspect\|全阵营\|3\|1\.06\|/);
+  assert.match(markdown, /\|BledarD\|ex-MANA\|The Suspect\|1\.06\|/);
+  assert.match(markdown, /统计范围：近 3 个月；全阵营/);
+  assert.match(markdown, /Rating（5E）.*HLTV Rating.*不可直接互换/);
   assert.match(markdown, /\|能力指标\|BledarD\|vAloN\|ammar\|/);
   assert.match(markdown, /\|火力\|80\|25\|/);
   assert.match(markdown, /\|↳每回合击杀\|0\.74\|0\.61\|/);
@@ -490,16 +553,18 @@ test('Markdown follows 5E terminology and pre-match analysis hierarchy', async (
   assert.doesNotMatch(markdown, /补充战队历史数据/);
   assert.doesNotMatch(markdown, /按赛事分组的近期记录/);
   assert.doesNotMatch(markdown, /历史比赛统计/);
-  assert.match(markdown, /\|战队\|选手\|Rating\|K\/D\|KAST\|SWING\|ADR\|KPR\|/);
+  assert.match(markdown, /\|战队\|选手\|Rating（5E）\|K\/D\|KAST\|5E SWING\|ADR\|KPR\|/);
   assert.match(markdown, /\|ex-MANA\|BledarD\|1\.1\|1\.1\|69\.9%\|\+0\.5%\|76\.7\|0\.73\|/);
-  assert.match(markdown, /\|地图\|地图BP\|ex-MANA\|Misa\|/);
-  assert.match(markdown, /\|Mirage\|pick\|2\/—\/100%\/1\/12%\/0\/—\|13\/—\/38%\/2\/6%\/8\/24%\|/);
+  assert.match(markdown, /\|地图\|本场BP\|ex-MANA\|Misa\|/);
+  assert.match(markdown, /\|Mirage\|pick（ex-MANA）\|2\/100%\/1\/12%\/0\/—\|13\/38%\/2\/6%\/8\/24%\|/);
   assert.doesNotMatch(markdown, /荒漠迷城|沙漠2|炼狱小镇/);
   assert.match(markdown, /上半场手枪局胜率/);
   assert.match(markdown, /下半场手枪局胜率/);
   assert.doesNotMatch(markdown, /虚拟排名/);
   assert.doesNotMatch(markdown, /首选阵营率|次选阵营率/);
   assert.doesNotMatch(markdown, /选手评分|社区评分/);
+  assert.doesNotMatch(markdown, /\|Impact\||全表无数据字段/);
+  assert.match(markdown, /接口未返回交手汇总或比赛明细/);
 });
 
 test('artifact writer preserves the complete JSON beside the filtered Markdown', async (context) => {

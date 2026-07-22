@@ -50,15 +50,23 @@ retains analysis-relevant API detail such as CT/T splits, advanced player metric
 duels, multi-kill distributions, comparison highlights, player-power metrics, and formal-round
 match logs. It omits schema/revision tokens, provider state, artwork URLs, country
 metadata, section transport metadata, community/player ratings, and player-power bar-rendering
-guidelines/widths. It also suppresses the duplicated `kills_per_round_win` row that 5E mislabels
-with the player's HLTV rating. Those provider fields remain available in the complete JSON. Its
-headline status uses the authoritative phase model, including unopened/live maps and both
-between-map states.
+guidelines/widths. It also suppresses provider UI-only MVP chart metadata, opaque map flags,
+all-zero placeholder Impact columns, duplicate ADR/Damage-per-Round columns, empty side-split
+multi-kill tables, and the duplicated `kills_per_round_win` row that 5E mislabels with the
+player's HLTV rating. Those provider fields remain available in the complete JSON. Its headline
+status uses the authoritative phase model, including unopened/live maps and both between-map
+states. Map details are state-aware: live maps retain telemetry/economy fields, settled maps retain
+final results, and unused decider maps render only their no-play reason.
 To reduce AI context usage while improving comparisons, player-power metrics are transposed into
 an indicator-by-player matrix, both teams' map-analysis values share one map row, duel details use
 a lossless kill/opening-kill matrix, and round-score team order is declared once in the header.
-Formal events remain in occurrence order by round, and columns that are entirely unavailable are
-named once instead of repeating an empty cell for every row.
+Formal events remain in occurrence order by round. Event player aliases, side names, and common
+weapon identifiers are normalized; event scores are explicitly labeled as CT:T side scores rather
+than fixed-team scores. Comparison highlights identify one representative per provider category
+instead of implying that every attached metric is independently team-leading. Pre-match output
+also distinguishes current match teams from player-profile affiliations and 5E Rating from HLTV
+Rating. Entirely unavailable columns are omitted; `—` consistently means unavailable or not
+applicable, never an inferred zero.
 
 For production integration, exhaustive result handling, state mapping, retry policy, and realtime
 ownership, see [INTEGRATION.md](INTEGRATION.md).

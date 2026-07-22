@@ -8,6 +8,7 @@ import type {
   MatchSnapshot,
   MatchState,
   PlayerPowerMetric,
+  PlayerStatHighlight,
   PlayerStatHighlights,
   PlayerStatRows,
   PlayerState,
@@ -19,6 +20,7 @@ type MarkdownInput = ConfirmedMatchObservation | MatchSnapshot;
 
 interface RenderContext {
   readonly input: MarkdownInput;
+  readonly playerAliases: ReadonlyMap<string, string>;
   readonly playerNames: ReadonlyMap<string, string>;
   readonly teamNames: ReadonlyMap<string, string>;
 }
@@ -60,17 +62,10 @@ function sparseTable(headers: readonly string[], rows: readonly (readonly string
   if (rows.length === 0) return table(headers, rows);
   const retainedIndexes = headers.flatMap((_, index) =>
     rows.some((row) => row[index] !== '—') ? [index] : []);
-  const omittedIndexes = headers.flatMap((_, index) =>
-    retainedIndexes.includes(index) ? [] : [index]);
-  return [
-    ...(omittedIndexes.length === 0
-      ? []
-      : [`- 全表无数据字段：${omittedIndexes.map((index) => headers[index]).join('、')}`, '']),
-    ...table(
-      retainedIndexes.map((index) => headers[index] ?? '—'),
-      rows.map((row) => retainedIndexes.map((index) => row[index] ?? '—')),
-    ),
-  ];
+  return table(
+    retainedIndexes.map((index) => headers[index] ?? '—'),
+    rows.map((row) => retainedIndexes.map((index) => row[index] ?? '—')),
+  );
 }
 
 function block(title: string, lines: readonly string[]): string[] {
@@ -109,7 +104,7 @@ export function describeMatchState(state: MatchState): string {
     case 'between-maps':
       return `图 ${state.phase.previousMapNumber} 已结束，图 ${state.phase.nextMapNumber} 未开始`;
     case 'series-ended':
-      return `比赛已结束，最后进行图 ${state.phase.finalMapNumber}${lifecycleSuffix(state)}`;
+      return `比赛已结束，共进行 ${state.phase.finalMapNumber} 张地图${lifecycleSuffix(state)}`;
   }
 }
 
@@ -154,13 +149,32 @@ function sectionStatus<T>(section: DataSection<T>): string {
   }
 }
 
+function tournamentStage(
+  stage: string | null,
+  description: string | null,
+): string | null {
+  if (description !== null && description !== '') return description;
+  return stage;
+}
+
+function rankValue(rank: number | null): string {
+  return rank === 0 ? '未排名' : value(rank);
+}
+
+function virtualRankChange(
+  change: number | null,
+  trend: 'up' | 'down' | null,
+): string {
+  if (change === null) return '—';
+  if (trend === 'up') return `上升 ${Math.abs(change)} 名`;
+  if (trend === 'down') return `下降 ${Math.abs(change)} 名`;
+  return value(change);
+}
+
 function overviewHandler(context: RenderContext): string[] {
   const { input } = context;
   const [firstTeam, secondTeam] = input.teams;
   const [firstScore, secondScore] = input.seriesScore;
-  const tournamentStage = [input.tournament.stage, input.tournament.stageDescription]
-    .filter((entry): entry is string => entry !== null && entry !== '')
-    .join(' / ');
   return [
     `# ${value(firstTeam.name)} vs ${value(secondTeam.name)}`,
     '',
@@ -168,16 +182,19 @@ function overviewHandler(context: RenderContext): string[] {
     `- 当前状态：**${describeMatchState(input.state)}**`,
     `- 系列赛比分：${value(firstTeam.name)} ${firstScore.score}:${secondScore.score} ${value(secondTeam.name)}`,
     `- 赛制：${input.match.format.toUpperCase()}`,
-    `- 计划开始：${instant(input.match.scheduledAt)}`,
-    `- 数据时间：${instant(input.observedAt)}`,
+    `- 游戏：${input.match.gameVersion.toUpperCase()}`,
+    `- 计划开始（UTC）：${instant(input.match.scheduledAt)}`,
+    `- 快照采集时间（UTC）：${instant(input.observedAt)}`,
     `- 赛事：${value(input.tournament.name)}`,
-    `- 阶段：${value(tournamentStage)}`,
+    `- 赛事级别：${value(input.tournament.gradeLabel)}`,
+    `- 阶段：${value(tournamentStage(input.tournament.stage, input.tournament.stageDescription))}`,
     `- 地点：${value(input.tournament.location)}`,
-    `- 奖金：${value(input.tournament.prize)}`,
+    `- 奖励/奖金：${value(input.tournament.prize)}`,
     `- 系列赛胜者：${teamName(context, input.seriesWinnerTeamId)}`,
     ...('detailsCompleteness' in input
-      ? [`- 详细数据：${input.detailsCompleteness === 'complete' ? '完整' : '部分可用'}`]
+      ? [`- 详细数据采集：${input.detailsCompleteness === 'complete' ? '完整' : '部分可用'}`]
       : []),
+    '- 缺失值：`—` 表示接口未提供或当前状态不适用，不等于 0；采集完整不表示每个字段都有值',
     '',
   ];
 }
@@ -186,15 +203,13 @@ function teamsHandler(context: RenderContext): string[] {
   return block(
     '对阵信息',
     table(
-      ['战队', '战队 ID', '排名', 'V社排名', 'V社排名变化'],
+      ['战队', '战队 ID', '排名（接口）', 'V社排名', 'V社排名变化'],
       context.input.teams.map((team) => [
         team.name,
         team.id,
-        value(team.rank),
-        value(team.virtualRank),
-        team.virtualRankChange === null
-          ? '—'
-          : `${team.virtualRankChange > 0 ? '+' : ''}${team.virtualRankChange}${team.virtualRankTrend === null ? '' : ` (${team.virtualRankTrend})`}`,
+        rankValue(team.rank),
+        rankValue(team.virtualRank),
+        virtualRankChange(team.virtualRankChange, team.virtualRankTrend),
       ]),
     ),
   );
@@ -213,7 +228,7 @@ function statRows(
     'KD差',
     'KAST',
     'ADR',
-    'Swing',
+    '5E SWING',
     'KPR',
     'DPR',
     '爆头率',
@@ -230,7 +245,7 @@ function statRows(
         ? '—'
         : `${player.kills - player.deaths > 0 ? '+' : ''}${player.kills - player.deaths}`,
       percent(player.kastPercent),
-      value(player.adr),
+      value(player.adr ?? player.damagePerRound),
       percent(player.swingPercent, true),
       value(player.killsPerRound),
       value(player.deathsPerRound),
@@ -242,7 +257,6 @@ function statRows(
 
 function hasAdvancedMetrics(player: PlayerState): boolean {
   return [
-    player.damagePerRound,
     player.impact,
     player.multiKillRating,
     player.openingKillPercent,
@@ -259,6 +273,7 @@ function hasAdvancedMetrics(player: PlayerState): boolean {
 function advancedStatRows(rows: readonly PlayerState[]): string[] {
   const players = rows.filter(hasAdvancedMetrics);
   if (players.length === 0) return [];
+  const showImpact = players.some((player) => player.impact !== null && player.impact !== 0);
   return [
     '**高级指标**',
     '',
@@ -266,22 +281,20 @@ function advancedStatRows(rows: readonly PlayerState[]): string[] {
       [
         '选手',
         'Impact',
-        'Multi-kill Rating',
-        'Damage/Round',
-        'Opening Kill%',
-        'Opening差',
+        'Multi-kill Rating（5E）',
+        'Opening Kill%（回合占比）',
+        'Opening差（首杀-首死）',
         'KD差',
-        'Flash Assists',
-        'Clutch',
-        'Multi-kill',
+        'Flash Assists（次数）',
+        'Clutch Wins',
+        'Multi-kill Rounds',
         'Traded Deaths',
         'Round MVP',
       ],
       players.map((player) => [
         player.name,
-        value(player.impact),
+        showImpact ? value(player.impact) : '—',
         value(player.multiKillRating),
-        value(player.damagePerRound),
         percent(player.openingKillPercent),
         value(player.openingKillDifference),
         value(player.killDeathDifference),
@@ -368,7 +381,8 @@ function duelRows(context: RenderContext, rows: readonly PlayerState[]): string[
 }
 
 function multiKillRows(rows: readonly PlayerState[]): string[] {
-  const players = rows.filter((player) => player.multiKills.length > 0);
+  const players = rows.filter((player) =>
+    player.multiKills.some((entry) => entry.rounds !== null));
   if (players.length === 0) return [];
   return [
     '**Multi-kill 分布**',
@@ -410,20 +424,30 @@ function highlightsLines(
 ): string[] {
   if (highlights.rows === null) return ['**选手对比**：_数据不可用_', ''];
   if (highlights.rows.length === 0) return [];
-  const rows = highlights.rows.flatMap((highlight) =>
-    highlight.metrics.map((metric) => [
-      highlight.title,
-      metric.title,
-      value(metric.values[0]),
-      value(metric.values[1]),
-      `${playerName(context, highlight.leaders[0].playerId)} / ${playerName(context, highlight.leaders[1].playerId)}`,
-    ]),
-  );
+  const metricSummary = (highlight: PlayerStatHighlight, index: 0 | 1) =>
+    highlight.metrics
+      .map((metric) => `${metric.title} ${value(metric.values[index])}`)
+      .join('；');
+  const rows = highlights.rows.map((highlight) => [
+    highlight.title,
+    playerName(context, highlight.leaders[0].playerId),
+    metricSummary(highlight, 0),
+    playerName(context, highlight.leaders[1].playerId),
+    metricSummary(highlight, 1),
+  ]);
   return [
     '**选手对比**',
     '',
+    '- 代表选手由整个对比项确定；同一项内的其他数值是该选手的附属指标，不表示各指标分别为队内最高',
+    '',
     ...table(
-      ['对比项', '指标', context.input.teams[0].name, context.input.teams[1].name, '领先选手'],
+      [
+        '对比项',
+        `${context.input.teams[0].name} 代表选手`,
+        `${context.input.teams[0].name} 数据`,
+        `${context.input.teams[1].name} 代表选手`,
+        `${context.input.teams[1].name} 数据`,
+      ],
       rows,
     ),
     '',
@@ -562,7 +586,7 @@ function roundTimelineLines(context: RenderContext, map: MatchMap): string[] {
       '回合',
       '阶段',
       '胜方',
-      '阵营',
+      '胜方当回合阵营',
       '获胜方式',
       `比分（${teamName(context, firstTeam.teamId)}:${teamName(context, secondTeam.teamId)}）`,
     ], rows),
@@ -571,62 +595,87 @@ function roundTimelineLines(context: RenderContext, map: MatchMap): string[] {
 }
 
 function mapsHandler(context: RenderContext): string[] {
-  const lines: string[] = [];
+  const lines: string[] = [
+    '- 统计口径：KAST=发生击杀、助攻、存活或死亡被补枪的回合占比；ADR/KPR/DPR=每回合平均伤害/击杀/死亡；Opening Kill%=首杀回合占比；Opening差=首杀数-首死数；Multi-kill=多杀回合数；Traded Deaths=死亡后被队友补枪次数',
+    '- `5E SWING` 与 `Multi-kill Rating（5E）` 保留接口口径，不与 HLTV Rating 混用',
+    '',
+  ];
   for (const map of context.input.maps) {
     const names = [map.displayName ?? `图 ${map.mapNumber}`, map.name]
       .filter((entry, index, entries): entry is string =>
         entry !== null && entry !== '' && entries.indexOf(entry) === index);
     const mapTitle = names.join(' / ');
     lines.push(`### ${value(mapTitle)}`, '');
-    lines.push(
-      `- 状态：${mapStatus(map)}`,
-      `- 阶段：${stageName(map.stage)}`,
-      `- 当前回合：${value(map.currentRound)}`,
-      `- 每半场常规回合：${value(map.regulationRoundsPerHalf)}`,
-      `- 开始时间：${instant(map.startedAt)}`,
-      `- 结束时间：${instant(map.endedAt)}`,
-      `- 当前回合开始：${instant(map.roundStartedAt)}`,
-      `- 局内时间（秒）：${value(map.gameTimeSeconds)}`,
-      `- 炸弹放置时间：${instant(map.bombPlantedAt)}`,
-      `- 胜者：${teamName(context, map.winnerTeamId)}`,
-      `- 选图：${value(map.vetoAction)}${map.vetoTeamId === null ? '' : ` / ${teamName(context, map.vetoTeamId)}`}`,
-      `- 技术判定：${value(map.technicalDisposition)}`,
-      '',
-      ...sparseTable(
-        [
-          '战队',
-          '总分',
-          'Quick Score',
-          '上半场',
-          '下半场',
-          '加时',
-          '当前阵营',
-          '上半场阵营',
-          '下半场阵营',
-          '加时阵营',
-          '金钱',
-          '装备价值',
-          'Flags',
-        ],
-        map.teams.map((team) => [
-          teamName(context, team.teamId),
-          value(team.score),
-          value(team.quickScore),
-          value(team.firstHalfScore),
-          value(team.secondHalfScore),
-          value(team.overtimeScore),
-          value(team.currentSide),
-          value(team.firstHalfSide),
-          value(team.secondHalfSide),
-          value(team.overtimeSide),
-          value(team.money),
-          value(team.equipmentValue),
-          team.flags.length === 0 ? '—' : team.flags.join(', '),
-        ]),
-      ),
-      '',
-      ...roundTimelineLines(context, map),
-    );
+    const veto = map.vetoAction === 'left'
+      ? 'decider（剩余决胜图）'
+      : `${map.vetoAction}${map.vetoTeamId === null ? '' : ` / ${teamName(context, map.vetoTeamId)}`}`;
+    if (map.status === 'closed-without-play' && map.technicalDisposition === 'unused') {
+      lines.push(
+        '- 状态：未进行（决胜图；系列赛提前结束）',
+        `- 本场 BP：${veto}`,
+        '',
+      );
+      continue;
+    }
+    lines.push(`- 状态：${mapStatus(map)}`);
+    if (map.status === 'live') {
+      lines.push(
+        `- 当前阶段：${stageName(map.stage)}`,
+        `- 当前回合：${value(map.currentRound)}`,
+        `- 赛制：MR${value(map.regulationRoundsPerHalf)}`,
+        `- 开始时间（UTC）：${instant(map.startedAt)}`,
+        `- 当前回合开始（UTC）：${instant(map.roundStartedAt)}`,
+        `- 回合计时（秒）：${value(map.gameTimeSeconds)}`,
+        `- 炸弹放置时间（UTC）：${instant(map.bombPlantedAt)}`,
+      );
+    } else if (map.status === 'settled') {
+      lines.push(
+        `- 正式回合数：${value(map.currentRound)}`,
+        `- 赛制：MR${value(map.regulationRoundsPerHalf)}`,
+        `- 开始时间（UTC）：${instant(map.startedAt)}`,
+        `- 结束时间（UTC）：${instant(map.endedAt)}`,
+        `- 胜者：${teamName(context, map.winnerTeamId)}`,
+      );
+    } else {
+      lines.push(`- 赛制：MR${value(map.regulationRoundsPerHalf)}`);
+      if (map.technicalDisposition === 'awarded') {
+        lines.push(
+          '- 技术判定：awarded（技术判胜）',
+          `- 胜者：${teamName(context, map.winnerTeamId)}`,
+        );
+      }
+    }
+    lines.push(`- 本场 BP：${veto}`, '');
+    if (map.played || map.technicalDisposition === 'awarded') {
+      const live = map.status === 'live';
+      lines.push(
+        ...sparseTable(
+          live
+            ? [
+                '战队', '正式比分', '即时比分（接口遥测）', '上半场', '下半场', '加时',
+                '当前阵营', '上半场阵营', '下半场阵营', '加时阵营', '金钱', '装备价值',
+              ]
+            : [
+                '战队', '最终比分', '上半场', '下半场', '加时',
+                '上半场阵营', '下半场阵营', '加时阵营',
+              ],
+          map.teams.map((team) => live
+            ? [
+                teamName(context, team.teamId), value(team.score), value(team.quickScore),
+                value(team.firstHalfScore), value(team.secondHalfScore), value(team.overtimeScore),
+                value(team.currentSide), value(team.firstHalfSide), value(team.secondHalfSide),
+                value(team.overtimeSide), value(team.money), value(team.equipmentValue),
+              ]
+            : [
+                teamName(context, team.teamId), value(team.score), value(team.firstHalfScore),
+                value(team.secondHalfScore), value(team.overtimeScore), value(team.firstHalfSide),
+                value(team.secondHalfSide), value(team.overtimeSide),
+              ]),
+        ),
+        '',
+      );
+    }
+    lines.push(...roundTimelineLines(context, map));
     if (map.played) {
       lines.push(
         '#### 选手数据',
@@ -642,25 +691,10 @@ function seriesStatisticsHandler(context: RenderContext): string[] {
   const statistics = context.input.seriesPlayerStatistics;
   const mvp = statistics.mvp;
   return subBlock('数据总览', [
+    '- 统计范围：已进行地图的系列赛合计',
+    '',
     ...(mvp === null ? [] : [`- MVP：${value(mvp.name)}`, '']),
     ...statisticsLines(context, statistics),
-    ...(statistics.mvpChart.length === 0
-      ? []
-      : [
-          '**MVP 指标参考**',
-          '',
-          ...table(
-            ['指标', '平均参考', '上限参考', '展示百分比', '标准化展示值'],
-            statistics.mvpChart.map((metric) => [
-              metric.key,
-              value(metric.averageReference),
-              value(metric.upperReference),
-              percent(metric.displayPercent),
-              value(metric.normalizedDisplay),
-            ]),
-          ),
-          '',
-        ]),
   ]);
 }
 
@@ -672,7 +706,7 @@ function vetoHandler(context: RenderContext): string[] {
       context.input.veto.map((entry, index) => [
         String(index + 1),
         teamName(context, entry.teamId),
-        entry.action,
+        entry.action === 'left' ? 'decider（剩余地图）' : entry.action,
         value(entry.mapName),
       ]),
     ),
@@ -713,8 +747,24 @@ function recentMatches(
   teamId: string,
   matches: readonly HistoricalMatch[],
 ): string[] {
+  const signature = (match: HistoricalMatch): string => {
+    const teamIndex = match.teams.findIndex((team) => team.id === teamId);
+    const opponentIndex = teamIndex === 0 ? 1 : 0;
+    return [
+      match.teams[opponentIndex]?.name,
+      date(match.scheduledAt),
+      match.tournament?.name,
+      match.scores[teamIndex]?.score,
+      match.scores[opponentIndex]?.score,
+    ].join('|');
+  };
+  const signatureCounts = new Map<string, number>();
+  for (const match of matches) {
+    const key = signature(match);
+    signatureCounts.set(key, (signatureCounts.get(key) ?? 0) + 1);
+  }
   return table(
-    ['对阵战队', '日期', '赛事', '赛果'],
+    ['对阵战队', '日期', '赛事', '赛果（本节战队:对手）'],
     matches.map((match) => {
       const teamIndex = match.teams.findIndex((team) => team.id === teamId);
       if (teamIndex < 0) {
@@ -723,8 +773,11 @@ function recentMatches(
       const opponentIndex = teamIndex === 0 ? 1 : 0;
       const teamScore = match.scores[teamIndex]?.score ?? null;
       const opponentScore = match.scores[opponentIndex]?.score ?? null;
+      const opponent = match.teams[opponentIndex]?.name ?? '—';
       return [
-        match.teams[opponentIndex]?.name ?? '—',
+        (signatureCounts.get(signature(match)) ?? 0) > 1
+          ? `${opponent}（${match.id}）`
+          : opponent,
         date(match.scheduledAt),
         match.tournament?.name ?? '—',
         `${value(teamScore)}-${value(opponentScore)}`,
@@ -739,6 +792,36 @@ interface MatrixPowerMetric {
   readonly name: string;
   readonly occurrence: number;
   readonly score: string | null;
+}
+
+function powerMetricName(metric: MatrixPowerMetric): string {
+  switch (metric.key.split('/').at(-1)?.split('#')[0]) {
+    case 'traded_deaths_per_round':
+      return '每回合被队友补枪的死亡数';
+    case 'sniper_multi-kill_rounds':
+      return '每回合狙击多杀数';
+    case 'time_opponent_flashed_per_round':
+      return '每回合闪白对手时间（秒）';
+    default:
+      return metric.name;
+  }
+}
+
+function powerMetricScore(metric: MatrixPowerMetric): string {
+  if (metric.score === null) return '—';
+  const key = metric.key.split('/').at(-1)?.split('#')[0];
+  if (key === 'time_alive_per_round') {
+    const time = /^(\d+)'(\d{2})$/.exec(metric.score);
+    if (time !== null) return `${time[1]}m${time[2]}s`;
+  }
+  if (
+    metric.score === '0'
+    && (
+      /(?:percentage|_rate$|win%)/.test(key ?? '')
+      || /(?:率|占比|百分比)$/.test(metric.name)
+    )
+  ) return '0%';
+  return value(metric.score);
 }
 
 function matrixPowerMetrics(
@@ -772,7 +855,11 @@ function matrixPowerMetrics(
 }
 
 function playerPowerLines(context: RenderContext, analysis: MatchAnalysis): string[] {
-  const players = analysis.power.flat();
+  const players = analysis.power.flatMap((group, teamIndex) =>
+    group.map((player) => ({
+      ...player,
+      matchTeamId: context.input.teams[teamIndex]?.id ?? null,
+    })));
   if (players.length === 0) return ['_暂无数据_'];
   const duplicateNames = new Set(players.flatMap((player, index) =>
     players.some((other, otherIndex) =>
@@ -780,7 +867,7 @@ function playerPowerLines(context: RenderContext, analysis: MatchAnalysis): stri
       ? [player.playerName]
       : []));
   const playerLabels = players.map((player) => duplicateNames.has(player.playerName)
-    ? `${player.playerName} (${player.teamName ?? teamName(context, player.teamId)})`
+    ? `${player.playerName} (${teamName(context, player.matchTeamId)})`
     : player.playerName);
   const metricsByPlayer = players.map((player) =>
     matrixPowerMetrics(player.metrics, player.hltvRating));
@@ -805,27 +892,48 @@ function playerPowerLines(context: RenderContext, analysis: MatchAnalysis): stri
     const occurrenceSuffix = definition.occurrence === 1
       ? ''
       : `（${definition.occurrence}）`;
+    const displayName = powerMetricName({
+      depth: definition.depth,
+      key,
+      name: definition.name,
+      occurrence: definition.occurrence,
+      score: null,
+    });
     return [
-      `${'↳'.repeat(definition.depth)}${definition.name}${occurrenceSuffix}`,
+      `${'↳'.repeat(definition.depth)}${displayName}${occurrenceSuffix}`,
       ...metricMaps.map((metrics) => {
         const metric = metrics.get(key);
-        return metric === undefined ? '—' : value(metric.score);
+        return metric === undefined ? '—' : powerMetricScore(metric);
       }),
     ];
   });
+  const timeFrames = [...new Set(players.map((player) => player.timeFrameCode).filter(
+    (entry): entry is string => entry !== null,
+  ))];
+  const timeFrame = timeFrames.length === 1 && timeFrames[0] === '3'
+    ? '近 3 个月'
+    : timeFrames.map(value).join('、') || '接口未说明';
+  const sides = [...new Set(players.map((player) => player.sideLabel ?? player.side).filter(
+    (entry): entry is string => entry !== null,
+  ))];
   return [
+    `- 统计范围：${timeFrame}；${sides.join('、') || '阵营范围未说明'}`,
+    '- `Rating（5E）` 与 `HLTV Rating` 来自不同接口字段，不可直接互换',
+    '- “资料所属队”来自选手资料，可能是俱乐部或历史归属；“本场战队”才是本场阵容',
+    '',
     ...table(
-      ['选手', '战队', '阵营', '时间范围', 'HLTV Rating'],
+      ['选手', '本场战队', '资料所属队', 'HLTV Rating'],
       players.map((player) => [
         player.playerName,
-        player.teamName ?? teamName(context, player.teamId),
-        value(player.sideLabel ?? player.side),
-        value(player.timeFrameCode),
+        teamName(context, player.matchTeamId),
+        player.teamName === teamName(context, player.matchTeamId)
+          ? '—'
+          : value(player.teamName),
         value(player.hltvRating),
       ]),
     ),
     '',
-    '- 指标单元格：接口分数；`↳` 表示子级；`—` 表示该选手无此指标',
+    '- 无 `↳` 的行是 5E 综合能力分（0–100）；`↳` 是上方能力维度的原始明细指标，各行单位不同',
     '',
     ...(metricRows.length === 0
       ? ['_暂无能力指标_']
@@ -845,14 +953,15 @@ function analysisLines(context: RenderContext, analysis: MatchAnalysis): string[
   const mapTeamIds = context.input.teams.map((team) => team.id);
   const mapRows = analysis.maps.map((map) => [
     map.name,
-    map.vetoAction,
+    map.vetoAction === 'left'
+      ? 'decider'
+      : `${map.vetoAction}${map.vetoTeamId === null ? '' : `（${teamName(context, map.vetoTeamId)}）`}`,
     ...mapTeamIds.map((teamId) => {
       const team = map.teams.find((entry) => entry.teamId === teamId);
       return team === undefined
         ? '—'
         : [
             value(team.matches),
-            value(team.wins),
             percent(team.winRate),
             value(team.picks),
             percent(team.pickRate),
@@ -861,6 +970,8 @@ function analysisLines(context: RenderContext, analysis: MatchAnalysis): string[
           ].join('/');
     }),
   ]);
+  const showImpact = analysis.teams.some((team) =>
+    team.players.some((player) => player.impact !== null && player.impact !== 0));
   const playerRows = analysis.teams.flatMap((team) =>
     team.players.map((player) => [
       teamName(context, team.teamId),
@@ -871,7 +982,7 @@ function analysisLines(context: RenderContext, analysis: MatchAnalysis): string[
       percent(player.swing, true),
       value(player.adr),
       value(player.killsPerRound),
-      value(player.impact),
+      showImpact ? value(player.impact) : '—',
       value(player.multiKillRating),
     ]),
   );
@@ -880,28 +991,28 @@ function analysisLines(context: RenderContext, analysis: MatchAnalysis): string[
       [
         '战队',
         '选手',
-        'Rating',
+        'Rating（5E）',
         'K/D',
         'KAST',
-        'SWING',
+        '5E SWING',
         'ADR',
         'KPR',
         'Impact',
-        'Multi-kill Rating',
+        'Multi-kill Rating（5E）',
       ],
       playerRows,
     )),
     ...subBlock('选手能力指标', playerPowerLines(context, analysis)),
     ...subBlock('地图分析（近三个月数据）', [
-      '- 战队单元格：场次/胜场/胜率/Pick次数/Pick率/Ban次数/Ban率',
+      '- 战队单元格：场次/胜率/Pick次数/Pick率/Ban次数/Ban率；Pick/Ban率按 5E 近三个月统计口径',
       '',
       ...sparseTable(
-        ['地图', '地图BP', ...mapTeamIds.map((teamId) => teamName(context, teamId))],
+        ['地图', '本场BP', ...mapTeamIds.map((teamId) => teamName(context, teamId))],
         mapRows,
       ),
     ]),
     ...subBlock('战队分析（近三个月数据）', sparseTable(
-      ['战队', '胜率（小局）', 'Rating', 'K/D', '上半场手枪局胜率', '下半场手枪局胜率'],
+      ['战队', '胜率（小局）', 'Rating（5E）', 'K/D', '上半场手枪局胜率', '下半场手枪局胜率'],
       teamRows,
     )),
   ];
@@ -916,12 +1027,19 @@ function analysisLines(context: RenderContext, analysis: MatchAnalysis): string[
     teamName(context, entry.teamId),
     percent(entry.winRate),
   ]);
+  const hasHeadToHeadRates = analysis.headToHead.winRates.some(
+    (entry) => entry.winRate !== null,
+  );
+  const headToHeadLines = [
+    ...(hasHeadToHeadRates ? [...table(['战队', '胜率'], headToHeadRows), ''] : []),
+    ...(analysis.headToHead.matches.length === 0
+      ? [hasHeadToHeadRates
+          ? '_接口仅返回汇总胜率，未返回比赛明细；样本数未知。_'
+          : '_接口未返回交手汇总或比赛明细。_']
+      : historicalMatches(analysis.headToHead.matches.slice(0, 5))),
+  ];
   lines.push(
-    ...subBlock('交手战绩（最近五场）', [
-      ...table(['战队', '胜率'], headToHeadRows),
-      '',
-      ...historicalMatches(analysis.headToHead.matches.slice(0, 5)),
-    ]),
+    ...subBlock('交手战绩（最近五场）', headToHeadLines),
   );
   return lines;
 }
@@ -931,7 +1049,7 @@ function renderDataSection<T>(
   section: DataSection<T>,
   render: (data: T) => readonly string[],
 ): string[] {
-  const status = `- 数据状态：${sectionStatus(section)}`;
+  const status = `- 采集状态：${sectionStatus(section)}`;
   if (section.data === null) return block(title, [status]);
   return block(title, [status, '', ...render(section.data)]);
 }
@@ -971,9 +1089,47 @@ function eventParticipant(
   }
   for (const key of attributeKeys) {
     const name = eventAttribute(event, key);
-    if (name !== null) return name;
+    if (name !== null) return canonicalPlayerName(context, name);
   }
   return playerName(context, playerId);
+}
+
+function normalizedPlayerAlias(name: string): string {
+  return name.toLocaleLowerCase('en-US').replaceAll(/[^a-z0-9]/g, '');
+}
+
+function canonicalPlayerName(context: RenderContext, name: string): string {
+  return context.playerAliases.get(normalizedPlayerAlias(name)) ?? name;
+}
+
+function eventSide(side: string | null): string | null {
+  if (side === null) return null;
+  const normalized = side.toUpperCase().replaceAll(/[^A-Z]/g, '');
+  if (normalized === 'T' || normalized === 'TERRORIST') return 'T';
+  if (normalized === 'CT' || normalized === 'COUNTERTERRORIST') return 'CT';
+  return side;
+}
+
+function weaponName(weapon: string | null): string {
+  if (weapon === null) return '—';
+  const names: Readonly<Record<string, string>> = {
+    ak47: 'AK-47',
+    awp: 'AWP',
+    elite: 'Dual Berettas',
+    fiveseven: 'Five-SeveN',
+    galilar: 'Galil AR',
+    glock: 'Glock-18',
+    hkp2000: 'P2000',
+    inferno: 'Incendiary fire',
+    knife_cord: 'Paracord Knife',
+    m4a1_silencer: 'M4A1-S',
+    mac10: 'MAC-10',
+    mp9: 'MP9',
+    p250: 'P250',
+    tec9: 'Tec-9',
+    usp_silencer: 'USP-S',
+  };
+  return names[weapon] ?? weapon;
 }
 
 function formalRoundEvents(
@@ -1011,17 +1167,17 @@ function killEventText(
   if (trueEventAttribute(event, 'penetrated')) details.push('穿透击杀');
   if (trueEventAttribute(event, 'through_smoke')) details.push('穿烟击杀');
   if (trueEventAttribute(event, 'no_scope')) details.push('未开镜');
-  if (trueEventAttribute(event, 'killer_blind')) details.push('致盲状态击杀');
+  if (trueEventAttribute(event, 'killer_blind')) details.push('击杀者处于致盲状态');
   const assister = eventAttribute(event, 'assist_assister_name')
     ?? eventAttribute(event, 'assist_assister_nick');
   if (assister !== null) {
-    const side = eventAttribute(event, 'assist_assister_side');
-    details.push(`助攻：${assister}${side === null ? '' : ` (${side})`}`);
+    const side = eventSide(eventAttribute(event, 'assist_assister_side'));
+    details.push(`助攻：${canonicalPlayerName(context, assister)}${side === null ? '' : ` (${side})`}`);
   }
   const flasher = eventAttribute(event, 'flasher_nick');
   if (flasher !== null && flasher !== assister) {
-    const side = eventAttribute(event, 'flasher_side');
-    details.push(`闪光助攻：${flasher}${side === null ? '' : ` (${side})`}`);
+    const side = eventSide(eventAttribute(event, 'flasher_side'));
+    details.push(`闪光助攻：${canonicalPlayerName(context, flasher)}${side === null ? '' : ` (${side})`}`);
   }
   const killer = eventParticipant(
     context,
@@ -1035,8 +1191,8 @@ function killEventText(
     event.targetPlayerId,
     ['victim_name', 'victim_nick'],
   );
-  const suffix = [value(eventAttribute(event, 'weapon')), ...details].join('；');
-  return `${killer}[${value(eventAttribute(event, 'killer_side'))}] > ${victim}[${value(eventAttribute(event, 'victim_side'))}]（${suffix}）`;
+  const suffix = [weaponName(eventAttribute(event, 'weapon')), ...details].join('；');
+  return `${killer}[${value(eventSide(eventAttribute(event, 'killer_side')))}] > ${victim}[${value(eventSide(eventAttribute(event, 'victim_side')))}]（${suffix}）`;
 }
 
 function bombPlantEventText(
@@ -1067,8 +1223,8 @@ function roundEndEventText(event: MatchEvent): string {
     ? roundOutcome(code)?.reason ?? eventAttribute(event, 'win_type')
     : eventAttribute(event, 'win_type');
   const result = [
-    winner === null ? null : `${winner} 获胜`,
-    ctScore === null || tScore === null ? null : `比分 CT ${ctScore}:${tScore} T`,
+    winner === null ? null : `${value(eventSide(winner))} 获胜`,
+    ctScore === null || tScore === null ? null : `阵营比分 CT ${ctScore}:${tScore} T`,
     reason,
   ].filter((entry): entry is string => entry !== null);
   return `回合结束：${result.length === 0 ? '—' : result.join('；')}`;
@@ -1102,7 +1258,12 @@ function formalEventRows(
 function eventsHandler(context: RenderContext): string[] {
   if (!('details' in context.input)) return [];
   const section = context.input.details.events;
-  const lines: string[] = [`- 数据状态：${sectionStatus(section)}`, ''];
+  const lines: string[] = [
+    `- 采集状态：${sectionStatus(section)}`,
+    '- 范围：仅正式回合中的击杀、下包和回合结束事件；按发生顺序排列',
+    '- 日志比分为随换边变化的 CT:T 阵营比分；逐回合结果中的比分为固定战队顺序',
+    '',
+  ];
   if (section.data !== null) {
     for (const map of context.input.maps) {
       if (!map.played) continue;
@@ -1114,7 +1275,7 @@ function eventsHandler(context: RenderContext): string[] {
       lines.push(
         `#### ${value(names.join(' / '))}`,
         '',
-        '- 事件按发生顺序；`>` 表示击杀，括号内依次为武器及关键信息',
+        '- `>` 表示击杀；括号内依次为标准武器/伤害类型及关键信息',
         '',
         ...table(
           ['回合', '正式事件'],
@@ -1124,7 +1285,9 @@ function eventsHandler(context: RenderContext): string[] {
       );
     }
   }
-  if (lines.length === 2) lines.push('_暂无正式回合日志_');
+  if (section.data === null || !lines.some((line) => line.startsWith('#### '))) {
+    lines.push('_暂无正式回合日志_');
+  }
   return subBlock('比赛日志', lines);
 }
 
@@ -1151,7 +1314,16 @@ function createContext(input: MarkdownInput): RenderContext {
       }
     }
   }
-  return { input, playerNames, teamNames };
+  const aliases = new Map<string, string | null>();
+  for (const name of playerNames.values()) {
+    const key = normalizedPlayerAlias(name);
+    const existing = aliases.get(key);
+    aliases.set(key, existing === undefined || existing === name ? name : null);
+  }
+  const playerAliases = new Map(
+    [...aliases].flatMap(([key, name]) => name === null ? [] : [[key, name] as const]),
+  );
+  return { input, playerAliases, playerNames, teamNames };
 }
 
 /** Renders a filtered, analysis-facing Markdown view while leaving the JSON source untouched. */

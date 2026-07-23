@@ -2414,6 +2414,78 @@ test('event history collapses stable provider event ids across update versions',
   assert.equal(stableEvents.length, 1);
 });
 
+test('event history accepts revised enrichment but rejects identity conflicts for a stable provider event id', async (context) => {
+  const originalFetch = globalThis.fetch;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  const [core, page] = await Promise.all(
+    ['states/bo3-between-map2-map3.json', 'events/page-1.json'].map(async (name) =>
+      JSON.parse(await readFile(new URL(`./fixtures/${name}`, import.meta.url), 'utf8')),
+    ),
+  );
+  const older = structuredClone(page.data.list[0]);
+  const olderInfo = JSON.parse(older.log_info);
+  olderInfo.kill.event_id = 'revised-event-1';
+  olderInfo.assist = {
+    assister_name: 'older-assister',
+    assister_nick: 'older-assister',
+    assister_side: 'CT',
+    victim_nick: olderInfo.kill.victim_nick,
+    victim_name: olderInfo.kill.victim_name,
+    victim_side: olderInfo.kill.victim_side,
+    kill_event_id: 'revised-event-1',
+  };
+  older.log_info = JSON.stringify(olderInfo);
+  older.update_version = '1784543737000';
+  const newer = structuredClone(older);
+  const newerInfo = JSON.parse(newer.log_info);
+  newerInfo.assist = {
+    assister_name: '',
+    assister_nick: '',
+    assister_side: '',
+    victim_nick: '',
+    victim_name: '',
+    victim_side: '',
+    kill_event_id: '',
+  };
+  newer.log_info = JSON.stringify(newerInfo);
+  newer.update_version = '1784543738000';
+  page.data.list = [newer, older, ...page.data.list];
+  globalThis.fetch = async (input) => {
+    const url = new URL(String(input));
+    if (url.pathname.endsWith('/matches/csgo_mc_2395547/data')) return Response.json(core);
+    if (url.pathname.endsWith('/match/csgo_mc_2395547/event/log')) return Response.json(page);
+    return new Response(null, { status: 404 });
+  };
+
+  const result = await createFiveEPlayMatchSource({
+    limits: { eventPageSize: 500 },
+  }).snapshot('csgo_mc_2395547');
+
+  assert.equal(result.kind, 'confirmed');
+  if (result.kind !== 'confirmed') return;
+  assert.equal(result.snapshot.details.events.status, 'complete');
+  assert.equal(result.snapshot.details.events.gap, null);
+  const revisedEvents = result.snapshot.details.events.data?.filter(
+    (event) => event.attributes.event_id === 'revised-event-1',
+  );
+  assert.equal(revisedEvents?.length, 1);
+  assert.equal(revisedEvents[0]?.updateVersion, '1784543738000');
+  assert.equal(revisedEvents[0]?.attributes.assist_assister_name, '');
+
+  newerInfo.kill.victim_id = 'different-victim';
+  newer.log_info = JSON.stringify(newerInfo);
+  const conflictingResult = await createFiveEPlayMatchSource({
+    limits: { eventPageSize: 500 },
+  }).snapshot('csgo_mc_2395547');
+
+  assert.equal(conflictingResult.kind, 'confirmed');
+  if (conflictingResult.kind !== 'confirmed') return;
+  assert.equal(conflictingResult.snapshot.details.events.status, 'partial');
+  assert.equal(conflictingResult.snapshot.details.events.gap, 'EVENT_VERSION_CONFLICT');
+});
+
 test('unresolved BO3 participants preserve format evidence in unsupported results', async (context) => {
   const originalFetch = globalThis.fetch;
   context.after(() => {

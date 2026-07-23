@@ -144,9 +144,12 @@ event limit, or deadline produces a partial section with an explicit gap. Every 
 head verification and bridging, shares the same page, event, attempt, signal, and deadline budget.
 
 Deduplicate by stable provider `event_id` within `(matchId, providerBoutId, eventType)` when present,
-falling back to `updateVersion`; compare the normalized payload without `updateVersion` when an
-identity repeats, and retain the newest equivalent update. Every row must match the core
-match ID and tournament ID. Its provider bout number and ID must join the corresponding core map.
+falling back to `updateVersion`. When a stable identity repeats at different update versions, its
+match, bout, map, round, event type, actor, target, team, sides, weapon, and head-shot identity must
+remain equal; compatible revisions retain the highest `updateVersion`, even when mutable enrichment
+such as assist data changes. A differing identity, or differing payloads at the same update version,
+produces `EVENT_VERSION_CONFLICT`. Every row must match the core match ID and tournament ID. Its
+provider bout number and ID must join the corresponding core map.
 Map names are compared through one canonical identity form that accepts observed display/engine
 aliases such as `Ancient` and `de_ancient`; the public event retains the core display name. A row
 identity mismatch is isolated, retains the other verified rows, and makes the event section partial

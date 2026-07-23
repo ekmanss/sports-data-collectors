@@ -182,7 +182,9 @@ events, both history products, and community data were complete at that observat
 
 Event rows carry both provider bout identity and chronological map number. Engine/display aliases
 are canonicalized for identity, and activity attached to an unopened or no-play map is excluded as
-non-official warmup data even when provider pagination itself is stable. An invalid event row is
+non-official warmup data even when provider pagination itself is stable. Repeated stable provider
+event IDs retain the highest compatible update version when mutable enrichment changes; changes to
+the event's core identity remain an explicit conflict. An invalid event row is
 isolated from otherwise valid rows and marks the section partial. Markdown never treats a partial
 event collection as an analysis-safe subset.
 

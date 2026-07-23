@@ -264,6 +264,10 @@ older snapshot and present it as current without separately labeling it last-kno
 The five fixed detail sections are `analysis`, `events`, `teamRecentMatches`, `teamPastMatches`, and
 `community`. Each has its own status even when core match state is confirmed.
 
+Within `events`, a repeated stable provider event ID can revise mutable enrichment such as assist
+data. The source retains the highest compatible update version and still reports
+`EVENT_VERSION_CONFLICT` when the event's core identity changes.
+
 ```ts
 import type { DataSection } from '@ekmanss/5eplay';
 

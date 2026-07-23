@@ -205,7 +205,6 @@ function compareVersions(first: string, second: string): number {
 
 interface StoredEvent {
   readonly event: MatchEvent;
-  readonly fingerprint: string;
 }
 
 interface EventPage {
@@ -221,17 +220,63 @@ type PageRead =
   | { readonly kind: 'ok'; readonly page: EventPage }
   | { readonly kind: 'failure'; readonly gap: string; readonly observedAt: UnixMilliseconds };
 
-function eventKey(event: MatchEvent): string {
+function stableProviderEventId(event: MatchEvent): string | number | null {
   const providerEventId = event.attributes.event_id;
-  if (typeof providerEventId === 'string' || typeof providerEventId === 'number') {
+  return typeof providerEventId === 'string' || typeof providerEventId === 'number'
+    ? providerEventId
+    : null;
+}
+
+function eventKey(event: MatchEvent): string {
+  const providerEventId = stableProviderEventId(event);
+  if (providerEventId !== null) {
     return `${event.matchId}:${event.providerBoutId ?? ''}:${event.type}:event:${providerEventId}`;
   }
   return `${event.matchId}:${event.providerBoutId ?? ''}:${event.updateVersion}`;
 }
 
-function eventFingerprint(event: MatchEvent): string {
+function eventPayloadFingerprint(event: MatchEvent): string {
   const { updateVersion: _updateVersion, ...stableEvent } = event;
   return createHash('sha256').update(JSON.stringify(stableEvent)).digest('hex');
+}
+
+function eventIdentityFingerprint(event: MatchEvent): string {
+  return createHash('sha256')
+    .update(
+      JSON.stringify({
+        actorPlayerId: event.actorPlayerId,
+        eventId: stableProviderEventId(event),
+        headShot: event.attributes.head_shot ?? null,
+        killerSide: event.attributes.killer_side ?? null,
+        mapName: event.mapName,
+        mapNumber: event.mapNumber,
+        matchId: event.matchId,
+        providerBoutId: event.providerBoutId,
+        providerBoutNumber: event.providerBoutNumber,
+        roundNumber: event.roundNumber,
+        targetPlayerId: event.targetPlayerId,
+        teamId: event.teamId,
+        tournamentId: event.tournamentId,
+        type: event.type,
+        victimSide: event.attributes.victim_side ?? null,
+        weapon: event.attributes.weapon ?? null,
+      }),
+    )
+    .digest('hex');
+}
+
+function eventRevisionsConflict(first: MatchEvent, second: MatchEvent): boolean {
+  if (
+    stableProviderEventId(first) === null ||
+    stableProviderEventId(second) === null
+  ) {
+    return eventPayloadFingerprint(first) !== eventPayloadFingerprint(second);
+  }
+  if (eventIdentityFingerprint(first) !== eventIdentityFingerprint(second)) return true;
+  return (
+    compareVersions(first.updateVersion, second.updateVersion) === 0 &&
+    eventPayloadFingerprint(first) !== eventPayloadFingerprint(second)
+  );
 }
 
 function pageToken(rows: readonly unknown[]): string {
@@ -297,9 +342,8 @@ export async function loadEvents(
       const pageEvents = new Map<string, StoredEvent>();
       for (const event of parsed) {
         const key = eventKey(event);
-        const fingerprint = eventFingerprint(event);
         const existing = pageEvents.get(key);
-        if (existing !== undefined && existing.fingerprint !== fingerprint) {
+        if (existing !== undefined && eventRevisionsConflict(existing.event, event)) {
           pageGap = 'EVENT_VERSION_CONFLICT';
           continue;
         }
@@ -307,7 +351,7 @@ export async function loadEvents(
           existing === undefined ||
           compareVersions(existing.event.updateVersion, event.updateVersion) < 0
         ) {
-          pageEvents.set(key, { event, fingerprint });
+          pageEvents.set(key, { event });
         }
       }
       let nextCursor: string | null = null;
@@ -345,19 +389,18 @@ export async function loadEvents(
   const addEvents = (incoming: readonly MatchEvent[]): string | null => {
     for (const event of incoming) {
       const key = eventKey(event);
-      const fingerprint = eventFingerprint(event);
       const existing = events.get(key);
       if (existing !== undefined) {
-        if (existing.fingerprint !== fingerprint) return 'EVENT_VERSION_CONFLICT';
+        if (eventRevisionsConflict(existing.event, event)) return 'EVENT_VERSION_CONFLICT';
         if (compareVersions(existing.event.updateVersion, event.updateVersion) < 0) {
-          events.set(key, { event, fingerprint });
+          events.set(key, { event });
         }
         continue;
       }
       if (events.size >= limits.maxEvents) {
         return 'EVENT_LIMIT';
       }
-      events.set(key, { event, fingerprint });
+      events.set(key, { event });
     }
     return null;
   };
@@ -375,14 +418,14 @@ export async function loadEvents(
         const older = anchor.get(eventKey(event));
         if (older === undefined) continue;
         return {
-          gap: older.fingerprint === eventFingerprint(event)
-            ? 'HEAD_REGRESSED'
-            : 'EVENT_VERSION_CONFLICT',
+          gap: eventRevisionsConflict(older.event, event)
+            ? 'EVENT_VERSION_CONFLICT'
+            : 'HEAD_REGRESSED',
           index,
         };
       }
       if (priorIndex !== 0) return { gap: 'HEAD_REGRESSED', index };
-      if (eventFingerprint(priorHead[0] as MatchEvent) !== eventFingerprint(event)) {
+      if (eventRevisionsConflict(priorHead[0] as MatchEvent, event)) {
         return { gap: 'EVENT_VERSION_CONFLICT', index };
       }
       const suffix = page.events.slice(index);
@@ -392,7 +435,7 @@ export async function loadEvents(
         if (priorEvent === undefined || eventKey(priorEvent) !== eventKey(suffixEvent)) {
           return { gap: 'HEAD_REGRESSED', index };
         }
-        if (eventFingerprint(priorEvent) !== eventFingerprint(suffixEvent)) {
+        if (eventRevisionsConflict(priorEvent, suffixEvent)) {
           return { gap: 'EVENT_VERSION_CONFLICT', index };
         }
       }

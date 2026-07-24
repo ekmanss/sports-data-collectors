@@ -255,6 +255,10 @@ Some awarded no-play maps retain raw provider `statusCode: -1`; when the result,
 absent gameplay timing/stage, and zero official gameplay fields all agree, the normalized map is
 still `closed-without-play` with `technicalDisposition: 'awarded'`. Inspect `providerState` when the
 raw lifecycle code matters, and treat blocked near-matches as contradictory evidence.
+If the provider later erases the map-level award, a terminal `2:1` can still yield the same
+normalized award only when one empty settled no-play slot and two played settlements leave exactly
+one winner missing from the final series score. This inference is not applied to `2:0`, live,
+multi-gap, or contradictory snapshots.
 
 Use `settled`, `played`, `closedWithoutPlay`, `technicalDisposition`, and `winnerTeamId` rather than
 deriving map semantics from a score. An administrative 1:0 result is deliberately different from a

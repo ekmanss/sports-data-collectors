@@ -1244,6 +1244,58 @@ test('snapshot accepts a legacy status -1 awarded opening map', async (context) 
   assert.equal(result.snapshot.providerState.bouts[0]?.statusCode, -1);
 });
 
+test('snapshot reconciles one terminal no-play award from an exact 2-1 series score', async (context) => {
+  const originalFetch = globalThis.fetch;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  const body = await awardedOpeningMapResponse('2');
+  const awarded = body.data.match.bouts_state[0];
+  assert.ok(awarded);
+  awarded.result = '';
+  awarded.t1_stats.all_score = '';
+  awarded.t1_stats.quick_score = '';
+  awarded.t2_stats.all_score = '';
+  awarded.t2_stats.quick_score = '';
+  globalThis.fetch = async () => Response.json(body);
+
+  const result = await createFiveEPlayMatchSource({
+    timing: { closeCalibrationMs: 1, livePollMs: 1 },
+  }).snapshot('csgo_mc_2395547');
+
+  assert.equal(result.kind, 'confirmed', JSON.stringify(result));
+  if (result.kind !== 'confirmed') return;
+  assert.equal(result.snapshot.state.closure, 'administrative');
+  assert.deepEqual(
+    result.snapshot.maps.map((map) => ({
+      scores: map.teams.map((team) => team.score),
+      status: map.status,
+      technicalDisposition: map.technicalDisposition,
+      winnerTeamId: map.winnerTeamId,
+    })),
+    [
+      {
+        scores: [1, 0],
+        status: 'closed-without-play',
+        technicalDisposition: 'awarded',
+        winnerTeamId: result.snapshot.maps[0]?.teams[0].teamId,
+      },
+      {
+        scores: [10, 13],
+        status: 'settled',
+        technicalDisposition: null,
+        winnerTeamId: result.snapshot.maps[1]?.teams[1].teamId,
+      },
+      {
+        scores: [7, 13],
+        status: 'settled',
+        technicalDisposition: null,
+        winnerTeamId: result.snapshot.maps[2]?.teams[1].teamId,
+      },
+    ],
+  );
+});
+
 test('snapshot blocks a legacy status -1 award containing gameplay rounds', async (context) => {
   const originalFetch = globalThis.fetch;
   context.after(() => {

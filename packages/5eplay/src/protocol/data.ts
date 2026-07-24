@@ -1053,6 +1053,86 @@ function map(
   };
 }
 
+type AwardedNoPlayMap = Extract<MatchMap, { technicalDisposition: 'awarded' }>;
+type UnusedNoPlayMap = Extract<MatchMap, { technicalDisposition: 'unused' }>;
+
+function awardUnusedMap(mapState: UnusedNoPlayMap, winnerTeamId: string): AwardedNoPlayMap {
+  const [firstTeam, secondTeam] = mapState.teams;
+  if (winnerTeamId === firstTeam.teamId) {
+    return {
+      ...mapState,
+      orderFinality: 'confirmed',
+      teams: [
+        { ...firstTeam, score: 1 },
+        { ...secondTeam, score: 0 },
+      ],
+      technicalDisposition: 'awarded',
+      winnerTeamId,
+    };
+  }
+  if (winnerTeamId === secondTeam.teamId) {
+    return {
+      ...mapState,
+      orderFinality: 'confirmed',
+      teams: [
+        { ...firstTeam, score: 0 },
+        { ...secondTeam, score: 1 },
+      ],
+      technicalDisposition: 'awarded',
+      winnerTeamId,
+    };
+  }
+  throw new InconsistentProviderStateError('inferred award winner is not a match participant');
+}
+
+function reconcileTerminalNoPlayAward(
+  globalStatusCode: 0 | 1 | 2,
+  maps: readonly MatchMap[],
+  seriesScore: readonly [TeamScore, TeamScore],
+): readonly MatchMap[] {
+  const scoreValues = seriesScore.map((entry) => entry.score);
+  if (
+    globalStatusCode !== 2 ||
+    Math.max(...scoreValues) !== 2 ||
+    Math.min(...scoreValues) !== 1
+  ) {
+    return maps;
+  }
+  const unusedMaps = maps.filter(
+    (entry): entry is UnusedNoPlayMap => entry.technicalDisposition === 'unused',
+  );
+  if (
+    unusedMaps.length !== 1 ||
+    !maps.every(
+      (entry) =>
+        entry === unusedMaps[0] ||
+        (entry.status === 'settled' && entry.played),
+    )
+  ) {
+    return maps;
+  }
+  const knownWinnerCounts = seriesScore.map(
+    ({ teamId }) => maps.filter((entry) => entry.winnerTeamId === teamId).length,
+  );
+  const missingWins = seriesScore.map(
+    ({ score }, index) => score - (knownWinnerCounts[index] ?? 0),
+  );
+  const missingWinnerIndex =
+    missingWins[0] === 1 && missingWins[1] === 0
+      ? 0
+      : missingWins[0] === 0 && missingWins[1] === 1
+        ? 1
+        : null;
+  if (missingWinnerIndex === null) return maps;
+
+  const unusedMap = unusedMaps[0];
+  const winnerTeamId = seriesScore[missingWinnerIndex]?.teamId;
+  if (unusedMap === undefined || winnerTeamId === undefined) return maps;
+  return maps.map(
+    (entry) => entry === unusedMap ? awardUnusedMap(unusedMap, winnerTeamId) : entry,
+  );
+}
+
 function stateFromEvidence(
   globalStatusCode: 0 | 1 | 2,
   maps: readonly MatchMap[],
@@ -1423,7 +1503,7 @@ export function decodeCoreResponse(
       }
     }
   }
-  const maps = chronologicalBouts.map((entry, index) =>
+  const decodedMaps = chronologicalBouts.map((entry, index) =>
     map(
       entry.bout,
       (index + 1) as MapNumber,
@@ -1447,6 +1527,7 @@ export function decodeCoreResponse(
     { score: integer(globalState.t1_score, 'global_state.t1_score'), teamId: firstTeam.id },
     { score: integer(globalState.t2_score, 'global_state.t2_score'), teamId: secondTeam.id },
   ] as const satisfies readonly [TeamScore, TeamScore];
+  const maps = reconcileTerminalNoPlayAward(globalStatus, decodedMaps, providerSeriesScore);
   const settledWinnerCounts = teamIds.map(
     (teamId) => maps.filter((entry) => entry.winnerTeamId === teamId).length,
   ) as [number, number];

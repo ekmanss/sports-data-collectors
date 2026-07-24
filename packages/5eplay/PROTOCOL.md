@@ -95,6 +95,11 @@ The provider can retain legacy bout `status=-1` after recording the winner and `
 shape is normalized to the same awarded no-play state only when its result, exact scores, absent
 timings/stage, and zero official gameplay fields all agree; `providerState` still exposes the raw
 `-1`. Any partial or contradictory legacy shape remains blocked.
+After closure, the provider may erase that map-level result and retain only an empty settled
+no-play slot plus the final series score. A terminal BO3 `2:1` is reconciled as the same award only
+when exactly one such slot exists, the other two maps are played settlements, and subtracting their
+winners from the series score identifies exactly one missing winner. Normal `2:0` unused slots,
+ambiguous gaps, and contradictory totals are never promoted.
 
 Provider terminal state first becomes `closing`. It becomes `closed / stable` only after two
 consistent HTTP observations at least one live polling interval apart and after the three-minute

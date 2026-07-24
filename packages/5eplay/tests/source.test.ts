@@ -50,6 +50,74 @@ async function snapshotFromFixture(path: string) {
   }).snapshot(matchId);
 }
 
+async function awardedOpeningMapResponse(status: '-1' | '2') {
+  const body = JSON.parse(
+    await readFile(
+      new URL('./fixtures/states/bo3-complete-three-maps.json', import.meta.url),
+      'utf8',
+    ),
+  ) as {
+    data: {
+      match: {
+        bouts_state: Array<Record<string, unknown> & {
+          t1_stats: Record<string, unknown>;
+          t2_stats: Record<string, unknown>;
+        }>;
+      };
+    };
+  };
+  const awarded = body.data.match.bouts_state[0];
+  assert.ok(awarded);
+  Object.assign(awarded, {
+    bomb_planted_time: '',
+    curr_bout_stage: status === '-1' ? '' : 'fh',
+    curr_round_num: '',
+    end_time: '',
+    game_time: '0',
+    round_start_time: '',
+    start_time: '',
+    status,
+    t1_pr_stats: [],
+    t2_pr_stats: [],
+  });
+  const placeholderRounds = Array.from({ length: 12 }, () => 0);
+  Object.assign(awarded.t1_stats, {
+    all_score: '1',
+    equipment_value: '',
+    fh_data: placeholderRounds,
+    fh_role: '',
+    fh_score: '0',
+    flags: [],
+    money: '',
+    ot_data: placeholderRounds,
+    ot_role: '',
+    ot_score: '0',
+    quick_score: '1',
+    role: '',
+    sh_data: placeholderRounds,
+    sh_role: '',
+    sh_score: '0',
+  });
+  Object.assign(awarded.t2_stats, {
+    all_score: '0',
+    equipment_value: '',
+    fh_data: placeholderRounds,
+    fh_role: '',
+    fh_score: '0',
+    flags: [],
+    money: '',
+    ot_data: placeholderRounds,
+    ot_role: '',
+    ot_score: '0',
+    quick_score: '0',
+    role: '',
+    sh_data: placeholderRounds,
+    sh_role: '',
+    sh_score: '0',
+  });
+  return body;
+}
+
 test('snapshot confirms a real BO3 between map 2 and map 3', async (context) => {
   const body = await readFile(BETWEEN_MAPS_RESPONSE, 'utf8');
   const originalFetch = globalThis.fetch;
@@ -1126,69 +1194,7 @@ test('snapshot accepts an awarded opening map followed by two played maps', asyn
   context.after(() => {
     globalThis.fetch = originalFetch;
   });
-  const body = JSON.parse(
-    await readFile(
-      new URL('./fixtures/states/bo3-complete-three-maps.json', import.meta.url),
-      'utf8',
-    ),
-  ) as {
-    data: {
-      match: {
-        bouts_state: Array<Record<string, unknown> & {
-          t1_stats: Record<string, unknown>;
-          t2_stats: Record<string, unknown>;
-        }>;
-      };
-    };
-  };
-  const awarded = body.data.match.bouts_state[0];
-  assert.ok(awarded);
-  Object.assign(awarded, {
-    bomb_planted_time: '',
-    curr_bout_stage: 'fh',
-    curr_round_num: '',
-    end_time: '',
-    game_time: '0',
-    round_start_time: '',
-    start_time: '',
-    t1_pr_stats: [],
-    t2_pr_stats: [],
-  });
-  const placeholderRounds = Array.from({ length: 12 }, () => 0);
-  Object.assign(awarded.t1_stats, {
-    all_score: '1',
-    equipment_value: '',
-    fh_data: placeholderRounds,
-    fh_role: '',
-    fh_score: '0',
-    flags: [],
-    money: '',
-    ot_data: placeholderRounds,
-    ot_role: '',
-    ot_score: '0',
-    quick_score: '1',
-    role: '',
-    sh_data: placeholderRounds,
-    sh_role: '',
-    sh_score: '0',
-  });
-  Object.assign(awarded.t2_stats, {
-    all_score: '0',
-    equipment_value: '',
-    fh_data: placeholderRounds,
-    fh_role: '',
-    fh_score: '0',
-    flags: [],
-    money: '',
-    ot_data: placeholderRounds,
-    ot_role: '',
-    ot_score: '0',
-    quick_score: '0',
-    role: '',
-    sh_data: placeholderRounds,
-    sh_role: '',
-    sh_score: '0',
-  });
+  const body = await awardedOpeningMapResponse('2');
   globalThis.fetch = async () => Response.json(body);
 
   const result = await createFiveEPlayMatchSource({
@@ -1210,6 +1216,58 @@ test('snapshot accepts an awarded opening map followed by two played maps', asyn
       ['settled', null],
     ],
   );
+});
+
+test('snapshot accepts a legacy status -1 awarded opening map', async (context) => {
+  const originalFetch = globalThis.fetch;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  const body = await awardedOpeningMapResponse('-1');
+  globalThis.fetch = async () => Response.json(body);
+
+  const result = await createFiveEPlayMatchSource({
+    timing: { closeCalibrationMs: 1, livePollMs: 1 },
+  }).snapshot('csgo_mc_2395547');
+
+  assert.equal(result.kind, 'confirmed', JSON.stringify(result));
+  if (result.kind !== 'confirmed') return;
+  assert.equal(result.snapshot.state.closure, 'administrative');
+  assert.deepEqual(
+    result.snapshot.maps.map((map) => [map.status, map.technicalDisposition]),
+    [
+      ['closed-without-play', 'awarded'],
+      ['settled', null],
+      ['settled', null],
+    ],
+  );
+  assert.equal(result.snapshot.providerState.bouts[0]?.statusCode, -1);
+});
+
+test('snapshot blocks a legacy status -1 award containing gameplay rounds', async (context) => {
+  const originalFetch = globalThis.fetch;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  const body = await awardedOpeningMapResponse('-1');
+  const awarded = body.data.match.bouts_state[0];
+  assert.ok(awarded);
+  const firstHalfRounds = awarded.t1_stats.fh_data;
+  assert.ok(Array.isArray(firstHalfRounds));
+  firstHalfRounds[0] = 1;
+  globalThis.fetch = async () => Response.json(body);
+
+  const result = await createFiveEPlayMatchSource({
+    timing: { closeCalibrationMs: 1, livePollMs: 1 },
+  }).snapshot('csgo_mc_2395547');
+
+  assert.deepEqual(result, {
+    diagnosticCode: 'UNPLAYED_MAP_CONTAINS_GAMEPLAY_TEAM_DATA',
+    kind: 'blocked',
+    matchId: 'csgo_mc_2395547',
+    observedAt: result.kind === 'blocked' ? result.observedAt : null,
+    reason: 'inconsistent-state',
+  });
 });
 
 test('core identity mismatch is blocked as inconsistent rather than mislabeled unsupported', async (context) => {

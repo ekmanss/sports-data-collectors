@@ -91,6 +91,10 @@ A no-play award may contain zero-valued half/overtime scores and fixed-length ze
 They are accepted only when every value is zero and all timing/current-round gameplay evidence is
 absent, then normalized to empty public process fields. Present player planes on a no-play map are
 isolated as `NON_OFFICIAL_ACTIVITY`; they never become official statistics for the award.
+The provider can retain legacy bout `status=-1` after recording the winner and `1:0` award. That
+shape is normalized to the same awarded no-play state only when its result, exact scores, absent
+timings/stage, and zero official gameplay fields all agree; `providerState` still exposes the raw
+`-1`. Any partial or contradictory legacy shape remains blocked.
 
 Provider terminal state first becomes `closing`. It becomes `closed / stable` only after two
 consistent HTTP observations at least one live polling interval apart and after the three-minute

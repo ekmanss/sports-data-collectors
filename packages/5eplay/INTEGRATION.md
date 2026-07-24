@@ -251,6 +251,10 @@ settlements. Unopened and unused slots remain `provisional` and can move when la
 Use `quickScore` only as unsettled provider telemetry; `score` plus half/overtime fields are the
 formal score model. A no-play map can carry upstream zero-filled round placeholders and player rows;
 the package normalizes the former away and reports the latter as `NON_OFFICIAL_ACTIVITY`.
+Some awarded no-play maps retain raw provider `statusCode: -1`; when the result, exact `1:0` score,
+absent gameplay timing/stage, and zero official gameplay fields all agree, the normalized map is
+still `closed-without-play` with `technicalDisposition: 'awarded'`. Inspect `providerState` when the
+raw lifecycle code matters, and treat blocked near-matches as contradictory evidence.
 
 Use `settled`, `played`, `closedWithoutPlay`, `technicalDisposition`, and `winnerTeamId` rather than
 deriving map semantics from a score. An administrative 1:0 result is deliberately different from a

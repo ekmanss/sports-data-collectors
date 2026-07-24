@@ -612,9 +612,9 @@ function assertInactiveTeam(team: MapTeamState): void {
   }
 }
 
-function assertNoPlayTeam(team: MapTeamState): void {
+function isNoPlayTeam(team: MapTeamState): boolean {
   const zeroOrMissing = (value: number | null): boolean => value === null || value === 0;
-  if (
+  return !(
     team.currentSide !== null ||
     team.equipmentValue !== null ||
     !zeroOrMissing(team.firstHalfScore) ||
@@ -628,7 +628,11 @@ function assertNoPlayTeam(team: MapTeamState): void {
     team.secondHalfRounds.some((round) => round !== 0) ||
     team.overtimeRounds.some((round) => round !== 0) ||
     team.flags.length > 0
-  ) {
+  );
+}
+
+function assertNoPlayTeam(team: MapTeamState): void {
+  if (!isNoPlayTeam(team)) {
     throw new InconsistentProviderStateError('no-play map contains official gameplay team data');
   }
 }
@@ -728,15 +732,12 @@ function map(
     bout.start_time,
     `provider bout ${providerBoutNumber}.start_time`,
   );
-  const providerClosedWithoutPlay = statusCode === 2 && startedAt === null;
   const result = nullableString(bout.result);
-  const providerWinnerTeamId =
-    statusCode !== 2
-      ? null
-      : result === 't1'
-        ? teamIds[0]
-        : result === 't2'
-          ? teamIds[1]
+  const resultWinnerTeamId =
+    result === 't1'
+      ? teamIds[0]
+      : result === 't2'
+        ? teamIds[1]
         : null;
   const stage = nullableString(bout.curr_bout_stage);
   const normalizedStage: MatchMap['stage'] =
@@ -791,6 +792,32 @@ function map(
     mapTeamState(bout.t1_stats, teamIds[0], statusCode === -1),
     mapTeamState(bout.t2_stats, teamIds[1], statusCode === -1),
   ] as const;
+  const expectedLegacyAwardScores =
+    resultWinnerTeamId === teamIds[0]
+      ? [1, 0] as const
+      : resultWinnerTeamId === teamIds[1]
+        ? [0, 1] as const
+        : null;
+  const legacyAwardedNoPlay =
+    statusCode === -1 &&
+    expectedLegacyAwardScores !== null &&
+    startedAt === null &&
+    endedAt === null &&
+    currentRound === null &&
+    roundStartedAt === null &&
+    bombPlantedAt === null &&
+    (gameTimeSeconds === null || gameTimeSeconds === 0) &&
+    normalizedStage === null &&
+    teams.every(
+      (team, index) =>
+        isNoPlayTeam(team) &&
+        team.score === expectedLegacyAwardScores[index] &&
+        (team.quickScore === null || team.quickScore === expectedLegacyAwardScores[index]),
+    );
+  const providerClosedWithoutPlay =
+    (statusCode === 2 && startedAt === null) || legacyAwardedNoPlay;
+  const providerWinnerTeamId =
+    statusCode === 2 || legacyAwardedNoPlay ? resultWinnerTeamId : null;
   const metadata = {
     backgroundUrl: nullableString(bout.map_bgm),
     displayName: nullableString(bout.disp_name),
@@ -843,7 +870,7 @@ function map(
       winnerTeamId: null,
     };
   }
-  if (statusCode === -1) {
+  if (statusCode === -1 && !legacyAwardedNoPlay) {
     assertUnplayedPlayerStatistics(statistics);
     for (const team of teams) {
       assertInactiveTeam(team);
@@ -1340,7 +1367,12 @@ export function decodeCoreResponse(
   }
   const progressRank = (entry: (typeof boutEvidence)[number]): number => {
     if (entry.statusCode === 2 && entry.startedAt !== null) return 0;
-    if (entry.statusCode === 2) return 1;
+    if (
+      entry.statusCode === 2 ||
+      (entry.statusCode === -1 && (entry.result === 't1' || entry.result === 't2'))
+    ) {
+      return 1;
+    }
     if (entry.statusCode === 1) return 2;
     return 3;
   };
@@ -1398,7 +1430,10 @@ export function decodeCoreResponse(
       entry.providerBoutNumber,
       entry.statusCode === 1 ||
         entry.startedAt !== null ||
-        (entry.statusCode === 2 && (entry.result === 't1' || entry.result === 't2'))
+        (
+          (entry.statusCode === 2 || entry.statusCode === -1) &&
+          (entry.result === 't1' || entry.result === 't2')
+        )
         ? 'confirmed'
         : 'provisional',
       teamIds,
